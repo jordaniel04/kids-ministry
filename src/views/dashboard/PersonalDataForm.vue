@@ -35,7 +35,7 @@
                             v-model="ministerialData.leadershipTime" 
                             required
                         ></VTextField>
-                        <VTextField label="Otros Cargos" v-model="ministerialData.otherPositions"></VTextField>
+                        <!-- <VTextField label="Otros Cargos" v-model="ministerialData.otherPositions"></VTextField> -->
                         <VSelect :items="['Sí', 'No']" label="Bautizado con el Espíritu Santo"
                             v-model="ministerialData.baptized" required></VSelect>
                         <VRow>
@@ -96,7 +96,7 @@ const personalData = ref({
 
 const ministerialData = ref({
     leadershipTime: "",
-    otherPositions: "",
+    // otherPositions: "",
     baptized: "",
     courses: [] as string[],
 });
@@ -121,7 +121,7 @@ const completionPercentage = computed(() => {
 
     // Validación más estricta para campos ministeriales
     if (ministerialData.value.leadershipTime?.trim()) filledFields++;
-    if (ministerialData.value.otherPositions?.trim()) filledFields++;
+    // if (ministerialData.value.otherPositions?.trim()) filledFields++;
     if (ministerialData.value.baptized?.trim()) filledFields++;
     if (ministerialData.value.courses?.length > 0) filledFields++;
 
@@ -162,7 +162,7 @@ const loadUserData = async () => {
             if (leaderData.ministerialData) {
                 ministerialData.value = {
                     leadershipTime: leaderData.ministerialData.leadershipTime || "",
-                    otherPositions: leaderData.ministerialData.otherPositions || "",
+                    // otherPositions: leaderData.ministerialData.otherPositions || "",
                     baptized: leaderData.ministerialData.baptized || "",
                     courses: leaderData.ministerialData.courses || [],
                 };

@@ -2,7 +2,7 @@ export interface User {
     id: string;
     email: string;
     role: string;
-    lastLogin?: string;
+    lastLogin?: Date;
     createdAt?: Date;
     updatedAt?: Date;
     areaNumber?: number;
