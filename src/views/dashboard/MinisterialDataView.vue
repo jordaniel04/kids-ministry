@@ -16,7 +16,6 @@
                                 <th scope="col" class="text-left">Nombre del Líder</th>
                                 <th scope="col" class="text-center">Total Maestras</th>
                                 <th scope="col" class="text-center">Total Niños</th>
-                                <th scope="col" class="text-center">Niños Ministrados</th>
                                 <th scope="col" class="text-center">Niños Convertidos</th>
                                 <th scope="col" class="text-center">Niños Miembros</th>
                                 <th scope="col" class="text-center">Bautizados E.S.</th>
@@ -34,7 +33,6 @@
                                 <td>{{ church.leaderName }}</td>
                                 <td class="text-center">{{ church.totalTeachers }}</td>
                                 <td class="text-center">{{ church.totalChildren }}</td>
-                                <td class="text-center">{{ church.ministeredChildren }}</td>
                                 <td class="text-center">{{ church.convertedChildren }}</td>
                                 <td class="text-center">{{ church.memberChildren }}</td>
                                 <td class="text-center">{{ church.baptizedChildren }}</td>
@@ -98,15 +96,6 @@
                                 <div class="d-flex align-center mb-2">
                                     <VIcon color="success" class="me-2">mdi-school</VIcon>
                                     <div>
-                                        <div class="text-caption">Niños Ministrados</div>
-                                        <div class="text-h6">{{ totals.ministeredChildren }}</div>
-                                    </div>
-                                </div>
-                            </VCol>
-                            <VCol cols="6">
-                                <div class="d-flex align-center mb-2">
-                                    <VIcon color="warning" class="me-2">mdi-heart</VIcon>
-                                    <div>
                                         <div class="text-caption">Niños Convertidos</div>
                                         <div class="text-h6">{{ totals.convertedChildren }}</div>
                                     </div>
@@ -114,7 +103,7 @@
                             </VCol>
                             <VCol cols="6">
                                 <div class="d-flex align-center mb-2">
-                                    <VIcon color="deep-purple" class="me-2">mdi-account-check</VIcon>
+                                    <VIcon color="warning" class="me-2">mdi-heart</VIcon>
                                     <div>
                                         <div class="text-caption">Niños Miembros</div>
                                         <div class="text-h6">{{ totals.memberChildren }}</div>
@@ -123,7 +112,7 @@
                             </VCol>
                             <VCol cols="6">
                                 <div class="d-flex align-center mb-2">
-                                    <VIcon color="red" class="me-2">mdi-fire</VIcon>
+                                    <VIcon color="deep-purple" class="me-2">mdi-account-check</VIcon>
                                     <div>
                                         <div class="text-caption">Bautizados E.S.</div>
                                         <div class="text-h6">{{ totals.baptizedChildren }}</div>
@@ -132,7 +121,7 @@
                             </VCol>
                             <VCol cols="6">
                                 <div class="d-flex align-center mb-2">
-                                    <VIcon color="teal" class="me-2">mdi-certificate</VIcon>
+                                    <VIcon color="red" class="me-2">mdi-fire</VIcon>
                                     <div>
                                         <div class="text-caption">Graduados Consolidado</div>
                                         <div class="text-h6">{{ totals.consolidatedGraduates }}</div>
@@ -141,7 +130,7 @@
                             </VCol>
                             <VCol cols="6">
                                 <div class="d-flex align-center mb-2">
-                                    <VIcon color="indigo" class="me-2">mdi-book-open-variant</VIcon>
+                                    <VIcon color="teal" class="me-2">mdi-certificate</VIcon>
                                     <div>
                                         <div class="text-caption">Graduados Sacramentos</div>
                                         <div class="text-h6">{{ totals.sacramentsGraduates }}</div>
@@ -213,10 +202,6 @@
                                     <div v-if="showDetailsFor === church.name">
                                         <VDivider class="my-2"></VDivider>
                                         <div class="mt-2">
-                                            <div class="d-flex justify-space-between mb-2">
-                                                <div class="text-caption">Niños Ministrados</div>
-                                                <div>{{ church.ministeredChildren }}</div>
-                                            </div>
                                             <div class="d-flex justify-space-between mb-2">
                                                 <div class="text-caption">Niños Convertidos</div>
                                                 <div>{{ church.convertedChildren }}</div>
@@ -300,16 +285,7 @@
                         </VCol>
                         <VCol cols="12" sm="6" md="3">
                             <div class="d-flex align-center mb-2">
-                                <VIcon color="success" class="me-2">mdi-hand-heart</VIcon>
-                                <div>
-                                    <div class="text-caption">Niños Ministrados</div>
-                                    <div class="text-h6">{{ totals.ministeredChildren }}</div>
-                                </div>
-                            </div>
-                        </VCol>
-                        <VCol cols="12" sm="6" md="3">
-                            <div class="d-flex align-center mb-2">
-                                <VIcon color="warning" class="me-2">mdi-heart</VIcon>
+                                <VIcon color="success" class="me-2">mdi-school</VIcon>
                                 <div>
                                     <div class="text-caption">Niños Convertidos</div>
                                     <div class="text-h6">{{ totals.convertedChildren }}</div>
@@ -318,7 +294,7 @@
                         </VCol>
                         <VCol cols="12" sm="6" md="3">
                             <div class="d-flex align-center mb-2">
-                                <VIcon color="deep-purple" class="me-2">mdi-account-check</VIcon>
+                                <VIcon color="warning" class="me-2">mdi-heart</VIcon>
                                 <div>
                                     <div class="text-caption">Niños Miembros</div>
                                     <div class="text-h6">{{ totals.memberChildren }}</div>
@@ -336,7 +312,7 @@
                         </VCol>
                         <VCol cols="12" sm="6" md="3">
                             <div class="d-flex align-center mb-2">
-                                <VIcon color="teal" class="me-2">mdi-certificate</VIcon>
+                                <VIcon color="deep-purple" class="me-2">mdi-school-outline</VIcon>
                                 <div>
                                     <div class="text-caption">Graduados Consolidado</div>
                                     <div class="text-h6">{{ totals.consolidatedGraduates }}</div>
@@ -345,7 +321,7 @@
                         </VCol>
                         <VCol cols="12" sm="6" md="3">
                             <div class="d-flex align-center mb-2">
-                                <VIcon color="indigo" class="me-2">mdi-book-open-variant</VIcon>
+                                <VIcon color="teal" class="me-2">mdi-certificate</VIcon>
                                 <div>
                                     <div class="text-caption">Graduados Sacramentos</div>
                                     <div class="text-h6">{{ totals.sacramentsGraduates }}</div>
@@ -363,7 +339,7 @@
                         </VCol>
                         <VCol cols="12" sm="6" md="3">
                             <div class="d-flex align-center mb-2">
-                                <VIcon color="blue-grey" class="me-2">mdi-school-outline</VIcon>
+                                <VIcon color="blue-grey" class="me-2">mdi-book-open-variant</VIcon>
                                 <div>
                                     <div class="text-caption">Graduados Discipulado</div>
                                     <div class="text-h6">{{ totals.discipleshipGraduates }}</div>
@@ -408,9 +384,9 @@ interface Church {
     leaderName: string;
     totalTeachers: number;
     totalChildren: number;
-    ministeredChildren: number;
     convertedChildren: number;
     memberChildren: number;
+    nonRepentantChildren: number;
     baptizedChildren: number;
     consolidatedGraduates: number;
     sacramentsGraduates: number;
@@ -432,7 +408,6 @@ const totals = computed(() => {
     return {
         totalTeachers: churches.value.reduce((sum, church) => sum + Number(church.totalTeachers || 0), 0),
         totalChildren: churches.value.reduce((sum, church) => sum + Number(church.totalChildren || 0), 0),
-        ministeredChildren: churches.value.reduce((sum, church) => sum + Number(church.ministeredChildren || 0), 0),
         convertedChildren: churches.value.reduce((sum, church) => sum + Number(church.convertedChildren || 0), 0),
         memberChildren: churches.value.reduce((sum, church) => sum + Number(church.memberChildren || 0), 0),
         baptizedChildren: churches.value.reduce((sum, church) => sum + Number(church.baptizedChildren || 0), 0),
@@ -475,9 +450,9 @@ const editedItem = ref({
     leaderName: '',
     totalTeachers: 0,
     totalChildren: 0,
-    ministeredChildren: 0,
     convertedChildren: 0,
     memberChildren: 0,
+    nonRepentantChildren: 0,
     baptizedChildren: 0,
     consolidatedGraduates: 0,
     sacramentsGraduates: 0,
@@ -493,15 +468,14 @@ const formTitle = computed(() => {
 const closeDialog = () => {
     dialog.value = false;
     editedIndex.value = -1;
-    // Resetear el formulario
     editedItem.value = {
         name: '',
         leaderName: '',
         totalTeachers: 0,
         totalChildren: 0,
-        ministeredChildren: 0,
         convertedChildren: 0,
         memberChildren: 0,
+        nonRepentantChildren: 0,
         baptizedChildren: 0,
         consolidatedGraduates: 0,
         sacramentsGraduates: 0,
@@ -511,12 +485,12 @@ const closeDialog = () => {
     };
 };
 
-const saveChurch = async () => {
+const saveChurch = async (formData: any) => {
     try {
         if (editedIndex.value > -1) {
-            churches.value[editedIndex.value] = { ...editedItem.value };
+            churches.value[editedIndex.value] = { ...formData };
         } else {
-            churches.value.push({ ...editedItem.value });
+            churches.value.push({ ...formData });
         }
         await saveToFirestore();
         closeDialog();
