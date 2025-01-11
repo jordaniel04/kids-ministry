@@ -2,8 +2,10 @@ export interface User {
     id: string;
     email: string;
     role: string;
-    district?: string | null;
-    lastLogin?: Date;
+    lastLogin?: string;
     createdAt?: Date;
     updatedAt?: Date;
+    areaNumber?: number;
+    districtNumber?: number;
+    location?: string;
 }

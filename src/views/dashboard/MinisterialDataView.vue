@@ -237,12 +237,19 @@ const loadData = async () => {
     if (!authStore.user?.id) return;
 
     try {
+        // Primero cargar datos del usuario para obtener su distrito
+        const userDoc = await getDoc(doc(db, "users", authStore.user.id));
+        if (!userDoc.exists()) return;
+        
+        const userData = userDoc.data();
+        districtName.value = userData.location || 'No especificado';
+
+        // Luego cargar datos ministeriales
         const leaderRef = doc(db, "leaders", authStore.user.id);
         const leaderDoc = await getDoc(leaderRef);
         
         if (leaderDoc.exists()) {
             const data = leaderDoc.data();
-            districtName.value = data.ministerialData?.district || 'No especificado';
             churches.value = data.churches || [];
         }
     } catch (error) {

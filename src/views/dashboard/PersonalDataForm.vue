@@ -3,6 +3,9 @@
         <NavigationBar />
         <VContainer>
             <h1>Datos del Líder Distrital</h1>
+            <div class="text-subtitle-1 mb-4">
+                {{ `Área ${userData?.areaNumber || ''} - Distrito ${userData?.districtNumber || ''} - ${userData?.location || ''}` }}
+            </div>
             <VForm @submit.prevent="savePersonalData">
                 <VCard class="mb-4 pa-4">
                     <VCardTitle>Datos Personales</VCardTitle>
@@ -27,9 +30,11 @@
                 <VCard class="mb-4 pa-4">
                     <VCardTitle>Datos Ministeriales</VCardTitle>
                     <VCardText>
-                        <VSelect :items="districts" label="Distrito" v-model="ministerialData.district" required></VSelect>
-                        <VTextField label="Tiempo en Liderazgo Distrital" v-model="ministerialData.leadershipTime" required>
-                        </VTextField>
+                        <VTextField 
+                            label="Tiempo en el Liderazgo" 
+                            v-model="ministerialData.leadershipTime" 
+                            required
+                        ></VTextField>
                         <VTextField label="Otros Cargos" v-model="ministerialData.otherPositions"></VTextField>
                         <VSelect :items="['Sí', 'No']" label="Bautizado con el Espíritu Santo"
                             v-model="ministerialData.baptized" required></VSelect>
@@ -66,7 +71,7 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from "vue";
-import { doc, setDoc, collection, getDocs, Timestamp } from "firebase/firestore";
+import { doc, setDoc, collection, getDocs, Timestamp, getDoc } from "firebase/firestore";
 import { db } from "../../firebase/config";
 import { useAuthStore } from "../../stores/auth";
 import { useRouter } from 'vue-router';
@@ -90,7 +95,6 @@ const personalData = ref({
 });
 
 const ministerialData = ref({
-    district: "",
     leadershipTime: "",
     otherPositions: "",
     baptized: "",
@@ -105,7 +109,7 @@ const initialData = ref({
 });
 
 const completionPercentage = computed(() => {
-    const totalFields = 10;
+    const totalFields = 9;
     let filledFields = 0;
 
     // Validación más estricta para campos personales
@@ -116,7 +120,6 @@ const completionPercentage = computed(() => {
     if (personalData.value.phoneNumber?.trim()) filledFields++;
 
     // Validación más estricta para campos ministeriales
-    if (ministerialData.value.district?.trim()) filledFields++;
     if (ministerialData.value.leadershipTime?.trim()) filledFields++;
     if (ministerialData.value.otherPositions?.trim()) filledFields++;
     if (ministerialData.value.baptized?.trim()) filledFields++;
@@ -131,30 +134,37 @@ const loading = ref(false);
 
 const router = useRouter();
 
-// Función para cargar los datos
+const userData = ref<any>(null);
+
 const loadUserData = async () => {
     try {
-        const userData = await authStore.getUserData();
-        if (userData) {
+        // Primero cargar datos del usuario de la colección users
+        const userDoc = await getDoc(doc(db, "users", authStore.user!.id));
+        if (userDoc.exists()) {
+            userData.value = userDoc.data();
+        }
+
+        // Luego cargar datos de leader
+        const leaderData = await authStore.getUserData();
+        if (leaderData) {
             // Cargar datos personales
-            if (userData.personalData) {
+            if (leaderData.personalData) {
                 personalData.value = {
-                    firstName: userData.personalData.firstName || "",
-                    lastName: userData.personalData.lastName || "",
-                    birthDate: userData.personalData.birthDate ? userData.personalData.birthDate.toDate() : null,
-                    maritalStatus: userData.personalData.maritalStatus || "",
-                    phoneNumber: userData.personalData.phoneNumber || "",
+                    firstName: leaderData.personalData.firstName || "",
+                    lastName: leaderData.personalData.lastName || "",
+                    birthDate: leaderData.personalData.birthDate ? leaderData.personalData.birthDate.toDate() : null,
+                    maritalStatus: leaderData.personalData.maritalStatus || "",
+                    phoneNumber: leaderData.personalData.phoneNumber || "",
                 };
             }
 
             // Cargar datos ministeriales
-            if (userData.ministerialData) {
+            if (leaderData.ministerialData) {
                 ministerialData.value = {
-                    district: userData.ministerialData.district || "",
-                    leadershipTime: userData.ministerialData.leadershipTime || "",
-                    otherPositions: userData.ministerialData.otherPositions || "",
-                    baptized: userData.ministerialData.baptized || "",
-                    courses: userData.ministerialData.courses || [],
+                    leadershipTime: leaderData.ministerialData.leadershipTime || "",
+                    otherPositions: leaderData.ministerialData.otherPositions || "",
+                    baptized: leaderData.ministerialData.baptized || "",
+                    courses: leaderData.ministerialData.courses || [],
                 };
             }
 

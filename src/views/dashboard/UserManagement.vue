@@ -2,7 +2,7 @@
     <div>
         <NavigationBar />
         <VContainer>
-            <h1>Gestor de Usuarios</h1>
+    <h1>Gestor de Usuarios</h1>
             
         <VCard class="mb-4">
             <VCardTitle class="d-flex justify-space-between align-center">
@@ -29,17 +29,14 @@
 
                 <VDataTable
                     v-if="$vuetify.display.mdAndUp"
-                    :headers="headers"
+      :headers="headers"
                     :items="filteredUsers"
-                    :loading="loading"
+      :loading="loading"
                     :search="search"
-                    item-key="email"
-                >
+      item-key="email"
+    >
                     <template #[`item.role`]="{ item }">
                         <VChip :color="getRoleColor(item.role)">{{ item.role }}</VChip>
-                    </template>
-                    <template #[`item.district`]="{ item }">
-                        {{ item.district || 'No asignado aún' }}
                     </template>
                     <template #[`item.actions`]="{ item }">
                         <VIcon
@@ -101,41 +98,67 @@
                 </VCardTitle>
 
                 <VCardText>
-                    <VForm @submit.prevent="saveUser">
-                        <VTextField
-                            v-model="editedItem.email"
-                            label="Correo Electrónico"
-                            type="email"
-                            required
-                            :disabled="isEditing"
-                        ></VTextField>
-
-                        <VTextField
-                            v-if="!isEditing"
-                            v-model="editedItem.password"
-                            label="Contraseña"
-                            :type="showPassword ? 'text' : 'password'"
-                            required
-                            :append-icon="showPassword ? 'mdi-eye' : 'mdi-eye-off'"
-                            @click:append="showPassword = !showPassword"
-                        ></VTextField>
-
-                        <VSelect
-                            v-model="editedItem.role"
-                            :items="['admin', 'lider']"
-                            label="Rol"
-                            required
-                        ></VSelect>
-
-                        <VCardActions>
-                            <VSpacer></VSpacer>
-                            <VBtn color="error" variant="text" @click="closeDialog">Cancelar</VBtn>
-                            <VBtn type="submit" color="success" variant="text" :loading="saving">
-                                Guardar
-                            </VBtn>
-                        </VCardActions>
-                    </VForm>
+                    <VContainer>
+                        <VRow>
+                            <VCol cols="12">
+                                <VTextField
+                                    v-model="editedItem.email"
+                                    label="Email"
+                                    required
+                                ></VTextField>
+                            </VCol>
+                            <VCol cols="12" v-if="!isEditing">
+                                <VTextField
+                                    v-model="editedItem.password"
+                                    :append-icon="showPassword ? 'mdi-eye' : 'mdi-eye-off'"
+                                    :type="showPassword ? 'text' : 'password'"
+                                    label="Contraseña"
+                                    @click:append="showPassword = !showPassword"
+                                    required
+                                ></VTextField>
+                            </VCol>
+                            <VCol cols="12" sm="6">
+                                <VSelect
+                                    v-model="editedItem.role"
+                                    :items="['admin', 'lider']"
+                                    label="Rol"
+                                    required
+                                ></VSelect>
+                            </VCol>
+                            <VCol cols="12" sm="6">
+                                <VSelect
+                                    v-model="editedItem.areaNumber"
+                                    :items="areaNumbers"
+                                    label="Área"
+                                ></VSelect>
+                            </VCol>
+                            <VCol cols="12" sm="6">
+                                <VSelect
+                                    v-model="editedItem.districtNumber"
+                                    :items="districtNumbers"
+                                    label="Distrito"
+                                ></VSelect>
+                            </VCol>
+                            <VCol cols="12" sm="6">
+                                <VSelect
+                                    v-model="editedItem.location"
+                                    :items="locations"
+                                    label="Lugar"
+                                ></VSelect>
+                            </VCol>
+                        </VRow>
+                    </VContainer>
                 </VCardText>
+
+                <form @submit.prevent="saveUser">
+                    <VCardActions>
+                        <VSpacer></VSpacer>
+                        <VBtn color="error" variant="text" @click="closeDialog">Cancelar</VBtn>
+                        <VBtn type="submit" color="success" variant="text" :loading="saving">
+                            Guardar
+                        </VBtn>
+                    </VCardActions>
+                </form>
             </VCard>
         </VDialog>
     </VContainer>
@@ -143,12 +166,13 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from "vue";
+import { ref, computed, onMounted } from "vue";
 import { db } from "../../firebase/config";
-import { collection, getDocs, doc, setDoc, deleteDoc, updateDoc, getDoc } from "firebase/firestore";
+import { collection, getDocs, doc, setDoc, deleteDoc, updateDoc } from "firebase/firestore";
 import { getAuth, createUserWithEmailAndPassword, deleteUser as deleteAuthUser } from "firebase/auth";
 import type { User } from "../../types/User";
 import NavigationBar from '../../components/NavigationBar.vue';
+import type { District } from "../../types/District";
 
 const dialog = ref(false);
 const showPassword = ref(false);
@@ -162,14 +186,17 @@ const editedItem = ref({
     id: '',
     email: '',
     password: '',
-    role: 'lider'
+    role: 'lider',
+    areaNumber: undefined as number | undefined,
+    districtNumber: undefined as number | undefined,
+    location: undefined as string | undefined
 });
 
 const headers = [
-    { title: "Email", key: "email" },
-    { title: "Último Inicio de Sesión", key: "lastLogin" },
-    { title: "Rol", key: "role" },
-    { title: "Distrito", key: "district" },
+    { title: "Email", key: "email", sortable: true },
+    { title: "Lugar", key: "location", sortable: true },
+    { title: "Rol", key: "role", sortable: true },
+    { title: "Último Inicio de Sesión", key: "lastLogin", sortable: true },
     { title: "Acciones", key: "actions", sortable: false }
 ];
 
@@ -194,7 +221,10 @@ const openCreateDialog = () => {
         id: '',
         email: '',
         password: '',
-        role: 'lider'
+        role: 'lider',
+        areaNumber: undefined,
+        districtNumber: undefined,
+        location: undefined
     };
     dialog.value = true;
 };
@@ -205,7 +235,10 @@ const editUser = (user: User) => {
         id: user.id,
         email: user.email,
         password: '',
-        role: user.role
+        role: user.role,
+        areaNumber: user.areaNumber || undefined,
+        districtNumber: user.districtNumber || undefined,
+        location: user.location || undefined
     };
     dialog.value = true;
 };
@@ -251,6 +284,9 @@ const saveUser = async () => {
         if (isEditing.value) {
             await updateDoc(doc(db, "users", editedItem.value.id), {
                 role: editedItem.value.role,
+                areaNumber: editedItem.value.areaNumber,
+                districtNumber: editedItem.value.districtNumber,
+                location: editedItem.value.location,
                 updatedAt: new Date()
             });
         } else {
@@ -261,14 +297,32 @@ const saveUser = async () => {
                 editedItem.value.password
             );
 
+            // Guardar en users collection
             await setDoc(doc(db, "users", userCredential.user.uid), {
                 email: editedItem.value.email,
                 role: editedItem.value.role,
+                areaNumber: editedItem.value.areaNumber,
+                districtNumber: editedItem.value.districtNumber,
+                location: editedItem.value.location,
                 createdAt: new Date(),
                 updatedAt: new Date()
             });
-        }
 
+            // Crear documento inicial en leaders collection
+            await setDoc(doc(db, "leaders", userCredential.user.uid), {
+                personalData: {
+                    createdAt: new Date(),
+                    updatedAt: new Date()
+                },
+                ministerialData: {
+                    district: editedItem.value.location,
+                    areaNumber: editedItem.value.areaNumber,
+                    districtNumber: editedItem.value.districtNumber,
+                    createdAt: new Date(),
+                    updatedAt: new Date()
+                }
+            });
+        }
         await getUsers();
         closeDialog();
     } catch (error) {
@@ -285,31 +339,25 @@ const closeDialog = () => {
         id: '',
         email: '',
         password: '',
-        role: 'lider'
+        role: 'lider',
+        areaNumber: undefined,
+        districtNumber: undefined,
+        location: undefined
     };
 };
 
 const getUsers = async () => {
     try {
-        const usersCollection = collection(db, "users");
-        const userDocs = await getDocs(usersCollection);
+  const usersCollection = collection(db, "users");
+  const userDocs = await getDocs(usersCollection);
         
-        // Obtener los datos de usuario y sus distritos
         const usersData = await Promise.all(userDocs.docs.map(async (userDoc) => {
             const userData = userDoc.data();
-            let district = null;
-
-            // Buscar el distrito en la colección leaders
-            const leaderDoc = await getDoc(doc(db, "leaders", userDoc.id));
-            if (leaderDoc.exists()) {
-                const leaderData = leaderDoc.data();
-                district = leaderData?.ministerialData?.district || null;
-            }
-
+            
             return {
                 id: userDoc.id,
                 ...userData,
-                district: district,
+                location: userData.location || 'No asignado',
                 lastLogin: userData.lastLogin?.toDate().toLocaleString() || "N/A",
                 createdAt: userData.createdAt?.toDate() || new Date(),
                 updatedAt: userData.updatedAt?.toDate() || new Date(),
@@ -320,22 +368,43 @@ const getUsers = async () => {
     } catch (error) {
         console.error("Error al obtener usuarios:", error);
     } finally {
-        loading.value = false;
+  loading.value = false;
     }
 };
 
 const getRoleColor = (role: string) => {
-    switch (role) {
-        case "admin":
-            return "green";
-        case "lider":
-            return "blue";
-        default:
-            return "red";
-    }
+  switch (role) {
+    case "admin":
+      return "green";
+    case "lider":
+      return "blue";
+    default:
+      return "red";
+  }
 };
 
-getUsers();
+const districts = ref<District[]>([]);
+const areaNumbers = Array.from({ length: 11 }, (_, i) => i + 1);
+const districtNumbers = Array.from({ length: 10 }, (_, i) => i + 1);
+const locations = computed(() => {
+    return districts.value
+        .filter(d => d.areaNumber === editedItem.value.areaNumber && 
+                    d.districtNumber === editedItem.value.districtNumber)
+        .map(d => d.location);
+});
+
+const loadDistricts = async () => {
+    const querySnapshot = await getDocs(collection(db, "districts"));
+    districts.value = querySnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+    } as District));
+};
+
+onMounted(async () => {
+    await loadDistricts();
+  getUsers();
+});
 </script>
 
 <style scoped>
