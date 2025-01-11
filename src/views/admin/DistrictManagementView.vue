@@ -17,10 +17,21 @@
                 </VCardTitle>
                 
                 <VCardText>
+                    <!-- Buscador -->
+                    <VTextField
+                        v-model="search"
+                        prepend-icon="mdi-magnify"
+                        label="Buscar distrito"
+                        single-line
+                        hide-details
+                        class="mb-4"
+                    ></VTextField>
+
                     <VDataTable
                         :headers="headers"
-                        :items="districts"
+                        :items="formattedDistricts"
                         :loading="loading"
+                        :search="search"
                         class="elevation-1"
                         :items-per-page="10"
                     >
@@ -28,7 +39,7 @@
                             <VIcon
                                 size="small"
                                 class="me-2 cursor-pointer"
-                                @click="editDistrict(item, districts.indexOf(item))"
+                                @click="editDistrict(item.id)"
                             >
                                 mdi-pencil
                             </VIcon>
@@ -39,15 +50,6 @@
                             >
                                 mdi-delete
                             </VIcon>
-                        </template>
-                        <template #[`item.areaNumber`]="{ item }">
-                            Área {{ item.areaNumber }}
-                        </template>
-                        <template #[`item.districtNumber`]="{ item }">
-                            Distrito {{ item.districtNumber }}
-                        </template>
-                        <template #[`item.createdAt`]="{ item }">
-                            {{ formatDate(item.createdAt) }}
                         </template>
                     </VDataTable>
                 </VCardText>
@@ -92,14 +94,6 @@ const editedItem = ref<District>({
     areaNumber: 1,
     districtNumber: 1,
     location: ''
-});
-
-// Generar arrays para los selectores
-const areaNumbers = Array.from({ length: 11 }, (_, i) => i + 1);
-const districtNumbers = Array.from({ length: 10 }, (_, i) => i + 1);
-
-const formTitle = computed(() => {
-    return editedIndex.value === -1 ? 'Nuevo Distrito' : 'Editar Distrito'
 });
 
 const loadDistricts = async () => {
@@ -159,10 +153,13 @@ const deleteDistrict = async (id: string) => {
     }
 };
 
-const editDistrict = (district: District, index: number) => {
-    editedIndex.value = index;
-    editedItem.value = { ...district };
-    dialog.value = true;
+const editDistrict = (id: string) => {
+    const district = districts.value.find(d => d.id === id);
+    if (district) {
+        editedIndex.value = districts.value.findIndex(d => d.id === id);
+        editedItem.value = { ...district };
+        dialog.value = true;
+    }
 };
 
 const closeDialog = () => {
@@ -178,6 +175,17 @@ const closeDialog = () => {
 
 const loading = ref(false);
 
+// Computed property para formatear los distritos
+const formattedDistricts = computed(() => {
+    return districts.value.map(district => ({
+        ...district,
+        areaNumber: `Área ${district.areaNumber}`,
+        districtNumber: `Distrito ${district.districtNumber}`,
+        createdAt: formatDate(district.createdAt)
+    }));
+});
+
+// Modificamos los headers para usar directamente los valores formateados
 const headers = [
     { title: 'Área', key: 'areaNumber', sortable: true },
     { title: 'Distrito', key: 'districtNumber', sortable: true },
@@ -185,6 +193,9 @@ const headers = [
     { title: 'Fecha de Creación', key: 'createdAt', sortable: true },
     { title: 'Acciones', key: 'actions', sortable: false }
 ];
+
+// Agregar ref para el buscador
+const search = ref('');
 
 // Cargar distritos al montar el componente
 onMounted(() => {

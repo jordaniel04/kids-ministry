@@ -60,10 +60,6 @@ export default {
 
 
 <script setup lang="ts">
-// defineOptions({
-//   name: 'DistrictFormDialog'
-// });
-
 import { computed } from 'vue';
 import type { District } from '../types/District';
 
