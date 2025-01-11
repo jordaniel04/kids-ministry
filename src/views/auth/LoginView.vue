@@ -8,7 +8,7 @@
           </VCardTitle>
 
           <VCardText>
-            <VForm @submit.prevent="handleLogin" ref="form">
+            <VForm @submit.prevent="handleLogin">
               <VTextField
                 v-model="email"
                 label="Correo Electrónico"
@@ -59,30 +59,25 @@
 </template>
 
 <script setup lang="ts">
-import { ref, defineComponent } from 'vue';
+import { ref } from 'vue';
 import { useAuth } from '../../composables/useAuth';
 import { useRouter } from 'vue-router';
-
-defineComponent({
-  name: 'LoginView'
-});
 
 const { login, error } = useAuth();
 const email = ref('');
 const password = ref('');
 const showPassword = ref(false);
 const loading = ref(false);
-const form = ref<HTMLFormElement | null>(null);
 const router = useRouter();
 
 const emailRules = [
-  (v: string) => !!v || 'El correo es requerido',
-  (v: string) => /.+@.+\..+/.test(v) || 'El formato del correo no es válido'
+  (v: string): string | boolean => !!v || 'El correo es requerido',
+  (v: string): string | boolean => /.+@.+\..+/.test(v) || 'El formato del correo no es válido'
 ];
 
 const passwordRules = [
-  (v: string) => !!v || 'La contraseña es requerida',
-  (v: string) => v.length >= 6 || 'La contraseña debe tener al menos 6 caracteres'
+  (v: string): string | boolean => !!v || 'La contraseña es requerida',
+  (v: string): string | boolean => v.length >= 6 || 'La contraseña debe tener al menos 6 caracteres'
 ];
 
 const clearErrors = () => {
@@ -91,11 +86,24 @@ const clearErrors = () => {
 
 const handleLogin = async () => {
   clearErrors();
-  
-  // @ts-ignore
-  const { valid } = await form.value?.validate();
-  
-  if (!valid) return;
+
+  // Validar campos requeridos
+  if (!email.value || !password.value) {
+    error.value = 'Por favor, complete todos los campos requeridos';
+    return;
+  }
+
+  // Validar formato de email
+  if (!/.+@.+\..+/.test(email.value)) {
+    error.value = 'El formato del correo no es válido';
+    return;
+  }
+
+  // Validar longitud de contraseña
+  if (password.value.length < 6) {
+    error.value = 'La contraseña debe tener al menos 6 caracteres';
+    return;
+  }
 
   loading.value = true;
   try {

@@ -3,22 +3,12 @@
         <NavigationBar />
         <VContainer>
             <h1>Datos del Líder Distrital</h1>
-            <VForm @submit.prevent="savePersonalData" ref="form">
+            <VForm @submit.prevent="savePersonalData">
                 <VCard class="mb-4 pa-4">
                     <VCardTitle>Datos Personales</VCardTitle>
                     <VCardText>
-                        <VTextField 
-                            label="Nombres" 
-                            v-model="personalData.firstName" 
-                            required
-                            :rules="nameRules"
-                        ></VTextField>
-                        <VTextField 
-                            label="Apellidos" 
-                            v-model="personalData.lastName" 
-                            required
-                            :rules="nameRules"
-                        ></VTextField>
+                        <VTextField label="Nombres" v-model="personalData.firstName" required></VTextField>
+                        <VTextField label="Apellidos" v-model="personalData.lastName" required></VTextField>
                         <VDateInput 
                             label="Fecha de Nacimiento" 
                             prepend-icon=""
@@ -26,23 +16,11 @@
                             placeholder="DD-MM-AAAA"
                             locale="es-ES"
                             required
-                            :rules="[v => !!v || 'La fecha de nacimiento es requerida']"
                         ></VDateInput>
-                        <VSelect 
-                            :items="['Soltero', 'Casado']" 
-                            label="Estado Civil" 
-                            v-model="personalData.maritalStatus"
-                            required
-                            :rules="[v => !!v || 'El estado civil es requerido']"
-                        ></VSelect>
-                        <VTextField 
-                            label="Número de Celular" 
-                            v-model="personalData.phoneNumber" 
-                            required
-                            :rules="phoneRules"
-                            @input="formatPhoneNumber"
-                            maxlength="9"
-                        ></VTextField>
+                        <VSelect :items="['Soltero', 'Casado']" label="Estado Civil" v-model="personalData.maritalStatus"
+                            required>
+                        </VSelect>
+                        <VTextField label="Número de Celular" v-model="personalData.phoneNumber" required></VTextField>
                     </VCardText>
                 </VCard>
 
@@ -87,16 +65,12 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, defineComponent } from "vue";
+import { ref, computed, onMounted } from "vue";
 import { doc, setDoc, collection, getDocs, Timestamp } from "firebase/firestore";
 import { db } from "../../firebase/config";
 import { useAuthStore } from "../../stores/auth";
 import { useRouter } from 'vue-router';
 import NavigationBar from '../../components/NavigationBar.vue';
-
-defineComponent({
-  name: 'PersonalDataForm'
-});
 
 const availableCourses = [
     "Bases del Ministerio",
@@ -211,40 +185,8 @@ onMounted(async () => {
     await loadUserData();
 });
 
-// Reglas de validación
-const nameRules = [
-    (v: string) => !!v || 'Este campo es requerido',
-    (v: string) => /^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$/.test(v) || 'Solo se permiten letras y espacios',
-    (v: string) => v.length >= 2 || 'Mínimo 2 caracteres',
-    (v: string) => v.length <= 50 || 'Máximo 50 caracteres'
-];
-
-const phoneRules = [
-    (v: string) => !!v || 'El número de celular es requerido',
-    (v: string) => /^[0-9]+$/.test(v) || 'Solo se permiten números',
-    (v: string) => v.length === 9 || 'El número debe tener 9 dígitos'
-];
-
-const form = ref<HTMLFormElement | null>(null);
-
-// Función para formatear el número de teléfono
-const formatPhoneNumber = (event: Event) => {
-    const input = event.target as HTMLInputElement;
-    // Eliminar cualquier carácter que no sea número
-    input.value = input.value.replace(/\D/g, '');
-    personalData.value.phoneNumber = input.value;
-};
-
-// Modificar la función savePersonalData para incluir validación del formulario
 const savePersonalData = async () => {
-    // @ts-ignore
-    const { valid } = await form.value?.validate();
-
-    if (!valid) {
-        alert('Por favor, complete correctamente todos los campos requeridos.');
-        return;
-    }
-
+    // Validar que todos los campos requeridos estén completos
     if (completionPercentage.value < 100) {
         alert('Por favor, complete todos los campos obligatorios antes de guardar.');
         return;

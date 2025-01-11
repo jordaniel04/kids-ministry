@@ -101,7 +101,7 @@
                 </VCardTitle>
 
                 <VCardText>
-                    <VForm ref="form" @submit.prevent="saveUser">
+                    <VForm @submit.prevent="saveUser">
                         <VTextField
                             v-model="editedItem.email"
                             label="Correo Electrónico"
@@ -122,20 +122,20 @@
 
                         <VSelect
                             v-model="editedItem.role"
-                            :items="['admin', 'lider', 'guest']"
+                            :items="['admin', 'lider']"
                             label="Rol"
                             required
                         ></VSelect>
+
+                        <VCardActions>
+                            <VSpacer></VSpacer>
+                            <VBtn color="error" variant="text" @click="closeDialog">Cancelar</VBtn>
+                            <VBtn type="submit" color="success" variant="text" :loading="saving">
+                                Guardar
+                            </VBtn>
+                        </VCardActions>
                     </VForm>
                 </VCardText>
-
-                <VCardActions>
-                    <VSpacer></VSpacer>
-                    <VBtn color="error" variant="text" @click="closeDialog">Cancelar</VBtn>
-                    <VBtn color="success" variant="text" @click="saveUser" :loading="saving">
-                        Guardar
-                    </VBtn>
-                </VCardActions>
             </VCard>
         </VDialog>
     </VContainer>
@@ -143,16 +143,12 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, defineComponent } from "vue";
+import { ref, computed } from "vue";
 import { db } from "../../firebase/config";
 import { collection, getDocs, doc, setDoc, deleteDoc, updateDoc, getDoc } from "firebase/firestore";
 import { getAuth, createUserWithEmailAndPassword, deleteUser as deleteAuthUser } from "firebase/auth";
 import type { User } from "../../types/User";
 import NavigationBar from '../../components/NavigationBar.vue';
-
-defineComponent({
-  name: 'UserManagement'
-});
 
 const dialog = ref(false);
 const showPassword = ref(false);
@@ -166,7 +162,7 @@ const editedItem = ref({
     id: '',
     email: '',
     password: '',
-    role: 'guest'
+    role: 'lider'
 });
 
 const headers = [
@@ -198,7 +194,7 @@ const openCreateDialog = () => {
         id: '',
         email: '',
         password: '',
-        role: 'guest'
+        role: 'lider'
     };
     dialog.value = true;
 };
@@ -234,6 +230,22 @@ const deleteUser = async (user: User) => {
 };
 
 const saveUser = async () => {
+    // Validaciones manuales
+    if (!editedItem.value.email) {
+        alert('El correo electrónico es requerido');
+        return;
+    }
+
+    if (!isEditing.value && !editedItem.value.password) {
+        alert('La contraseña es requerida');
+        return;
+    }
+
+    if (!editedItem.value.role) {
+        alert('El rol es requerido');
+        return;
+    }
+
     saving.value = true;
     try {
         if (isEditing.value) {
@@ -273,7 +285,7 @@ const closeDialog = () => {
         id: '',
         email: '',
         password: '',
-        role: 'guest'
+        role: 'lider'
     };
 };
 
@@ -318,14 +330,10 @@ const getRoleColor = (role: string) => {
             return "green";
         case "lider":
             return "blue";
-        case "guest":
-            return "grey";
         default:
             return "red";
     }
 };
-
-const form = ref<HTMLFormElement | null>(null);
 
 getUsers();
 </script>
