@@ -125,25 +125,42 @@
                                     required
                                 ></VSelect>
                             </VCol>
-                            <VCol cols="12" sm="6">
+                            <VCol cols="12" sm="6" v-if="editedItem.role === 'lider'">
                                 <VSelect
                                     v-model="editedItem.areaNumber"
                                     :items="areaNumbers"
                                     label="Área"
+                                    required
                                 ></VSelect>
                             </VCol>
-                            <VCol cols="12" sm="6">
+                            <VCol cols="12" sm="6" v-if="editedItem.role === 'lider'">
                                 <VSelect
                                     v-model="editedItem.districtNumber"
                                     :items="districtNumbers"
                                     label="Distrito"
+                                    required
                                 ></VSelect>
                             </VCol>
-                            <VCol cols="12" sm="6">
+                            <VCol cols="12" v-if="editedItem.role === 'lider'">
                                 <VSelect
-                                    v-model="editedItem.location"
-                                    :items="locations"
+                                    v-model="selectedDistrict"
+                                    :items="filteredDistricts"
+                                    item-title="location"
+                                    item-value="id"
                                     label="Lugar"
+                                    :loading="loadingDistricts"
+                                    required
+                                ></VSelect>
+                            </VCol>
+                            <VCol cols="12" v-if="editedItem.role === 'lider'">
+                                <VSelect
+                                    v-model="leaderRole"
+                                    :items="[
+                                        { title: 'Líder Principal', value: 'primary' },
+                                        { title: 'Líder Secundario', value: 'secondary' }
+                                    ]"
+                                    label="Rol en el Distrito"
+                                    required
                                 ></VSelect>
                             </VCol>
                         </VRow>
@@ -168,11 +185,12 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from "vue";
 import { db } from "../../firebase/config";
-import { collection, getDocs, doc, setDoc, deleteDoc, updateDoc } from "firebase/firestore";
+import { collection, getDocs, doc, setDoc, deleteDoc, Timestamp, query, where, getDoc } from "firebase/firestore";
 import { getAuth, createUserWithEmailAndPassword, deleteUser as deleteAuthUser } from "firebase/auth";
 import type { User } from "../../types/User";
 import NavigationBar from '../../components/NavigationBar.vue';
 import type { District } from "../../types/District";
+import type { DistrictLeader } from '../../types/DistrictLeader';
 
 const dialog = ref(false);
 const showPassword = ref(false);
@@ -188,8 +206,7 @@ const editedItem = ref({
     password: '',
     role: 'lider',
     areaNumber: undefined as number | undefined,
-    districtNumber: undefined as number | undefined,
-    location: undefined as string | undefined
+    districtNumber: undefined as number | undefined
 });
 
 const headers = [
@@ -222,10 +239,11 @@ const openCreateDialog = () => {
         email: '',
         password: '',
         role: 'lider',
-        areaNumber: undefined,
-        districtNumber: undefined,
-        location: undefined
+        areaNumber: undefined as number | undefined,
+        districtNumber: undefined as number | undefined
     };
+    selectedDistrict.value = '';
+    leaderRole.value = 'primary';
     dialog.value = true;
 };
 
@@ -236,9 +254,8 @@ const editUser = (user: User) => {
         email: user.email,
         password: '',
         role: user.role,
-        areaNumber: user.areaNumber || undefined,
-        districtNumber: user.districtNumber || undefined,
-        location: user.location || undefined
+        areaNumber: undefined,
+        districtNumber: undefined
     };
     dialog.value = true;
 };
@@ -246,90 +263,91 @@ const editUser = (user: User) => {
 const deleteUser = async (user: User) => {
     if (confirm('¿Estás seguro de eliminar este usuario?')) {
         try {
-            // Eliminar de Firestore
-            await deleteDoc(doc(db, "users", user.id));
-            // Eliminar de Firebase Auth
-            const auth = getAuth();
-            const authUser = auth.currentUser;
-            if (authUser) {
-                await deleteAuthUser(authUser);
+            // 1. Eliminar relaciones de distrito-líder si existen
+            const districtLeadersRef = collection(db, "district_leaders");
+            const q = query(districtLeadersRef, where("userId", "==", user.id));
+            const districtLeaderDocs = await getDocs(q);
+            
+            for (const doc of districtLeaderDocs.docs) {
+                await deleteDoc(doc.ref);
             }
+
+            // 2. Eliminar datos del líder si existen
+            await deleteDoc(doc(db, "leaders", user.id));
+
+            // 3. Eliminar el usuario de Firestore
+            await deleteDoc(doc(db, "users", user.id));
+
+            // 4. Actualizar la lista de usuarios
             await getUsers();
+
+            // Nota: La eliminación del usuario en Firebase Auth debe hacerse desde el backend
+            // ya que requiere privilegios de administrador
         } catch (error) {
             console.error("Error al eliminar usuario:", error);
-            alert("Error al eliminar usuario");
+            alert("Error al eliminar usuario. Los datos se han eliminado de la base de datos, pero es posible que necesites ayuda del administrador para eliminar la cuenta de autenticación.");
         }
     }
 };
 
+const selectedDistrict = ref('');
+const leaderRole = ref<'primary' | 'secondary'>('primary');
+const loadingDistricts = ref(false);
+
 const saveUser = async () => {
-    // Validaciones manuales
-    if (!editedItem.value.email) {
-        alert('El correo electrónico es requerido');
-        return;
-    }
-
-    if (!isEditing.value && !editedItem.value.password) {
-        alert('La contraseña es requerida');
-        return;
-    }
-
-    if (!editedItem.value.role) {
-        alert('El rol es requerido');
-        return;
-    }
-
-    saving.value = true;
     try {
-        if (isEditing.value) {
-            await updateDoc(doc(db, "users", editedItem.value.id), {
-                role: editedItem.value.role,
-                areaNumber: editedItem.value.areaNumber,
-                districtNumber: editedItem.value.districtNumber,
-                location: editedItem.value.location,
-                updatedAt: new Date()
-            });
-        } else {
-            const auth = getAuth();
-            const userCredential = await createUserWithEmailAndPassword(
-                auth,
-                editedItem.value.email,
-                editedItem.value.password
-            );
-
-            // Guardar en users collection
-            await setDoc(doc(db, "users", userCredential.user.uid), {
-                email: editedItem.value.email,
-                role: editedItem.value.role,
-                areaNumber: editedItem.value.areaNumber,
-                districtNumber: editedItem.value.districtNumber,
-                location: editedItem.value.location,
-                createdAt: new Date(),
-                updatedAt: new Date()
-            });
-
-            // Crear documento inicial en leaders collection
-            await setDoc(doc(db, "leaders", userCredential.user.uid), {
-                personalData: {
-                    createdAt: new Date(),
-                    updatedAt: new Date()
-                },
-                ministerialData: {
-                    district: editedItem.value.location,
-                    areaNumber: editedItem.value.areaNumber,
-                    districtNumber: editedItem.value.districtNumber,
-                    createdAt: new Date(),
-                    updatedAt: new Date()
-                }
-            });
+        // 1. Validar que se haya seleccionado un distrito si el rol es líder
+        if (editedItem.value.role === 'lider' && !selectedDistrict.value) {
+            alert('Debe seleccionar un distrito para un líder');
+            return;
         }
+
+        // 2. Crear usuario en Authentication
+        const auth = getAuth();
+        const userCredential = await createUserWithEmailAndPassword(
+            auth,
+            editedItem.value.email,
+            editedItem.value.password
+        );
+
+        // 3. Obtener información completa del distrito seleccionado
+        let districtData = null;
+        if (selectedDistrict.value) {
+            const districtDoc = await getDoc(doc(db, "districts", selectedDistrict.value));
+            if (districtDoc.exists()) {
+                districtData = districtDoc.data();
+            }
+        }
+
+        // 4. Guardar datos básicos del usuario
+        await setDoc(doc(db, "users", userCredential.user.uid), {
+            email: editedItem.value.email,
+            role: editedItem.value.role,
+            createdAt: Timestamp.now(),
+            updatedAt: Timestamp.now()
+        });
+
+        // 5. Crear relación distrito-líder con información completa
+        if (districtData && selectedDistrict.value) {
+            const districtLeaderRef = doc(collection(db, "district_leaders"));
+            await setDoc(districtLeaderRef, {
+                id: districtLeaderRef.id,
+                districtId: selectedDistrict.value,
+                userId: userCredential.user.uid,
+                role: leaderRole.value,
+                areaNumber: districtData.areaNumber,
+                districtNumber: districtData.districtNumber,
+                location: districtData.location,
+                startDate: Timestamp.now(),
+                isActive: true
+            } as DistrictLeader);
+        }
+
         await getUsers();
         closeDialog();
     } catch (error) {
         console.error("Error al guardar usuario:", error);
         alert("Error al guardar usuario");
-    } finally {
-        saving.value = false;
     }
 };
 
@@ -341,26 +359,40 @@ const closeDialog = () => {
         password: '',
         role: 'lider',
         areaNumber: undefined,
-        districtNumber: undefined,
-        location: undefined
+        districtNumber: undefined
     };
 };
 
 const getUsers = async () => {
     try {
-  const usersCollection = collection(db, "users");
-  const userDocs = await getDocs(usersCollection);
+        const usersCollection = collection(db, "users");
+        const userDocs = await getDocs(usersCollection);
         
         const usersData = await Promise.all(userDocs.docs.map(async (userDoc) => {
             const userData = userDoc.data();
             
+            // Obtener información del distrito del líder
+            const districtLeadersRef = collection(db, "district_leaders");
+            const q = query(districtLeadersRef, where("userId", "==", userDoc.id), where("isActive", "==", true));
+            const districtLeaderDocs = await getDocs(q);
+            
+            let districtInfo = { location: 'No asignado' };
+            if (!districtLeaderDocs.empty) {
+                const districtLeader = districtLeaderDocs.docs[0].data();
+                const districtDoc = await getDoc(doc(db, "districts", districtLeader.districtId));
+                if (districtDoc.exists()) {
+                    districtInfo = districtDoc.data() as { location: string };
+                }
+            }
+            
             return {
                 id: userDoc.id,
-                ...userData,
-                location: userData.location || 'No asignado',
+                email: userData.email,
+                role: userData.role,
+                location: districtInfo.location,
                 lastLogin: userData.lastLogin?.toDate().toLocaleString() || "N/A",
-                createdAt: userData.createdAt?.toDate() || new Date(),
-                updatedAt: userData.updatedAt?.toDate() || new Date(),
+                createdAt: userData.createdAt?.toDate(),
+                updatedAt: userData.updatedAt?.toDate()
             };
         }));
 
@@ -368,7 +400,7 @@ const getUsers = async () => {
     } catch (error) {
         console.error("Error al obtener usuarios:", error);
     } finally {
-  loading.value = false;
+        loading.value = false;
     }
 };
 
@@ -386,19 +418,30 @@ const getRoleColor = (role: string) => {
 const districts = ref<District[]>([]);
 const areaNumbers = Array.from({ length: 11 }, (_, i) => i + 1);
 const districtNumbers = Array.from({ length: 10 }, (_, i) => i + 1);
-const locations = computed(() => {
-    return districts.value
-        .filter(d => d.areaNumber === editedItem.value.areaNumber && 
-                    d.districtNumber === editedItem.value.districtNumber)
-        .map(d => d.location);
+
+const filteredDistricts = computed(() => {
+    return districts.value.filter(d => 
+        d.areaNumber === editedItem.value.areaNumber && 
+        d.districtNumber === editedItem.value.districtNumber
+    ).map(d => ({
+        id: d.id,
+        location: d.location
+    }));
 });
 
 const loadDistricts = async () => {
-    const querySnapshot = await getDocs(collection(db, "districts"));
-    districts.value = querySnapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-    } as District));
+    loadingDistricts.value = true;
+    try {
+        const querySnapshot = await getDocs(collection(db, "districts"));
+        districts.value = querySnapshot.docs.map(doc => ({
+            id: doc.id,
+            ...doc.data()
+        } as District));
+    } catch (error) {
+        console.error("Error al cargar distritos:", error);
+    } finally {
+        loadingDistricts.value = false;
+    }
 };
 
 onMounted(async () => {

@@ -145,7 +145,7 @@ const goToMinisterialData = () => {
 };
 
 const goToStatistics = () => {
-  router.push("/statistics");
+  router.push("/statistics/report-periods");
 };
 
 const goToDistrictManagement = () => {

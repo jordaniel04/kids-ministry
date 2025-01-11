@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia';
 import { auth, db } from '../firebase/config';
 import { signInWithEmailAndPassword, signOut } from 'firebase/auth';
-import { doc, getDoc, setDoc } from "firebase/firestore";
+import { doc, getDoc, setDoc, Timestamp } from "firebase/firestore";
 import type { User } from '../types/User';
 
 interface AuthState {
@@ -33,10 +33,10 @@ export const useAuthStore = defineStore('auth', {
           this.user = {
             id: userCredential.user.uid,
             email: userData.email,
-            lastLogin: new Date(),
+            lastLogin: Timestamp.now(),
             role: userData.role,
-            createdAt: userData.createdAt.toDate(),
-            updatedAt: new Date(),
+            createdAt: userData.createdAt,
+            updatedAt: Timestamp.now()
           };
         } else {
           console.error("No se encontró el documento del usuario en Firestore");
@@ -44,7 +44,7 @@ export const useAuthStore = defineStore('auth', {
 
         // Actualiza el documento del usuario
         await setDoc(userRef, {
-          lastLogin: new Date(),
+          lastLogin: Timestamp.now(),
         }, { merge: true });
 
         return this.user;

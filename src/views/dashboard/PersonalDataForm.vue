@@ -35,7 +35,6 @@
                             v-model="ministerialData.leadershipTime" 
                             required
                         ></VTextField>
-                        <!-- <VTextField label="Otros Cargos" v-model="ministerialData.otherPositions"></VTextField> -->
                         <VSelect :items="['Sí', 'No']" label="Bautizado con el Espíritu Santo"
                             v-model="ministerialData.baptized" required></VSelect>
                         <VRow>
@@ -71,7 +70,7 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from "vue";
-import { doc, setDoc, collection, getDocs, Timestamp, getDoc } from "firebase/firestore";
+import { doc, setDoc, collection, getDocs, Timestamp, getDoc, query, where } from "firebase/firestore";
 import { db } from "../../firebase/config";
 import { useAuthStore } from "../../stores/auth";
 import { useRouter } from 'vue-router';
@@ -138,16 +137,40 @@ const userData = ref<any>(null);
 
 const loadUserData = async () => {
     try {
-        // Primero cargar datos del usuario de la colección users
+        // 1. Cargar datos básicos del usuario
         const userDoc = await getDoc(doc(db, "users", authStore.user!.id));
         if (userDoc.exists()) {
-            userData.value = userDoc.data();
+            const basicUserData = userDoc.data();
+            
+            // 2. Cargar datos del district_leaders para obtener el districtId
+            const districtLeadersRef = collection(db, "district_leaders");
+            const q = query(
+                districtLeadersRef, 
+                where("userId", "==", authStore.user!.id),
+                where("isActive", "==", true)
+            );
+            const districtLeaderDocs = await getDocs(q);
+            
+            if (!districtLeaderDocs.empty) {
+                const districtLeader = districtLeaderDocs.docs[0].data();
+                
+                // 3. Cargar datos del distrito
+                const districtDoc = await getDoc(doc(db, "districts", districtLeader.districtId));
+                if (districtDoc.exists()) {
+                    const districtData = districtDoc.data();
+                    userData.value = {
+                        ...basicUserData,
+                        areaNumber: districtData.areaNumber,
+                        districtNumber: districtData.districtNumber,
+                        location: districtData.location
+                    };
+                }
+            }
         }
 
-        // Luego cargar datos de leader
+        // 4. Cargar datos personales y ministeriales del líder
         const leaderData = await authStore.getUserData();
         if (leaderData) {
-            // Cargar datos personales
             if (leaderData.personalData) {
                 personalData.value = {
                     firstName: leaderData.personalData.firstName || "",
@@ -158,17 +181,14 @@ const loadUserData = async () => {
                 };
             }
 
-            // Cargar datos ministeriales
             if (leaderData.ministerialData) {
                 ministerialData.value = {
                     leadershipTime: leaderData.ministerialData.leadershipTime || "",
-                    // otherPositions: leaderData.ministerialData.otherPositions || "",
                     baptized: leaderData.ministerialData.baptized || "",
                     courses: leaderData.ministerialData.courses || [],
                 };
             }
 
-            // Guarda el estado inicial
             initialData.value = {
                 personal: { ...personalData.value },
                 ministerial: { ...ministerialData.value }

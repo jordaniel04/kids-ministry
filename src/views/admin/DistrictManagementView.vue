@@ -93,7 +93,9 @@ const editedItem = ref<District>({
     id: '',
     areaNumber: 1,
     districtNumber: 1,
-    location: ''
+    location: '',
+    createdAt: Timestamp.now(),
+    updatedAt: Timestamp.now()
 });
 
 const loadDistricts = async () => {
@@ -169,7 +171,9 @@ const closeDialog = () => {
         id: '',
         areaNumber: 1,
         districtNumber: 1,
-        location: ''
+        location: '',
+        createdAt: Timestamp.now(),
+        updatedAt: Timestamp.now()
     };
 };
 

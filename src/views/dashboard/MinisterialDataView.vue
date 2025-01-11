@@ -1,17 +1,17 @@
 <template>
     <div>
         <NavigationBar />
-        <VContainer>
+    <VContainer>
             <h1>Datos de Iglesias del Distrito: 
                 <span class="district-name">{{ districtName }}</span>
             </h1>
-            
-            <!-- Vista Desktop -->
-            <VCard class="mb-4 d-none d-md-block">
-                <VCardText>
-                    <VTable fixed-header height="300px">
-                        <thead>
-                            <tr>
+
+        <!-- Vista Desktop -->
+        <VCard class="mb-4 d-none d-md-block">
+            <VCardText>
+                <VTable fixed-header height="300px">
+                    <thead>
+                        <tr>
                                 <th scope="col" class="text-left">Nombre de la Iglesia</th>
                                 <th scope="col" class="text-left">Nombre del Líder</th>
                                 <th scope="col" class="text-center">Total Maestras</th>
@@ -25,9 +25,9 @@
                                 <th scope="col" class="text-center">Graduados Discipulado</th>
                                 <th scope="col" class="text-center">Conexión 9.11</th>
                                 <th scope="col" class="text-center">Acciones</th>
-                            </tr>
-                        </thead>
-                        <tbody>
+                        </tr>
+                    </thead>
+                    <tbody>
                             <tr v-for="(church, index) in churches" :key="church.name">
                                 <td>{{ church.name }}</td>
                                 <td>{{ church.leaderName }}</td>
@@ -41,11 +41,11 @@
                                 <td class="text-center">{{ church.rescueClubChildren }}</td>
                                 <td class="text-center">{{ church.discipleshipGraduates }}</td>
                                 <td class="text-center">{{ church.connection911Children }}</td>
-                                <td class="text-center">
+                            <td class="text-center">
                                     <VIcon
                                         color="primary"
-                                        icon="mdi-pencil"
-                                        size="small"
+                                    icon="mdi-pencil"
+                                    size="small"
                                         class="me-2 cursor-pointer"
                                         @click="editItem(church, index)"
                                     >
@@ -54,21 +54,21 @@
                                     <VIcon
                                         color="error"
                                         icon="mdi-delete"
-                                        size="small"
+                                    size="small"
                                         class="cursor-pointer"
                                         @click="deleteItem(church, index)"
                                     >
                                         <VTooltip activator="parent" location="top">Eliminar</VTooltip>
                                     </VIcon>
-                                </td>
-                            </tr>
-                        </tbody>
-                    </VTable>
-                </VCardText>
-            </VCard>
+                            </td>
+                        </tr>
+                    </tbody>
+                </VTable>
+            </VCardText>
+        </VCard>
 
             <!-- Vista Móvil -->
-            <div class="d-md-none">
+        <div class="d-md-none">
                 <!-- Tarjeta de Resumen de Totales para Móvil -->
                 <VCard class="mb-4">
                     <VCardTitle>Resumen de Totales</VCardTitle>
@@ -182,13 +182,13 @@
                                         <div class="text-caption">Total Maestras</div>
                                         <div class="text-h6">{{ church.totalTeachers }}</div>
                                     </div>
-                                    <div>
+                    <div>
                                         <div class="text-caption">Total Niños</div>
                                         <div class="text-h6">{{ church.totalChildren }}</div>
                                     </div>
                                 </div>
                                 
-                                <VBtn
+                        <VBtn
                                     block
                                     variant="text"
                                     @click="toggleDetails(church.name)"
@@ -243,22 +243,22 @@
                                 <VSpacer />
                                 <VIcon
                                     color="primary"
-                                    icon="mdi-pencil"
-                                    size="small"
+                            icon="mdi-pencil"
+                            size="small"
                                     class="me-2"
                                     @click="editItem(church, churches.indexOf(church))"
                                 />
                                 <VIcon
                                     color="error"
                                     icon="mdi-delete"
-                                    size="small"
+                            size="small"
                                     @click="deleteItem(church, churches.indexOf(church))"
                                 />
                             </VCardActions>
                         </VCard>
                     </VCol>
                 </VRow>
-            </div>
+                    </div>
 
             <!-- Tarjeta de Resumen de Totales para Desktop -->
             <VCard class="mt-4 d-none d-md-block">
@@ -367,16 +367,17 @@
                 @save="saveChurch"
                 @close="closeDialog"
             />
-        </VContainer>
+    </VContainer>
     </div>
 </template>
 
 <script setup lang="ts">
 import { ref, computed, onMounted, defineAsyncComponent } from 'vue';
 import { useAuthStore } from '../../stores/auth';
-import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { doc, getDoc, setDoc, collection, query, where, getDocs, orderBy, limit } from 'firebase/firestore';
 import { db } from '../../firebase/config';
 import NavigationBar from '../../components/NavigationBar.vue';
+import type { ReportPeriod, MinisterialReport } from '../../types/MinisterialReport';
 const ChurchFormDialog = defineAsyncComponent(() => import('../../components/ChurchFormDialog.vue'));
 
 interface Church {
@@ -397,6 +398,7 @@ interface Church {
 
 const authStore = useAuthStore();
 const districtName = ref('');
+const userData = ref<any>(null);
 const churches = ref<Church[]>([]);
 const showDetailsFor = ref<string | null>(null);
 
@@ -419,24 +421,70 @@ const totals = computed(() => {
     };
 });
 
+const activePeriod = ref<ReportPeriod | null>(null);
+const currentReport = ref<MinisterialReport | null>(null);
+
+const loadActivePeriod = async () => {
+    const periodsRef = collection(db, "report_periods");
+    const q = query(periodsRef, where("isActive", "==", true));
+    const snapshot = await getDocs(q);
+    
+    if (!snapshot.empty) {
+        activePeriod.value = {
+            id: snapshot.docs[0].id,
+            ...snapshot.docs[0].data()
+        } as ReportPeriod;
+    }
+};
+
 const loadData = async () => {
     if (!authStore.user?.id) return;
 
     try {
-        // Primero cargar datos del usuario para obtener su distrito
-        const userDoc = await getDoc(doc(db, "users", authStore.user.id));
-        if (!userDoc.exists()) return;
+        // 1. Cargar datos del district_leaders para obtener el districtId
+        const districtLeadersRef = collection(db, "district_leaders");
+        const q = query(
+            districtLeadersRef, 
+            where("userId", "==", authStore.user.id),
+            where("isActive", "==", true)
+        );
+        const districtLeaderDocs = await getDocs(q);
         
-        const userData = userDoc.data();
-        districtName.value = userData.location || 'No especificado';
+        if (!districtLeaderDocs.empty) {
+            const districtLeader = districtLeaderDocs.docs[0].data();
+            
+            // 2. Cargar datos del distrito
+            const districtDoc = await getDoc(doc(db, "districts", districtLeader.districtId));
+            if (districtDoc.exists()) {
+                const districtData = districtDoc.data();
+                userData.value = {
+                    areaNumber: districtData.areaNumber,
+                    districtNumber: districtData.districtNumber,
+                    location: districtData.location
+                };
+                districtName.value = `Área ${districtData.areaNumber} - Distrito ${districtData.districtNumber} - ${districtData.location}`;
+            }
+        }
 
-        // Luego cargar datos ministeriales
-        const leaderRef = doc(db, "leaders", authStore.user.id);
-        const leaderDoc = await getDoc(leaderRef);
+        await loadActivePeriod();
         
-        if (leaderDoc.exists()) {
-            const data = leaderDoc.data();
-            churches.value = data.churches || [];
+        // Continuar con el resto de la carga de datos...
+        if (activePeriod.value) {
+            const reportsRef = collection(db, "ministerial_reports");
+            const reportQuery = query(
+                reportsRef, 
+                where("userId", "==", authStore.user.id),
+                where("reportPeriod", "==", activePeriod.value.id)
+            );
+            const snapshot = await getDocs(reportQuery);
+            
+            if (!snapshot.empty) {
+                currentReport.value = {
+                    id: snapshot.docs[0].id,
+                    ...snapshot.docs[0].data()
+                } as MinisterialReport;
+                churches.value = currentReport.value.churches;
+            }
         }
     } catch (error) {
         console.error("Error al cargar los datos:", error);
@@ -527,7 +575,6 @@ onMounted(() => {
     loadData();
 });
 </script>
-
 <style scoped>
 .totals-card {
     position: sticky;

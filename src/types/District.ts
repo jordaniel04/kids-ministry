@@ -5,8 +5,6 @@ export interface District {
     areaNumber: number;
     districtNumber: number;
     location: string;
-    createdAt?: Timestamp;
-    updatedAt?: Timestamp;
-    createdBy?: string;
-    updatedBy?: string;
+    createdAt: Timestamp;
+    updatedAt: Timestamp;
 } 

@@ -38,12 +38,12 @@ const routes: Array<RouteRecordRaw> = [
     component: () => import('../views/admin/DistrictManagementView.vue'),
     meta: { requiresAuth: true, requiresAdmin: true }
   },
-  // {
-  //   path: '/statistics',
-  //   name: 'Statistics',
-  //   component: () => import('../views/dashboard/StatisticsView.vue'),
-  //   meta: { requiresAuth: true }
-  // }
+  {
+    path: '/statistics/report-periods',
+    name: 'ReportPeriods',
+    component: () => import('../views/admin/ReportPeriodsView.vue'),
+    meta: { requiresAuth: true, requiresAdmin: true }
+  }
 ];
 
 const router = createRouter({
