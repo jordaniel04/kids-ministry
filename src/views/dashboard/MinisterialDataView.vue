@@ -31,16 +31,16 @@
                             <tr v-for="(church, index) in churches" :key="church.name">
                                 <td>{{ church.name }}</td>
                                 <td>{{ church.leaderName }}</td>
-                                <td class="text-center">{{ church.totalTeachers }}</td>
-                                <td class="text-center">{{ church.totalChildren }}</td>
-                                <td class="text-center">{{ church.convertedChildren }}</td>
-                                <td class="text-center">{{ church.memberChildren }}</td>
-                                <td class="text-center">{{ church.baptizedChildren }}</td>
-                                <td class="text-center">{{ church.consolidatedGraduates }}</td>
-                                <td class="text-center">{{ church.sacramentsGraduates }}</td>
-                                <td class="text-center">{{ church.rescueClubChildren }}</td>
-                                <td class="text-center">{{ church.discipleshipGraduates }}</td>
-                                <td class="text-center">{{ church.connection911Children }}</td>
+                                <td class="text-center">{{ getLatestMinisterialData(church).totalTeachers }}</td>
+                                <td class="text-center">{{ getLatestMinisterialData(church).totalChildren }}</td>
+                                <td class="text-center">{{ getLatestMinisterialData(church).convertedChildren }}</td>
+                                <td class="text-center">{{ getLatestMinisterialData(church).memberChildren }}</td>
+                                <td class="text-center">{{ getLatestMinisterialData(church).baptizedChildren }}</td>
+                                <td class="text-center">{{ getLatestMinisterialData(church).consolidatedGraduates }}</td>
+                                <td class="text-center">{{ getLatestMinisterialData(church).sacramentsGraduates }}</td>
+                                <td class="text-center">{{ getLatestMinisterialData(church).rescueClubChildren }}</td>
+                                <td class="text-center">{{ getLatestMinisterialData(church).discipleshipGraduates }}</td>
+                                <td class="text-center">{{ getLatestMinisterialData(church).connection911Children }}</td>
                             <td class="text-center">
                                     <VIcon
                                         color="primary"
@@ -59,6 +59,15 @@
                                         @click="deleteItem(church, index)"
                                     >
                                         <VTooltip activator="parent" location="top">Eliminar</VTooltip>
+                                    </VIcon>
+                                    <VIcon
+                                        color="info"
+                                        icon="mdi-history"
+                                        size="small"
+                                        class="me-2 cursor-pointer"
+                                        @click="viewHistory(church)"
+                                    >
+                                        <VTooltip activator="parent" location="top">Ver Historial</VTooltip>
                                     </VIcon>
                             </td>
                         </tr>
@@ -180,11 +189,11 @@
                                 <div class="d-flex justify-space-between align-center mb-2">
                                     <div>
                                         <div class="text-caption">Total Maestras</div>
-                                        <div class="text-h6">{{ church.totalTeachers }}</div>
+                                        <div class="text-h6">{{ getLatestMinisterialData(church).totalTeachers }}</div>
                                     </div>
                     <div>
                                         <div class="text-caption">Total Niños</div>
-                                        <div class="text-h6">{{ church.totalChildren }}</div>
+                                        <div class="text-h6">{{ getLatestMinisterialData(church).totalChildren }}</div>
                                     </div>
                                 </div>
                                 
@@ -204,35 +213,35 @@
                                         <div class="mt-2">
                                             <div class="d-flex justify-space-between mb-2">
                                                 <div class="text-caption">Niños Convertidos</div>
-                                                <div>{{ church.convertedChildren }}</div>
+                                                <div>{{ getLatestMinisterialData(church).convertedChildren }}</div>
                                             </div>
                                             <div class="d-flex justify-space-between mb-2">
                                                 <div class="text-caption">Niños Miembros</div>
-                                                <div>{{ church.memberChildren }}</div>
+                                                <div>{{ getLatestMinisterialData(church).memberChildren }}</div>
                                             </div>
                                             <div class="d-flex justify-space-between mb-2">
                                                 <div class="text-caption">Bautizados E.S.</div>
-                                                <div>{{ church.baptizedChildren }}</div>
+                                                <div>{{ getLatestMinisterialData(church).baptizedChildren }}</div>
                                             </div>
                                             <div class="d-flex justify-space-between mb-2">
                                                 <div class="text-caption">Graduados Consolidado</div>
-                                                <div>{{ church.consolidatedGraduates }}</div>
+                                                <div>{{ getLatestMinisterialData(church).consolidatedGraduates }}</div>
                                             </div>
                                             <div class="d-flex justify-space-between mb-2">
                                                 <div class="text-caption">Graduados Sacramentos</div>
-                                                <div>{{ church.sacramentsGraduates }}</div>
+                                                <div>{{ getLatestMinisterialData(church).sacramentsGraduates }}</div>
                                             </div>
                                             <div class="d-flex justify-space-between mb-2">
                                                 <div class="text-caption">Club Al Rescate</div>
-                                                <div>{{ church.rescueClubChildren }}</div>
+                                                <div>{{ getLatestMinisterialData(church).rescueClubChildren }}</div>
                                             </div>
                                             <div class="d-flex justify-space-between mb-2">
                                                 <div class="text-caption">Graduados Discipulado</div>
-                                                <div>{{ church.discipleshipGraduates }}</div>
+                                                <div>{{ getLatestMinisterialData(church).discipleshipGraduates }}</div>
                                             </div>
                                             <div class="d-flex justify-space-between mb-2">
                                                 <div class="text-caption">Conexión 9.11</div>
-                                                <div>{{ church.connection911Children }}</div>
+                                                <div>{{ getLatestMinisterialData(church).connection911Children }}</div>
                                             </div>
                                         </div>
                                     </div>
@@ -253,6 +262,13 @@
                                     icon="mdi-delete"
                             size="small"
                                     @click="deleteItem(church, churches.indexOf(church))"
+                                />
+                                <VIcon
+                                    color="info"
+                                    icon="mdi-history"
+                                    size="small"
+                                    class="me-2"
+                                    @click="viewHistory(church)"
                                 />
                             </VCardActions>
                         </VCard>
@@ -367,6 +383,11 @@
                 @save="saveChurch"
                 @close="closeDialog"
             />
+
+            <ChurchHistoryDialog
+                v-model="showHistory"
+                :church="selectedChurch"
+            />
     </VContainer>
     </div>
 </template>
@@ -374,51 +395,78 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, defineAsyncComponent } from 'vue';
 import { useAuthStore } from '../../stores/auth';
-import { doc, getDoc, setDoc, collection, query, where, getDocs, orderBy, limit } from 'firebase/firestore';
+import { doc, getDoc, setDoc, collection, query, where, getDocs, orderBy, limit, Timestamp, updateDoc, addDoc } from 'firebase/firestore';
 import { db } from '../../firebase/config';
 import NavigationBar from '../../components/NavigationBar.vue';
 import type { ReportPeriod, MinisterialReport } from '../../types/MinisterialReport';
+import type { Church } from '../../types/Church';
+import type { MinisterialData } from '../../types/MinisterialData';
 const ChurchFormDialog = defineAsyncComponent(() => import('../../components/ChurchFormDialog.vue'));
-
-interface Church {
-    name: string;
-    leaderName: string;
-    totalTeachers: number;
-    totalChildren: number;
-    convertedChildren: number;
-    memberChildren: number;
-    nonRepentantChildren: number;
-    baptizedChildren: number;
-    consolidatedGraduates: number;
-    sacramentsGraduates: number;
-    rescueClubChildren: number;
-    discipleshipGraduates: number;
-    connection911Children: number;
-}
+const ChurchHistoryDialog = defineAsyncComponent(() => import('../../components/ChurchHistoryDialog.vue'));
 
 const authStore = useAuthStore();
 const districtName = ref('');
-const userData = ref<any>(null);
+const userData = ref<MinisterialData | null>(null);
 const churches = ref<Church[]>([]);
 const showDetailsFor = ref<string | null>(null);
+const summary = ref<any>(null);
 
 const toggleDetails = (churchName: string) => {
     showDetailsFor.value = showDetailsFor.value === churchName ? null : churchName;
 };
 
+const getLatestMinisterialData = (church: Church) => {
+    if (!church.ministerialData || church.ministerialData.length === 0) {
+        return {
+            totalTeachers: 0,
+            totalChildren: 0,
+            convertedChildren: 0,
+            memberChildren: 0,
+            nonRepentantChildren: 0,
+            baptizedChildren: 0,
+            consolidatedGraduates: 0,
+            sacramentsGraduates: 0,
+            rescueClubChildren: 0,
+            discipleshipGraduates: 0,
+            connection911Children: 0,
+            updatedAt: Timestamp.now(),
+            reportPeriodId: undefined
+        };
+    }
+    
+    // Ordenar por fecha y obtener el más reciente
+    return church.ministerialData.sort((a, b) => 
+        b.updatedAt.seconds - a.updatedAt.seconds
+    )[0];
+};
+
 const totals = computed(() => {
-    return {
-        totalTeachers: churches.value.reduce((sum, church) => sum + Number(church.totalTeachers || 0), 0),
-        totalChildren: churches.value.reduce((sum, church) => sum + Number(church.totalChildren || 0), 0),
-        convertedChildren: churches.value.reduce((sum, church) => sum + Number(church.convertedChildren || 0), 0),
-        memberChildren: churches.value.reduce((sum, church) => sum + Number(church.memberChildren || 0), 0),
-        baptizedChildren: churches.value.reduce((sum, church) => sum + Number(church.baptizedChildren || 0), 0),
-        consolidatedGraduates: churches.value.reduce((sum, church) => sum + Number(church.consolidatedGraduates || 0), 0),
-        sacramentsGraduates: churches.value.reduce((sum, church) => sum + Number(church.sacramentsGraduates || 0), 0),
-        rescueClubChildren: churches.value.reduce((sum, church) => sum + Number(church.rescueClubChildren || 0), 0),
-        discipleshipGraduates: churches.value.reduce((sum, church) => sum + Number(church.discipleshipGraduates || 0), 0),
-        connection911Children: churches.value.reduce((sum, church) => sum + Number(church.connection911Children || 0), 0)
-    };
+    return churches.value.reduce((sum, church) => {
+        const data = getLatestMinisterialData(church);
+        return {
+            totalTeachers: sum.totalTeachers + Number(data.totalTeachers || 0),
+            totalChildren: sum.totalChildren + Number(data.totalChildren || 0),
+            convertedChildren: sum.convertedChildren + Number(data.convertedChildren || 0),
+            memberChildren: sum.memberChildren + Number(data.memberChildren || 0),
+            baptizedChildren: sum.baptizedChildren + Number(data.baptizedChildren || 0),
+            consolidatedGraduates: sum.consolidatedGraduates + Number(data.consolidatedGraduates || 0),
+            sacramentsGraduates: sum.sacramentsGraduates + Number(data.sacramentsGraduates || 0),
+            rescueClubChildren: sum.rescueClubChildren + Number(data.rescueClubChildren || 0),
+            discipleshipGraduates: sum.discipleshipGraduates + Number(data.discipleshipGraduates || 0),
+            connection911Children: sum.connection911Children + Number(data.connection911Children || 0)
+        };
+    }, {
+        totalTeachers: 0,
+        totalChildren: 0,
+        convertedChildren: 0,
+        memberChildren: 0,
+        baptizedChildren: 0,
+        consolidatedGraduates: 0,
+        sacramentsGraduates: 0,
+        rescueClubChildren: 0,
+        discipleshipGraduates: 0,
+        connection911Children: 0
+    });
 });
 
 const activePeriod = ref<ReportPeriod | null>(null);
@@ -438,75 +486,81 @@ const loadActivePeriod = async () => {
 };
 
 const loadData = async () => {
-    if (!authStore.user?.id) return;
-
     try {
-        // 1. Cargar datos del district_leaders para obtener el districtId
+        // 1. Cargar el período activo
+        const periodsRef = collection(db, "report_periods");
+        const periodQuery = query(periodsRef, where("isActive", "==", true));
+        const periodSnapshot = await getDocs(periodQuery);
+        
+        if (!periodSnapshot.empty) {
+            activePeriod.value = {
+                id: periodSnapshot.docs[0].id,
+                ...periodSnapshot.docs[0].data()
+            } as ReportPeriod;
+        }
+
+        // 2. Cargar distrito del líder actual
         const districtLeadersRef = collection(db, "district_leaders");
-        const q = query(
+        const dlQuery = query(
             districtLeadersRef, 
-            where("userId", "==", authStore.user.id),
+            where("userId", "==", authStore.user?.id),
             where("isActive", "==", true)
         );
-        const districtLeaderDocs = await getDocs(q);
+        const districtLeaderDocs = await getDocs(dlQuery);
         
         if (!districtLeaderDocs.empty) {
             const districtLeader = districtLeaderDocs.docs[0].data();
             
-            // 2. Cargar datos del distrito
+            // Obtener los datos del distrito
             const districtDoc = await getDoc(doc(db, "districts", districtLeader.districtId));
             if (districtDoc.exists()) {
                 const districtData = districtDoc.data();
-                userData.value = {
-                    areaNumber: districtData.areaNumber,
-                    districtNumber: districtData.districtNumber,
-                    location: districtData.location
-                };
-                districtName.value = `Área ${districtData.areaNumber} - Distrito ${districtData.districtNumber} - ${districtData.location}`;
+                districtName.value = districtData.location; // Aquí establecemos el nombre del distrito
             }
-        }
 
-        await loadActivePeriod();
-        
-        // Continuar con el resto de la carga de datos...
-        if (activePeriod.value) {
-            const reportsRef = collection(db, "ministerial_reports");
-            const reportQuery = query(
-                reportsRef, 
-                where("userId", "==", authStore.user.id),
-                where("reportPeriod", "==", activePeriod.value.id)
+            // 3. Cargar las iglesias del distrito
+            const churchesRef = collection(db, "churches");
+            const churchesQuery = query(
+                churchesRef,
+                where("districtId", "==", districtLeader.districtId),
+                where("isActive", "==", true)
             );
-            const snapshot = await getDocs(reportQuery);
             
-            if (!snapshot.empty) {
-                currentReport.value = {
-                    id: snapshot.docs[0].id,
-                    ...snapshot.docs[0].data()
-                } as MinisterialReport;
-                churches.value = currentReport.value.churches;
-            }
+            const churchesSnapshot = await getDocs(churchesQuery);
+            churches.value = churchesSnapshot.docs.map(doc => {
+                const data = doc.data();
+                return {
+                    id: doc.id,
+                    name: data.name,
+                    leaderName: data.leaderName,
+                    districtId: data.districtId,
+                    createdAt: data.createdAt,
+                    updatedAt: data.updatedAt,
+                    createdBy: data.createdBy,
+                    updatedBy: data.updatedBy,
+                    isActive: data.isActive,
+                    ministerialData: data.ministerialData || []
+                } as Church;
+            });
         }
     } catch (error) {
-        console.error("Error al cargar los datos:", error);
+        console.error("Error al cargar datos:", error);
     }
 };
 
 const dialog = ref(false);
 const editedIndex = ref(-1);
-const editedItem = ref({
+const editedItem = ref<Church>({
+    id: '',
     name: '',
     leaderName: '',
-    totalTeachers: 0,
-    totalChildren: 0,
-    convertedChildren: 0,
-    memberChildren: 0,
-    nonRepentantChildren: 0,
-    baptizedChildren: 0,
-    consolidatedGraduates: 0,
-    sacramentsGraduates: 0,
-    rescueClubChildren: 0,
-    discipleshipGraduates: 0,
-    connection911Children: 0
+    districtId: '',
+    createdAt: Timestamp.now(),
+    updatedAt: Timestamp.now(),
+    createdBy: '',
+    updatedBy: '',
+    isActive: true,
+    ministerialData: []
 });
 
 const formTitle = computed(() => {
@@ -517,50 +571,115 @@ const closeDialog = () => {
     dialog.value = false;
     editedIndex.value = -1;
     editedItem.value = {
+        id: '',
         name: '',
         leaderName: '',
-        totalTeachers: 0,
-        totalChildren: 0,
-        convertedChildren: 0,
-        memberChildren: 0,
-        nonRepentantChildren: 0,
-        baptizedChildren: 0,
-        consolidatedGraduates: 0,
-        sacramentsGraduates: 0,
-        rescueClubChildren: 0,
-        discipleshipGraduates: 0,
-        connection911Children: 0
+        districtId: '',
+        createdAt: Timestamp.now(),
+        updatedAt: Timestamp.now(),
+        createdBy: '',
+        updatedBy: '',
+        isActive: true,
+        ministerialData: []
     };
 };
 
-const saveChurch = async (formData: any) => {
+const saveChurch = async (churchData: any) => {
     try {
-        if (editedIndex.value > -1) {
-            churches.value[editedIndex.value] = { ...formData };
-        } else {
-            churches.value.push({ ...formData });
+        // 1. Obtener el distrito activo del líder
+        const districtLeadersRef = collection(db, "district_leaders");
+        const q = query(
+            districtLeadersRef, 
+            where("userId", "==", authStore.user?.id),
+            where("isActive", "==", true)
+        );
+        const districtLeaderDocs = await getDocs(q);
+        
+        if (districtLeaderDocs.empty) {
+            throw new Error("No se encontró un distrito activo para el líder");
         }
-        await saveToFirestore();
-        closeDialog();
-    } catch (error) {
-        console.error('Error al guardar:', error);
-    }
-};
 
-const saveToFirestore = async () => {
-    if (!authStore.user?.id) return;
+        const districtLeader = districtLeaderDocs.docs[0].data();
+        const now = Timestamp.now();
 
-    try {
-        const leaderRef = doc(db, "leaders", authStore.user.id);
-        await setDoc(leaderRef, { churches: churches.value }, { merge: true });
+        // 2. Preparar datos de la iglesia
+        const church: Partial<Church> = {
+            name: churchData.name,
+            leaderName: churchData.leaderName,
+            districtId: districtLeader.districtId,
+            isActive: true,
+            ministerialData: [{
+                ...churchData.ministerialData,
+                updatedAt: now,
+                reportPeriodId: activePeriod.value?.id || null
+            }]
+        };
+
+        // 3. Guardar en Firestore
+        const churchesRef = collection(db, "churches");
+        if (editedIndex.value > -1 && editedItem.value.id) {
+            // Actualizar iglesia existente
+            const existingChurch = await getDoc(doc(db, "churches", editedItem.value.id));
+            if (existingChurch.exists()) {
+                const existingData = existingChurch.data();
+                await updateDoc(doc(db, "churches", editedItem.value.id), {
+                    name: church.name,
+                    leaderName: church.leaderName,
+                    ministerialData: [...(existingData.ministerialData || []), church.ministerialData![0]],
+                    updatedAt: now,
+                    updatedBy: authStore.user?.id
+                });
+            }
+        } else {
+            // Crear nueva iglesia
+            await addDoc(churchesRef, {
+                ...church,
+                createdAt: now,
+                updatedAt: now,
+                createdBy: authStore.user?.id,
+                updatedBy: authStore.user?.id
+            });
+        }
+
+        // 4. Recargar datos y cerrar diálogo
+        await loadData();
+        dialog.value = false;
+
     } catch (error) {
-        console.error("Error al guardar:", error);
+        console.error("Error al guardar iglesia:", error);
+        alert("Error al guardar la iglesia: " + (error as Error).message);
     }
 };
 
 const editItem = (church: Church, index: number) => {
     editedIndex.value = index;
-    editedItem.value = { ...church };
+    const ministerialData = getLatestMinisterialData(church);
+    editedItem.value = { 
+        id: church.id,
+        name: church.name,
+        leaderName: church.leaderName,
+        districtId: church.districtId,
+        createdAt: church.createdAt,
+        updatedAt: Timestamp.now(),
+        createdBy: church.createdBy,
+        updatedBy: authStore.user?.id || '',
+        isActive: true,
+        ministerialData: [{
+            totalTeachers: ministerialData.totalTeachers,
+            totalChildren: ministerialData.totalChildren,
+            convertedChildren: ministerialData.convertedChildren,
+            memberChildren: ministerialData.memberChildren,
+            nonRepentantChildren: ministerialData.nonRepentantChildren,
+            baptizedChildren: ministerialData.baptizedChildren,
+            consolidatedGraduates: ministerialData.consolidatedGraduates,
+            sacramentsGraduates: ministerialData.sacramentsGraduates,
+            rescueClubChildren: ministerialData.rescueClubChildren,
+            discipleshipGraduates: ministerialData.discipleshipGraduates,
+            connection911Children: ministerialData.connection911Children,
+            updatedAt: Timestamp.now(),
+            reportPeriodId: ministerialData.reportPeriodId
+        }]
+    };
     dialog.value = true;
 };
 
@@ -571,8 +690,32 @@ const deleteItem = async (church: Church, index: number) => {
     }
 };
 
-onMounted(() => {
-    loadData();
+const saveToFirestore = async () => {
+    if (!authStore.user?.id || !currentReport.value?.id) return;
+
+    try {
+        const reportRef = doc(db, "ministerial_reports", currentReport.value.id);
+        await updateDoc(reportRef, {
+            churches: churches.value,
+            updatedAt: Timestamp.now()
+        });
+    } catch (error) {
+        console.error("Error al guardar:", error);
+        alert("Error al guardar los cambios");
+    }
+};
+
+const showHistory = ref(false);
+const selectedChurch = ref<Church | undefined>();
+
+const viewHistory = (church: Church) => {
+    selectedChurch.value = church;
+    showHistory.value = true;
+};
+
+onMounted(async () => {
+    await loadActivePeriod();
+    await loadData();
 });
 </script>
 <style scoped>

@@ -120,7 +120,6 @@ const completionPercentage = computed(() => {
 
     // Validación más estricta para campos ministeriales
     if (ministerialData.value.leadershipTime?.trim()) filledFields++;
-    // if (ministerialData.value.otherPositions?.trim()) filledFields++;
     if (ministerialData.value.baptized?.trim()) filledFields++;
     if (ministerialData.value.courses?.length > 0) filledFields++;
 

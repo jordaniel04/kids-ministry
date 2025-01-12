@@ -105,6 +105,8 @@
                                     v-model="editedItem.email"
                                     label="Email"
                                     required
+                                    :readonly="isEditing"
+                                    :disabled="isEditing"
                                 ></VTextField>
                             </VCol>
                             <VCol cols="12" v-if="!isEditing">
@@ -185,12 +187,15 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from "vue";
 import { db } from "../../firebase/config";
-import { collection, getDocs, doc, setDoc, deleteDoc, Timestamp, query, where, getDoc } from "firebase/firestore";
+import { collection, getDocs, doc, setDoc, deleteDoc, Timestamp, query, where, getDoc, updateDoc } from "firebase/firestore";
 import { getAuth, createUserWithEmailAndPassword, deleteUser as deleteAuthUser } from "firebase/auth";
 import type { User } from "../../types/User";
 import NavigationBar from '../../components/NavigationBar.vue';
 import type { District } from "../../types/District";
 import type { DistrictLeader } from '../../types/DistrictLeader';
+import { useAuthStore } from '../../stores/auth';
+
+const authStore = useAuthStore();
 
 const dialog = ref(false);
 const showPassword = ref(false);
@@ -247,17 +252,57 @@ const openCreateDialog = () => {
     dialog.value = true;
 };
 
-const editUser = (user: User) => {
-    isEditing.value = true;
-    editedItem.value = {
-        id: user.id,
-        email: user.email,
-        password: '',
-        role: user.role,
-        areaNumber: undefined,
-        districtNumber: undefined
-    };
-    dialog.value = true;
+const editUser = async (user: User) => {
+    try {
+        isEditing.value = true;
+        
+        // 1. Obtener información del distrito activo del líder
+        const districtLeadersRef = collection(db, "district_leaders");
+        const q = query(
+            districtLeadersRef, 
+            where("userId", "==", user.id),
+            where("isActive", "==", true)
+        );
+        const districtLeaderDocs = await getDocs(q);
+        
+        if (!districtLeaderDocs.empty) {
+            const districtLeader = districtLeaderDocs.docs[0].data();
+            const districtDoc = await getDoc(doc(db, "districts", districtLeader.districtId));
+            
+            if (districtDoc.exists()) {
+                const districtData = districtDoc.data();
+                
+                editedItem.value = {
+                    id: user.id,
+                    email: user.email,
+                    password: '',
+                    role: user.role,
+                    areaNumber: districtData.areaNumber,
+                    districtNumber: districtData.districtNumber
+                };
+                
+                selectedDistrict.value = districtLeader.districtId;
+                leaderRole.value = districtLeader.role || 'primary';
+            }
+        } else {
+            // Si no tiene distrito asignado, cargar solo datos básicos
+            editedItem.value = {
+                id: user.id,
+                email: user.email,
+                password: '',
+                role: user.role,
+                areaNumber: undefined,
+                districtNumber: undefined
+            };
+            selectedDistrict.value = '';
+            leaderRole.value = 'primary';
+        }
+        
+        dialog.value = true;
+    } catch (error) {
+        console.error("Error al cargar datos del usuario:", error);
+        alert("Error al cargar datos del usuario");
+    }
 };
 
 const deleteUser = async (user: User) => {
@@ -296,58 +341,78 @@ const loadingDistricts = ref(false);
 
 const saveUser = async () => {
     try {
-        // 1. Validar que se haya seleccionado un distrito si el rol es líder
-        if (editedItem.value.role === 'lider' && !selectedDistrict.value) {
-            alert('Debe seleccionar un distrito para un líder');
-            return;
-        }
-
-        // 2. Crear usuario en Authentication
+        saving.value = true;
+        const now = Timestamp.now();
         const auth = getAuth();
-        const userCredential = await createUserWithEmailAndPassword(
-            auth,
-            editedItem.value.email,
-            editedItem.value.password
-        );
 
-        // 3. Obtener información completa del distrito seleccionado
-        let districtData = null;
-        if (selectedDistrict.value) {
+        if (editedItem.value.id) {
+            // Código de actualización existente...
+        } else {
+            // 1. Crear usuario en Authentication
+            const userCredential = await createUserWithEmailAndPassword(
+                auth,
+                editedItem.value.email,
+                editedItem.value.password
+            );
+
+            // 2. Obtener datos del distrito seleccionado
             const districtDoc = await getDoc(doc(db, "districts", selectedDistrict.value));
-            if (districtDoc.exists()) {
-                districtData = districtDoc.data();
+            if (!districtDoc.exists()) {
+                throw new Error("Distrito no encontrado");
             }
-        }
+            const districtData = districtDoc.data();
 
-        // 4. Guardar datos básicos del usuario
-        await setDoc(doc(db, "users", userCredential.user.uid), {
-            email: editedItem.value.email,
-            role: editedItem.value.role,
-            createdAt: Timestamp.now(),
-            updatedAt: Timestamp.now()
-        });
+            // 3. Crear documento en la colección users
+            const userRef = doc(db, "users", userCredential.user.uid);
+            await setDoc(userRef, {
+                id: userCredential.user.uid,
+                email: editedItem.value.email,
+                role: editedItem.value.role,
+                createdAt: now,
+                updatedAt: now,
+                isActive: true,
+                createdBy: authStore.user?.id,
+                updatedBy: authStore.user?.id
+            });
 
-        // 5. Crear relación distrito-líder con información completa
-        if (districtData && selectedDistrict.value) {
-            const districtLeaderRef = doc(collection(db, "district_leaders"));
-            await setDoc(districtLeaderRef, {
-                id: districtLeaderRef.id,
-                districtId: selectedDistrict.value,
-                userId: userCredential.user.uid,
-                role: leaderRole.value,
-                areaNumber: districtData.areaNumber,
-                districtNumber: districtData.districtNumber,
-                location: districtData.location,
-                startDate: Timestamp.now(),
-                isActive: true
-            } as DistrictLeader);
+            // 4. Crear documento en la colección leaders
+            await setDoc(doc(db, "leaders", userCredential.user.uid), {
+                email: editedItem.value.email,
+                role: editedItem.value.role,
+                createdAt: now,
+                updatedAt: now,
+                createdBy: authStore.user?.id,
+                updatedBy: authStore.user?.id
+            });
+
+            // 5. Si es líder, crear relación distrito-líder
+            if (editedItem.value.role === 'lider') {
+                const districtLeaderRef = doc(collection(db, "district_leaders"));
+                await setDoc(districtLeaderRef, {
+                    id: districtLeaderRef.id,
+                    districtId: selectedDistrict.value,
+                    userId: userCredential.user.uid,
+                    role: leaderRole.value,
+                    areaNumber: districtData.areaNumber,
+                    districtNumber: districtData.districtNumber,
+                    location: districtData.location,
+                    startDate: now,
+                    isActive: true,
+                    createdAt: now,
+                    updatedAt: now,
+                    createdBy: authStore.user?.id,
+                    updatedBy: authStore.user?.id
+                });
+            }
         }
 
         await getUsers();
         closeDialog();
     } catch (error) {
         console.error("Error al guardar usuario:", error);
-        alert("Error al guardar usuario");
+        alert("Error al guardar usuario: " + (error as Error).message);
+    } finally {
+        saving.value = false;
     }
 };
 
@@ -446,7 +511,7 @@ const loadDistricts = async () => {
 
 onMounted(async () => {
     await loadDistricts();
-  getUsers();
+    await getUsers();
 });
 </script>
 

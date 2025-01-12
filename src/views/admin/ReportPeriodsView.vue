@@ -91,13 +91,14 @@
 </template> 
 
 <script setup lang="ts">
-import { ref, computed } from 'vue';
+import { ref, computed, onMounted } from 'vue';
+import { collection, doc, getDocs, addDoc, updateDoc, deleteDoc, query, where, Timestamp } from 'firebase/firestore';
+import { db } from '../../firebase/config';
 import NavigationBar from '../../components/NavigationBar.vue';
 import type { ReportPeriod } from '../../types/MinisterialReport';
-import { Timestamp } from 'firebase/firestore';
 
 const dialog = ref(false);
-const loading = ref(false);
+const loading = ref(true);
 const updatingId = ref<string | null>(null);
 const periods = ref<ReportPeriod[]>([]);
 
@@ -106,7 +107,8 @@ const headers = [
     { title: 'Descripción', key: 'description' },
     { title: 'Fecha Inicio', key: 'startDate' },
     { title: 'Fecha Fin', key: 'endDate' },
-    { title: 'Estado', key: 'isActive' }
+    { title: 'Estado', key: 'isActive' },
+    { title: 'Acciones', key: 'actions' }
 ];
 
 const editedItem = ref<ReportPeriod>({
@@ -128,12 +130,80 @@ const closeDialog = () => {
     dialog.value = false;
 };
 
-const savePeriod = () => {
-    // Implementar lógica de guardado
-    closeDialog();
+const loadPeriods = async () => {
+    loading.value = true;
+    try {
+        const querySnapshot = await getDocs(collection(db, "report_periods"));
+        periods.value = querySnapshot.docs.map(doc => ({
+            id: doc.id,
+            ...doc.data()
+        } as ReportPeriod));
+    } catch (error) {
+        console.error("Error al cargar períodos:", error);
+    } finally {
+        loading.value = false;
+    }
 };
 
-const togglePeriodStatus = (item: ReportPeriod) => {
-    // Implementar lógica de cambio de estado
+const savePeriod = async () => {
+    try {
+        if (editedItem.value.id) {
+            // Actualizar período existente
+            await updateDoc(doc(db, "report_periods", editedItem.value.id), {
+                name: editedItem.value.name,
+                description: editedItem.value.description,
+                startDate: editedItem.value.startDate,
+                endDate: editedItem.value.endDate,
+                isActive: editedItem.value.isActive
+            });
+        } else {
+            // Crear nuevo período
+            await addDoc(collection(db, "report_periods"), {
+                name: editedItem.value.name,
+                description: editedItem.value.description,
+                startDate: editedItem.value.startDate,
+                endDate: editedItem.value.endDate,
+                isActive: false
+            });
+        }
+        await loadPeriods();
+        closeDialog();
+    } catch (error) {
+        console.error("Error al guardar período:", error);
+        alert("Error al guardar el período");
+    }
 };
+
+const togglePeriodStatus = async (item: ReportPeriod) => {
+    updatingId.value = item.id;
+    try {
+        if (item.isActive) {
+            // Si se está activando, desactivar otros períodos activos
+            const activePeriodsQuery = query(
+                collection(db, "report_periods"),
+                where("isActive", "==", true)
+            );
+            const activePeriodsSnapshot = await getDocs(activePeriodsQuery);
+            
+            for (const doc of activePeriodsSnapshot.docs) {
+                if (doc.id !== item.id) {
+                    await updateDoc(doc.ref, { isActive: false });
+                }
+            }
+        }
+        
+        await updateDoc(doc(db, "report_periods", item.id), {
+            isActive: item.isActive
+        });
+        
+        await loadPeriods();
+    } catch (error) {
+        console.error("Error al cambiar estado:", error);
+        alert("Error al cambiar el estado del período");
+    } finally {
+        updatingId.value = null;
+    }
+};
+
+onMounted(loadPeriods);
 </script> 
