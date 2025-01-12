@@ -18,6 +18,7 @@
                                 <th scope="col" class="text-center">Total Niños</th>
                                 <th scope="col" class="text-center">Niños Convertidos</th>
                                 <th scope="col" class="text-center">Niños Miembros</th>
+                                <th scope="col" class="text-center">Niños Sin Arrepentir</th>
                                 <th scope="col" class="text-center">Bautizados E.S.</th>
                                 <th scope="col" class="text-center">Graduados Consolidado</th>
                                 <th scope="col" class="text-center">Graduados Sacramentos</th>
@@ -35,6 +36,7 @@
                                 <td class="text-center">{{ getLatestMinisterialData(church).totalChildren }}</td>
                                 <td class="text-center">{{ getLatestMinisterialData(church).convertedChildren }}</td>
                                 <td class="text-center">{{ getLatestMinisterialData(church).memberChildren }}</td>
+                                <td class="text-center">{{ getLatestMinisterialData(church).nonRepentantChildren }}</td>
                                 <td class="text-center">{{ getLatestMinisterialData(church).baptizedChildren }}</td>
                                 <td class="text-center">{{ getLatestMinisterialData(church).consolidatedGraduates }}</td>
                                 <td class="text-center">{{ getLatestMinisterialData(church).sacramentsGraduates }}</td>
@@ -83,89 +85,103 @@
                     <VCardTitle>Resumen de Totales</VCardTitle>
                     <VCardText>
                         <VRow>
+                            <!-- Columna Izquierda -->
                             <VCol cols="6">
-                                <div class="d-flex align-center mb-2">
+                                <!-- Total Maestras -->
+                                <div class="d-flex align-center mb-4">
                                     <VIcon color="primary" class="me-2">mdi-account-group</VIcon>
                                     <div>
                                         <div class="text-caption">Total Maestras</div>
                                         <div class="text-h6">{{ totals.totalTeachers }}</div>
                                     </div>
                                 </div>
-                            </VCol>
-                            <VCol cols="6">
-                                <div class="d-flex align-center mb-2">
+
+                                <!-- Total Niños -->
+                                <div class="d-flex align-center mb-4">
                                     <VIcon color="info" class="me-2">mdi-account-child</VIcon>
                                     <div>
                                         <div class="text-caption">Total Niños</div>
                                         <div class="text-h6">{{ totals.totalChildren }}</div>
                                     </div>
                                 </div>
-                            </VCol>
-                            <VCol cols="6">
-                                <div class="d-flex align-center mb-2">
+
+                                <!-- Niños Convertidos -->
+                                <div class="d-flex align-center mb-4">
                                     <VIcon color="success" class="me-2">mdi-school</VIcon>
                                     <div>
                                         <div class="text-caption">Niños Convertidos</div>
                                         <div class="text-h6">{{ totals.convertedChildren }}</div>
                                     </div>
                                 </div>
-                            </VCol>
-                            <VCol cols="6">
-                                <div class="d-flex align-center mb-2">
+
+                                <!-- Niños Miembros -->
+                                <div class="d-flex align-center mb-4">
                                     <VIcon color="warning" class="me-2">mdi-heart</VIcon>
                                     <div>
                                         <div class="text-caption">Niños Miembros</div>
                                         <div class="text-h6">{{ totals.memberChildren }}</div>
                                     </div>
                                 </div>
+
+                                <!-- Niños Sin Arrepentir -->
+                                <div class="d-flex align-center mb-4">
+                                    <VIcon color="error" class="me-2">mdi-account-alert</VIcon>
+                                    <div>
+                                        <div class="text-caption">Niños Sin Arrepentir</div>
+                                        <div class="text-h6">{{ totals.nonRepentantChildren }}</div>
+                                    </div>
+                                </div>
                             </VCol>
+
+                            <!-- Columna Derecha -->
                             <VCol cols="6">
-                                <div class="d-flex align-center mb-2">
+                                <!-- Bautizados E.S. -->
+                                <div class="d-flex align-center mb-4">
                                     <VIcon color="deep-purple" class="me-2">mdi-account-check</VIcon>
                                     <div>
                                         <div class="text-caption">Bautizados E.S.</div>
                                         <div class="text-h6">{{ totals.baptizedChildren }}</div>
                                     </div>
                                 </div>
-                            </VCol>
-                            <VCol cols="6">
-                                <div class="d-flex align-center mb-2">
+
+                                <!-- Graduados Consolidado -->
+                                <div class="d-flex align-center mb-4">
                                     <VIcon color="red" class="me-2">mdi-fire</VIcon>
                                     <div>
                                         <div class="text-caption">Graduados Consolidado</div>
                                         <div class="text-h6">{{ totals.consolidatedGraduates }}</div>
                                     </div>
                                 </div>
-                            </VCol>
-                            <VCol cols="6">
-                                <div class="d-flex align-center mb-2">
+
+                                <!-- Graduados Sacramentos -->
+                                <div class="d-flex align-center mb-4">
                                     <VIcon color="teal" class="me-2">mdi-certificate</VIcon>
                                     <div>
                                         <div class="text-caption">Graduados Sacramentos</div>
                                         <div class="text-h6">{{ totals.sacramentsGraduates }}</div>
                                     </div>
                                 </div>
-                            </VCol>
-                            <VCol cols="6">
-                                <div class="d-flex align-center mb-2">
+
+                                <!-- Club Al Rescate -->
+                                <div class="d-flex align-center mb-4">
                                     <VIcon color="orange" class="me-2">mdi-lifebuoy</VIcon>
                                     <div>
                                         <div class="text-caption">Club Al Rescate</div>
                                         <div class="text-h6">{{ totals.rescueClubChildren }}</div>
                                     </div>
                                 </div>
-                            </VCol>
-                            <VCol cols="6">
-                                <div class="d-flex align-center mb-2">
+
+                                <!-- Graduados Discipulado -->
+                                <div class="d-flex align-center mb-4">
                                     <VIcon color="blue-grey" class="me-2">mdi-school-outline</VIcon>
                                     <div>
                                         <div class="text-caption">Graduados Discipulado</div>
                                         <div class="text-h6">{{ totals.discipleshipGraduates }}</div>
                                     </div>
                                 </div>
-                            </VCol>
-                            <VCol cols="6">
-                                <div class="d-flex align-center mb-2">
+
+                                <!-- Conexión 9.11 -->
+                                <div class="d-flex align-center mb-4">
                                     <VIcon color="cyan" class="me-2">mdi-connection</VIcon>
                                     <div>
                                         <div class="text-caption">Conexión 9.11</div>
@@ -319,6 +335,15 @@
                         </VCol>
                         <VCol cols="12" sm="6" md="3">
                             <div class="d-flex align-center mb-2">
+                                <VIcon color="error" class="me-2">mdi-account-alert</VIcon>
+                                <div>
+                                    <div class="text-caption">Niños Sin Arrepentir</div>
+                                    <div class="text-h6">{{ totals.nonRepentantChildren }}</div>
+                                </div>
+                            </div>
+                        </VCol>
+                        <VCol cols="12" sm="6" md="3">
+                            <div class="d-flex align-center mb-2">
                                 <VIcon color="red" class="me-2">mdi-fire</VIcon>
                                 <div>
                                     <div class="text-caption">Bautizados E.S.</div>
@@ -395,7 +420,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, defineAsyncComponent } from 'vue';
 import { useAuthStore } from '../../stores/auth';
-import { doc, getDoc, setDoc, collection, query, where, getDocs, orderBy, limit, Timestamp, updateDoc, addDoc } from 'firebase/firestore';
+import { doc, getDoc, collection, query, where, getDocs, Timestamp, updateDoc, addDoc } from 'firebase/firestore';
 import { db } from '../../firebase/config';
 import NavigationBar from '../../components/NavigationBar.vue';
 import type { ReportPeriod, MinisterialReport } from '../../types/MinisterialReport';
@@ -448,6 +473,7 @@ const totals = computed(() => {
             totalChildren: sum.totalChildren + Number(data.totalChildren || 0),
             convertedChildren: sum.convertedChildren + Number(data.convertedChildren || 0),
             memberChildren: sum.memberChildren + Number(data.memberChildren || 0),
+            nonRepentantChildren: sum.nonRepentantChildren + Number(data.nonRepentantChildren || 0),
             baptizedChildren: sum.baptizedChildren + Number(data.baptizedChildren || 0),
             consolidatedGraduates: sum.consolidatedGraduates + Number(data.consolidatedGraduates || 0),
             sacramentsGraduates: sum.sacramentsGraduates + Number(data.sacramentsGraduates || 0),
@@ -460,6 +486,7 @@ const totals = computed(() => {
         totalChildren: 0,
         convertedChildren: 0,
         memberChildren: 0,
+        nonRepentantChildren: 0,
         baptizedChildren: 0,
         consolidatedGraduates: 0,
         sacramentsGraduates: 0,
@@ -717,6 +744,18 @@ onMounted(async () => {
     await loadActivePeriod();
     await loadData();
 });
+
+const headers = [
+    { title: 'Iglesia', key: 'name', sortable: true },
+    { title: 'Líder', key: 'leaderName', sortable: true },
+    { title: 'Maestras', key: 'ministerialData.totalTeachers', sortable: true },
+    { title: 'Total Niños', key: 'ministerialData.totalChildren', sortable: true },
+    { title: 'Convertidos', key: 'ministerialData.convertedChildren', sortable: true },
+    { title: 'Miembros', key: 'ministerialData.memberChildren', sortable: true },
+    { title: 'Niños Sin Arrepentir', key: 'ministerialData.nonRepentantChildren', sortable: true },
+    { title: 'Bautizados', key: 'ministerialData.baptizedChildren', sortable: true },
+    { title: 'Acciones', key: 'actions', sortable: false }
+];
 </script>
 <style scoped>
 .totals-card {
