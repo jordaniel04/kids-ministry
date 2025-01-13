@@ -1,5 +1,6 @@
 import { createRouter, createWebHistory, type RouteRecordRaw } from 'vue-router';
 import { auth } from '../firebase/config';
+import DistrictReportsView from '../views/admin/DistrictReportsView.vue'
 
 const routes: Array<RouteRecordRaw> = [
   {
@@ -42,6 +43,12 @@ const routes: Array<RouteRecordRaw> = [
     path: '/statistics/report-periods',
     name: 'ReportPeriods',
     component: () => import('../views/admin/ReportPeriodsView.vue'),
+    meta: { requiresAuth: true, requiresAdmin: true }
+  },
+  {
+    path: '/admin/district-reports',
+    name: 'district-reports',
+    component: DistrictReportsView,
     meta: { requiresAuth: true, requiresAdmin: true }
   }
 ];

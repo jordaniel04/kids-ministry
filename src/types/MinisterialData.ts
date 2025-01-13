@@ -14,4 +14,13 @@ export interface MinisterialData {
     connection911Children: number;
     updatedAt: Timestamp;
     reportPeriodId?: string | null;
+}
+
+export type NumericFields = Exclude<keyof MinisterialData, 'updatedAt' | 'reportPeriodId' | 'totalChildren'>;
+
+export interface LocalItem {
+    id?: string;
+    name: string;
+    leaderName: string;
+    ministerialData: MinisterialData;
 } 

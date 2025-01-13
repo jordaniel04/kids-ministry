@@ -87,7 +87,7 @@ const formatDate = (timestamp: Timestamp) => {
     });
 };
 
-const getReportPeriodName = (periodId?: string) => {
+const getReportPeriodName = (periodId: string | null | undefined) => {
     return periodId ? reportPeriods.value.get(periodId) || 'Período no encontrado' : 'N/A';
 };
 

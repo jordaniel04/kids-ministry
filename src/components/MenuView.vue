@@ -76,6 +76,28 @@
         </VCard>
       </VCol>
 
+      <VCol v-if="isAdmin" cols="12" sm="12" md="4">
+        <VCard
+          class="mx-auto mb-4"
+          color="surface-variant"
+          max-width="100%"
+          @click="goToDistrictReports"
+        >
+          <VCardTitle class="d-flex align-center">
+            <VIcon class="me-2">mdi-chart-box</VIcon>
+            Reportes por Distrito
+          </VCardTitle>
+          <VCardSubtitle>
+            Ver historial de reportes por distrito y período
+          </VCardSubtitle>
+          <template v-slot:actions>
+            <VBtn variant="text" @click="goToDistrictReports">
+              Ver Reportes
+            </VBtn>
+          </template>
+        </VCard>
+      </VCol>
+
       <VCol v-if="isLeader" cols="12" sm="12" md="4">
         <VCard
           class="mx-auto mb-4"
@@ -150,6 +172,10 @@ const goToStatistics = () => {
 
 const goToDistrictManagement = () => {
   router.push("/manage-districts");
+};
+
+const goToDistrictReports = () => {
+  router.push("/admin/district-reports");
 };
 
 const handleLogout = async () => {
