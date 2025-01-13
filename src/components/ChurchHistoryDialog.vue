@@ -9,11 +9,7 @@
                 <VContainer>
                     <VRow>
                         <VCol cols="12">
-                            <VDataTable
-                                :headers="headers"
-                                :items="sortedHistory"
-                                :loading="loading"
-                            >
+                            <VDataTable :headers="headers" :items="sortedHistory" :loading="loading">
                                 <template #[`item.updatedAt`]="{ item }">
                                     {{ formatDate(item.updatedAt) }}
                                 </template>
@@ -37,10 +33,14 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed, onMounted, defineOptions } from 'vue';
 import { Timestamp, collection, getDoc, doc } from 'firebase/firestore';
 import type { Church } from '../types/Church';
 import { db } from '../firebase/config';
+
+defineOptions({
+    name: 'ChurchHistoryDialog'
+});
 
 const props = defineProps<{
     modelValue: boolean;
@@ -72,19 +72,25 @@ const headers = [
 
 const sortedHistory = computed(() => {
     if (!props.church?.ministerialData) return [];
-    return [...props.church.ministerialData].sort((a, b) => 
-        b.updatedAt.seconds - a.updatedAt.seconds
-    );
+    return [...props.church.ministerialData].sort((a, b) => {
+        if (a.reportPeriodId && b.reportPeriodId) {
+            const periodCompare = b.reportPeriodId.localeCompare(a.reportPeriodId);
+            if (periodCompare !== 0) return periodCompare;
+        }
+        return b.updatedAt.seconds - a.updatedAt.seconds;
+    });
+});
+
+const dateFormatter = new Intl.DateTimeFormat('es-ES', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit'
 });
 
 const formatDate = (timestamp: Timestamp) => {
-    return timestamp.toDate().toLocaleDateString('es-ES', {
-        day: '2-digit',
-        month: '2-digit',
-        year: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit'
-    });
+    return dateFormatter.format(timestamp.toDate());
 };
 
 const getReportPeriodName = (periodId: string | null | undefined) => {
@@ -93,18 +99,30 @@ const getReportPeriodName = (periodId: string | null | undefined) => {
 
 const loadReportPeriods = async (periodIds: string[]) => {
     loading.value = true;
+    const errors: string[] = [];
+    
     try {
         const periodsRef = collection(db, "report_periods");
         const uniquePeriodIds = [...new Set(periodIds)];
         
-        for (const periodId of uniquePeriodIds) {
-            const periodDoc = await getDoc(doc(db, "report_periods", periodId));
-            if (periodDoc.exists()) {
-                reportPeriods.value.set(periodId, periodDoc.data().name);
+        await Promise.all(uniquePeriodIds.map(async (periodId) => {
+            try {
+                const periodDoc = await getDoc(doc(periodsRef, periodId));
+                if (periodDoc.exists()) {
+                    reportPeriods.value.set(periodId, periodDoc.data().name);
+                } else {
+                    errors.push(`Período no encontrado: ${periodId}`);
+                }
+            } catch (error) {
+                errors.push(`Error al cargar período ${periodId}: ${error}`);
             }
+        }));
+
+        if (errors.length > 0) {
+            console.error("Errores durante la carga:", errors);
         }
     } catch (error) {
-        console.error("Error al cargar períodos:", error);
+        console.error("Error general al cargar períodos:", error);
     } finally {
         loading.value = false;
     }

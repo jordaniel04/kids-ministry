@@ -115,7 +115,6 @@ import { db } from '../../firebase/config';
 import NavigationBar from '../../components/NavigationBar.vue';
 import type { District } from '../../types/District';
 import type { ReportPeriod } from '../../types/MinisterialReport';
-import type { Church } from '../../types/Church';
 import type { MinisterialData } from '../../types/MinisterialData';
 
 interface ChurchSummary {

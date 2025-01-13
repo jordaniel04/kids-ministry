@@ -92,7 +92,7 @@
 import { computed, ref, watch, defineComponent } from 'vue';
 import { Timestamp } from 'firebase/firestore';
 import type { ReportPeriod } from '../types/MinisterialReport';
-import type { MinisterialData, LocalItem, NumericFields } from '../types/MinisterialData';
+import type { LocalItem, NumericFields } from '../types/MinisterialData';
 
 export default defineComponent({
     name: 'ChurchFormDialog',
@@ -322,5 +322,6 @@ export default defineComponent({
 
 :deep(input[type="number"]) {
     -moz-appearance: textfield;
+    appearance: textfield;
 }
 </style>

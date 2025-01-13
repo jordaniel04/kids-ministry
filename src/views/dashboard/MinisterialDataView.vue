@@ -561,6 +561,12 @@
                 </VCardActions>
             </VCard>
         </VDialog>
+
+        <!-- Agregar el diálogo de historial -->
+        <ChurchHistoryDialog 
+            v-model="showHistory"
+            :church="selectedChurch"
+        />
     </div>
 </template>
 
@@ -586,6 +592,7 @@ import type {
 } from "../../types/MinisterialReport";
 import type { Church } from "../../types/Church";
 import ChurchFormDialog from "../../components/ChurchFormDialog.vue";
+import ChurchHistoryDialog from '../../components/ChurchHistoryDialog.vue';
 
 const authStore = useAuthStore();
 const districtName = ref("");
@@ -597,7 +604,7 @@ const currentReport = ref<MinisterialReport | null>(null);
 const loading = ref(false);
 const dialog = ref(false);
 const historyDialog = ref(false);
-const selectedChurch = ref<Church | null>(null);
+const selectedChurch = ref<Church | undefined>(undefined);
 const editedIndex = ref(-1);
 const editedItem = ref<any>(null);
 const showHistory = ref(false);
@@ -953,6 +960,11 @@ const saveToFirestore = async () => {
 const viewHistory = (church: Church) => {
     selectedChurch.value = church;
     showHistory.value = true;
+};
+
+const closeHistory = () => {
+    selectedChurch.value = undefined;
+    showHistory.value = false;
 };
 
 onMounted(async () => {
