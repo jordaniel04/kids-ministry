@@ -33,10 +33,25 @@
                 <h2 class="text-h4">
                     Datos de las iglesias del Distrito: {{ districtName }}
                 </h2>
-                <VBtn v-if="activePeriod?.allowEditing" color="primary" prepend-icon="mdi-plus"
-                    @click="openNewChurchDialog">
-                    Agregar Iglesia
-                </VBtn>
+                <div class="d-flex gap-2">
+                    <VBtn 
+                        v-if="activePeriod?.allowEditing" 
+                        color="primary" 
+                        prepend-icon="mdi-plus"
+                        @click="openNewChurchDialog"
+                    >
+                        Agregar Iglesia
+                    </VBtn>
+                    <VBtn
+                        v-if="activePeriod && !isConfirmed"
+                        color="success"
+                        prepend-icon="mdi-check-circle"
+                        @click="confirmDistrictData"
+                        :loading="confirming"
+                    >
+                        Confirmar Datos del Distrito
+                    </VBtn>
+                </div>
             </div>
 
 
@@ -485,6 +500,39 @@
         <!-- Diálogo para crear/editar iglesia -->
         <ChurchFormDialog v-model="dialog" :church="editedItem" :active-period="activePeriod" @save="saveChurch"
             @close="closeDialog" />
+
+        <!-- Diálogo de confirmación -->
+        <VDialog v-model="confirmDialog" max-width="500px">
+            <VCard>
+                <VCardTitle class="text-h5">Confirmar Datos del Distrito</VCardTitle>
+                <VCardText>
+                    <VAlert type="warning" class="mb-4">
+                        <strong>¡Atención!</strong> Una vez confirmados los datos:
+                        <ul class="mt-2">
+                            <li>No se podrán agregar nuevas iglesias</li>
+                            <li>No se podrán editar los datos existentes</li>
+                            <li>No se podrán eliminar registros</li>
+                            <li>La edición se habilitará en el siguiente período de reporte</li>
+                        </ul>
+                    </VAlert>
+                    <p>¿Está seguro de confirmar los datos del distrito?</p>
+                </VCardText>
+                <VCardActions>
+                    <VSpacer />
+                    <VBtn color="error" variant="text" @click="confirmDialog = false">
+                        Cancelar
+                    </VBtn>
+                    <VBtn 
+                        color="success" 
+                        variant="text" 
+                        @click="processDistrictConfirmation"
+                        :loading="confirming"
+                    >
+                        Confirmar
+                    </VBtn>
+                </VCardActions>
+            </VCard>
+        </VDialog>
     </div>
 </template>
 
@@ -527,6 +575,9 @@ const editedItem = ref<any>(null);
 const showHistory = ref(false);
 const churchConfirmations = ref(new Map());
 const completionPercentage = ref(0);
+const confirming = ref(false);
+const isConfirmed = ref(false);
+const confirmDialog = ref(false);
 
 const defaultItem = {
     id: "",
@@ -573,58 +624,60 @@ const getLatestMinisterialData = (church: Church) => {
             sacramentsGraduates: 0,
             rescueClubChildren: 0,
             discipleshipGraduates: 0,
-            connection911Children: 0,
-            updatedAt: Timestamp.now(),
-            reportPeriodId: undefined,
+            connection911Children: 0
         };
     }
 
-    // Ordenar por fecha y obtener el más reciente
     return church.ministerialData.sort(
         (a, b) => b.updatedAt.seconds - a.updatedAt.seconds
     )[0];
 };
 
+interface TotalAccumulator {
+    totalTeachers: number;
+    totalChildren: number;
+    convertedChildren: number;
+    memberChildren: number;
+    nonRepentantChildren: number;
+    baptizedChildren: number;
+    consolidatedGraduates: number;
+    sacramentsGraduates: number;
+    rescueClubChildren: number;
+    discipleshipGraduates: number;
+    connection911Children: number;
+}
+
 const totals = computed(() => {
-    return churches.value.reduce(
-        (sum, church) => {
-            const data = getLatestMinisterialData(church);
-            return {
-                totalTeachers: sum.totalTeachers + Number(data.totalTeachers || 0),
-                totalChildren: sum.totalChildren + Number(data.totalChildren || 0),
-                convertedChildren:
-                    sum.convertedChildren + Number(data.convertedChildren || 0),
-                memberChildren: sum.memberChildren + Number(data.memberChildren || 0),
-                nonRepentantChildren:
-                    sum.nonRepentantChildren + Number(data.nonRepentantChildren || 0),
-                baptizedChildren:
-                    sum.baptizedChildren + Number(data.baptizedChildren || 0),
-                consolidatedGraduates:
-                    sum.consolidatedGraduates + Number(data.consolidatedGraduates || 0),
-                sacramentsGraduates:
-                    sum.sacramentsGraduates + Number(data.sacramentsGraduates || 0),
-                rescueClubChildren:
-                    sum.rescueClubChildren + Number(data.rescueClubChildren || 0),
-                discipleshipGraduates:
-                    sum.discipleshipGraduates + Number(data.discipleshipGraduates || 0),
-                connection911Children:
-                    sum.connection911Children + Number(data.connection911Children || 0),
-            };
-        },
-        {
-            totalTeachers: 0,
-            totalChildren: 0,
-            convertedChildren: 0,
-            memberChildren: 0,
-            nonRepentantChildren: 0,
-            baptizedChildren: 0,
-            consolidatedGraduates: 0,
-            sacramentsGraduates: 0,
-            rescueClubChildren: 0,
-            discipleshipGraduates: 0,
-            connection911Children: 0,
-        }
-    );
+    const initialValue: TotalAccumulator = {
+        totalTeachers: 0,
+        totalChildren: 0,
+        convertedChildren: 0,
+        memberChildren: 0,
+        nonRepentantChildren: 0,
+        baptizedChildren: 0,
+        consolidatedGraduates: 0,
+        sacramentsGraduates: 0,
+        rescueClubChildren: 0,
+        discipleshipGraduates: 0,
+        connection911Children: 0
+    };
+
+    return churches.value.reduce((sum, church) => {
+        const data = getLatestMinisterialData(church);
+        return {
+            totalTeachers: sum.totalTeachers + Number(data.totalTeachers || 0),
+            totalChildren: sum.totalChildren + Number(data.totalChildren || 0),
+            convertedChildren: sum.convertedChildren + Number(data.convertedChildren || 0),
+            memberChildren: sum.memberChildren + Number(data.memberChildren || 0),
+            nonRepentantChildren: sum.nonRepentantChildren + Number(data.nonRepentantChildren || 0),
+            baptizedChildren: sum.baptizedChildren + Number(data.baptizedChildren || 0),
+            consolidatedGraduates: sum.consolidatedGraduates + Number(data.consolidatedGraduates || 0),
+            sacramentsGraduates: sum.sacramentsGraduates + Number(data.sacramentsGraduates || 0),
+            rescueClubChildren: sum.rescueClubChildren + Number(data.rescueClubChildren || 0),
+            discipleshipGraduates: sum.discipleshipGraduates + Number(data.discipleshipGraduates || 0),
+            connection911Children: sum.connection911Children + Number(data.connection911Children || 0)
+        };
+    }, initialValue);
 });
 
 const loadActivePeriod = async () => {
@@ -866,6 +919,17 @@ const viewHistory = (church: Church) => {
 onMounted(async () => {
     await loadActivePeriod();
     await loadData();
+    
+    // Verificar si el distrito ya está confirmado para el período actual
+    if (activePeriod.value && currentDistrict.value) {
+        const confirmationQuery = query(
+            collection(db, "district_confirmations"),
+            where("districtId", "==", currentDistrict.value.id),
+            where("periodId", "==", activePeriod.value.id)
+        );
+        const confirmationSnapshot = await getDocs(confirmationQuery);
+        isConfirmed.value = !confirmationSnapshot.empty;
+    }
 });
 
 const headers = [
@@ -1024,6 +1088,71 @@ const openNewChurchDialog = () => {
     editedItem.value = { ...defaultItem };
     editedIndex.value = -1;
     dialog.value = true;
+};
+
+// Función para confirmar los datos del distrito
+const confirmDistrictData = () => {
+    confirmDialog.value = true;
+};
+
+// Nueva función para procesar la confirmación
+const processDistrictConfirmation = async () => {
+    if (!activePeriod.value || !currentDistrict.value || !authStore.user?.id) return;
+    
+    confirming.value = true;
+    try {
+        // Verificar que todas las iglesias tengan datos ministeriales
+        const churchesWithoutData = churches.value.filter(
+            church => !church.ministerialData || !church.ministerialData.length
+        );
+
+        if (churchesWithoutData.length > 0) {
+            alert('Todas las iglesias deben tener datos ministeriales antes de confirmar');
+            return;
+        }
+
+        // Crear confirmación del distrito
+        await addDoc(collection(db, "district_confirmations"), {
+            districtId: currentDistrict.value.id,
+            periodId: activePeriod.value.id,
+            confirmedAt: Timestamp.now(),
+            confirmedBy: authStore.user.id,
+            churchesCount: churches.value.length,
+            totalTeachers: churches.value.reduce((sum: number, church) => 
+                sum + (church.ministerialData?.[0]?.totalTeachers || 0), 0),
+            totalChildren: churches.value.reduce((sum: number, church) => 
+                sum + (church.ministerialData?.[0]?.totalChildren || 0), 0),
+            convertedChildren: churches.value.reduce((sum: number, church) => 
+                sum + (church.ministerialData?.[0]?.convertedChildren || 0), 0),
+            baptizedChildren: churches.value.reduce((sum: number, church) => 
+                sum + (church.ministerialData?.[0]?.baptizedChildren || 0), 0),
+            consolidatedGraduates: churches.value.reduce((sum: number, church) => 
+                sum + (church.ministerialData?.[0]?.consolidatedGraduates || 0), 0),
+            sacramentsGraduates: churches.value.reduce((sum: number, church) => 
+                sum + (church.ministerialData?.[0]?.sacramentsGraduates || 0), 0)
+        });
+
+        // Confirmar cada iglesia individualmente
+        for (const church of churches.value) {
+            await addDoc(collection(db, "church_confirmations"), {
+                churchId: church.id,
+                periodId: activePeriod.value.id,
+                districtId: currentDistrict.value.id,
+                confirmedAt: Timestamp.now(),
+                confirmedBy: authStore.user.id,
+                ministerialData: church.ministerialData[0]
+            });
+        }
+
+        isConfirmed.value = true;
+        confirmDialog.value = false;
+        alert('Datos del distrito confirmados exitosamente');
+    } catch (error) {
+        console.error('Error al confirmar datos del distrito:', error);
+        alert('Error al confirmar los datos del distrito');
+    } finally {
+        confirming.value = false;
+    }
 };
 </script>
 <style scoped>
