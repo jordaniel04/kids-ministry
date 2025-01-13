@@ -1,172 +1,178 @@
 <template>
   <VContainer>
-    <VRow class="mb-4">
-      <VCol cols="12" class="d-flex justify-end">
-        <VBtn
-          color="error"
-          variant="outlined"
-          prepend-icon="mdi-logout"
-          @click="handleLogout"
-        >
-          Cerrar Sesión
-        </VBtn>
-      </VCol>
-    </VRow>
+    <VOverlay v-model="loading" class="align-center justify-center">
+      <VProgressCircular indeterminate />
+    </VOverlay>
 
-    <VRow>
-      <VCol v-if="isAdmin" cols="12" sm="12" md="4">
-        <VCard
-          class="mx-auto mb-4"
-          color="surface-variant"
-          max-width="100%"
-          @click="goToUserManagement"
-        >
-          <VCardTitle class="d-flex align-center">
-            <VIcon class="me-2">mdi-account-group</VIcon>
-            Administrar Usuarios
-          </VCardTitle>
-          <VCardSubtitle> Gestiona los usuarios del sistema </VCardSubtitle>
-          <template v-slot:actions>
-            <VBtn variant="text" @click="goToUserManagement">
-              Ir a Gestión
-            </VBtn>
-          </template>
-        </VCard>
-      </VCol>
+    <template v-if="!loading">
+      <VRow class="mb-4">
+        <VCol cols="12" class="d-flex justify-end">
+          <VBtn
+            color="error"
+            variant="outlined"
+            prepend-icon="mdi-logout"
+            @click="handleLogout"
+          >
+            Cerrar Sesión
+          </VBtn>
+        </VCol>
+      </VRow>
 
-      <VCol v-if="isAdmin" cols="12" sm="12" md="4">
-        <VCard
-          class="mx-auto mb-4"
-          color="surface-variant"
-          max-width="100%"
-          @click="goToStatistics"
-        >
-          <VCardTitle class="d-flex align-center">
-            <VIcon class="me-2">mdi-account-group</VIcon>
-            Gestión de Períodos de Reporte
-          </VCardTitle>
-          <VCardSubtitle> Organizar los datos ministeriales por períodos </VCardSubtitle>
-          <template v-slot:actions>
-            <VBtn variant="text" @click="goToStatistics">
-              Gestión de Períodos
-            </VBtn>
-          </template>
-        </VCard>
-      </VCol>
+      <VRow>
+        <VCol v-if="isAdmin" cols="12" sm="12" md="4">
+          <VCard
+            class="mx-auto mb-4"
+            color="surface-variant"
+            max-width="100%"
+            @click="goToUserManagement"
+          >
+            <VCardTitle class="d-flex align-center">
+              <VIcon class="me-2">mdi-account-group</VIcon>
+              Administrar Usuarios
+            </VCardTitle>
+            <VCardSubtitle> Gestiona los usuarios del sistema </VCardSubtitle>
+            <template v-slot:actions>
+              <VBtn variant="text" @click="goToUserManagement">
+                Ir a Gestión
+              </VBtn>
+            </template>
+          </VCard>
+        </VCol>
 
-      <VCol v-if="isAdmin" cols="12" sm="12" md="4">
-        <VCard
-          class="mx-auto mb-4"
-          color="surface-variant"
-          max-width="100%"
-          @click="goToDistrictManagement"
-        >
-          <VCardTitle class="d-flex align-center">
-            <VIcon class="me-2">mdi-office-building-marker</VIcon>
-            Gestión de Distritos
-          </VCardTitle>
-          <VCardSubtitle>
-            Administra los distritos del ministerio
-          </VCardSubtitle>
-          <template v-slot:actions>
-            <VBtn variant="text" @click="goToDistrictManagement">
-              Gestionar Distritos
-            </VBtn>
-          </template>
-        </VCard>
-      </VCol>
+        <VCol v-if="isAdmin" cols="12" sm="12" md="4">
+          <VCard
+            class="mx-auto mb-4"
+            color="surface-variant"
+            max-width="100%"
+            @click="goToStatistics"
+          >
+            <VCardTitle class="d-flex align-center">
+              <VIcon class="me-2">mdi-account-group</VIcon>
+              Gestión de Períodos de Reporte
+            </VCardTitle>
+            <VCardSubtitle> Organizar los datos ministeriales por períodos </VCardSubtitle>
+            <template v-slot:actions>
+              <VBtn variant="text" @click="goToStatistics">
+                Gestión de Períodos
+              </VBtn>
+            </template>
+          </VCard>
+        </VCol>
 
-      <VCol v-if="isAdmin" cols="12" sm="12" md="4">
-        <VCard
-          class="mx-auto mb-4"
-          color="surface-variant"
-          max-width="100%"
-          @click="goToDistrictReports"
-        >
-          <VCardTitle class="d-flex align-center">
-            <VIcon class="me-2">mdi-chart-box</VIcon>
-            Reportes por Distrito
-          </VCardTitle>
-          <VCardSubtitle>
-            Ver historial de reportes por distrito y período
-          </VCardSubtitle>
-          <template v-slot:actions>
-            <VBtn variant="text" @click="goToDistrictReports">
-              Ver Reportes
-            </VBtn>
-          </template>
-        </VCard>
-      </VCol>
+        <VCol v-if="isAdmin" cols="12" sm="12" md="4">
+          <VCard
+            class="mx-auto mb-4"
+            color="surface-variant"
+            max-width="100%"
+            @click="goToDistrictManagement"
+          >
+            <VCardTitle class="d-flex align-center">
+              <VIcon class="me-2">mdi-office-building-marker</VIcon>
+              Gestión de Distritos
+            </VCardTitle>
+            <VCardSubtitle>
+              Administra los distritos del ministerio
+            </VCardSubtitle>
+            <template v-slot:actions>
+              <VBtn variant="text" @click="goToDistrictManagement">
+                Gestionar Distritos
+              </VBtn>
+            </template>
+          </VCard>
+        </VCol>
 
-      <VCol v-if="isLeader" cols="12" sm="12" md="4">
-        <VCard
-          class="mx-auto mb-4"
-          :style="{ 
-            backgroundColor: personalDataComplete ? '#E8F5E9' : '#FFF3E0',
-            transition: 'all 0.3s ease'
-          }"
-          :elevation="2"
-          max-width="100%"
-          @click="goToPersonalData"
-        >
-          <VCardTitle class="d-flex align-center">
-            <VIcon 
-              class="me-2" 
-              :color="personalDataComplete ? 'success' : 'warning'"
-            >
-              mdi-account
-            </VIcon>
-            Datos Personales
-          </VCardTitle>
-          <VCardSubtitle :class="personalDataComplete ? 'text-success' : 'text-warning'">
-            {{ personalDataComplete ? 'Información completa' : 'Actualiza tu información personal' }}
-          </VCardSubtitle>
-          <VCardActions>
-            <VBtn 
-              variant="tonal"
-              :color="personalDataComplete ? 'success' : 'warning'"
-              @click="goToPersonalData"
-            >
-              Ir a Datos
-            </VBtn>
-          </VCardActions>
-        </VCard>
-      </VCol>
+        <VCol v-if="isAdmin" cols="12" sm="12" md="4">
+          <VCard
+            class="mx-auto mb-4"
+            color="surface-variant"
+            max-width="100%"
+            @click="goToDistrictReports"
+          >
+            <VCardTitle class="d-flex align-center">
+              <VIcon class="me-2">mdi-chart-box</VIcon>
+              Reportes por Distrito
+            </VCardTitle>
+            <VCardSubtitle>
+              Ver historial de reportes por distrito y período
+            </VCardSubtitle>
+            <template v-slot:actions>
+              <VBtn variant="text" @click="goToDistrictReports">
+                Ver Reportes
+              </VBtn>
+            </template>
+          </VCard>
+        </VCol>
 
-      <VCol v-if="isLeader" cols="12" sm="12" md="4">
-        <VCard
-          class="mx-auto mb-4"
-          :style="{ 
-            backgroundColor: personalDataComplete ? '#E8F5E9' : '#FAFAFA',
-            opacity: personalDataComplete ? 1 : 0.7,
-            transition: 'all 0.3s ease'
-          }"
-          :elevation="2"
-          max-width="100%"
-          :class="{ 'disabled-card': !personalDataComplete }"
-          @click="goToMinisterialData"
-        >
-          <VCardTitle class="d-flex align-center">
-            <VIcon class="me-2" :color="personalDataComplete ? 'success-darken-2' : 'grey'">
-              mdi-chart-box
-            </VIcon>
-            Datos Estadísticos
-          </VCardTitle>
-          <VCardSubtitle :class="personalDataComplete ? 'text-success-darken-1' : 'text-grey-darken-1'">
-            {{ personalDataComplete ? 'Gestiona tu información estadística del distrito' : 'Complete sus datos personales primero' }}
-          </VCardSubtitle>
-          <VCardActions>
-            <VBtn 
-              variant="tonal"
-              :color="personalDataComplete ? 'success' : 'grey'"
-              :disabled="!personalDataComplete"
-            >
-              Ir a Estadísticas Distritales
-            </VBtn>
-          </VCardActions>
-        </VCard>
-      </VCol>
-    </VRow>
+        <VCol v-if="isLeader" cols="12" sm="12" md="4">
+          <VCard
+            class="mx-auto mb-4"
+            :style="{ 
+              backgroundColor: personalDataComplete ? '#E8F5E9' : '#FFF3E0',
+              transition: 'all 0.3s ease'
+            }"
+            :elevation="2"
+            max-width="100%"
+            @click="goToPersonalData"
+          >
+            <VCardTitle class="d-flex align-center">
+              <VIcon 
+                class="me-2" 
+                :color="personalDataComplete ? 'success' : 'warning'"
+              >
+                mdi-account
+              </VIcon>
+              Datos Personales
+            </VCardTitle>
+            <VCardSubtitle :class="personalDataComplete ? 'text-success' : 'text-warning'">
+              {{ personalDataComplete ? 'Información completa' : 'Actualiza tu información personal' }}
+            </VCardSubtitle>
+            <VCardActions>
+              <VBtn 
+                variant="tonal"
+                :color="personalDataComplete ? 'success' : 'warning'"
+                @click="goToPersonalData"
+              >
+                Ir a Datos
+              </VBtn>
+            </VCardActions>
+          </VCard>
+        </VCol>
+
+        <VCol v-if="isLeader" cols="12" sm="12" md="4">
+          <VCard
+            class="mx-auto mb-4"
+            :style="{ 
+              backgroundColor: personalDataComplete ? '#E8F5E9' : '#FAFAFA',
+              opacity: personalDataComplete ? 1 : 0.7,
+              transition: 'all 0.3s ease'
+            }"
+            :elevation="2"
+            max-width="100%"
+            :class="{ 'disabled-card': !personalDataComplete }"
+            @click="goToMinisterialData"
+          >
+            <VCardTitle class="d-flex align-center">
+              <VIcon class="me-2" :color="personalDataComplete ? 'success-darken-2' : 'grey'">
+                mdi-chart-box
+              </VIcon>
+              Datos Estadísticos
+            </VCardTitle>
+            <VCardSubtitle :class="personalDataComplete ? 'text-success-darken-1' : 'text-grey-darken-1'">
+              {{ personalDataComplete ? 'Gestiona tu información estadística del distrito' : 'Complete sus datos personales primero' }}
+            </VCardSubtitle>
+            <VCardActions>
+              <VBtn 
+                variant="tonal"
+                :color="personalDataComplete ? 'success' : 'grey'"
+                :disabled="!personalDataComplete"
+              >
+                Ir a Estadísticas Distritales
+              </VBtn>
+            </VCardActions>
+          </VCard>
+        </VCol>
+      </VRow>
+    </template>
   </VContainer>
 </template>
 
@@ -180,6 +186,7 @@ import { db } from '../firebase/config';
 const authStore = useAuthStore();
 const router = useRouter();
 const personalDataComplete = ref(false);
+const loading = ref(true);
 
 const isAdmin = computed(() => authStore.user?.role === "admin");
 const isLeader = computed(() => authStore.user?.role === "lider");
@@ -189,7 +196,11 @@ const cardColor = computed(() => {
 });
 
 onMounted(async () => {
-  await checkPersonalDataCompletion();
+  try {
+    await checkPersonalDataCompletion();
+  } finally {
+    loading.value = false;
+  }
 });
 
 const checkPersonalDataCompletion = async () => {
