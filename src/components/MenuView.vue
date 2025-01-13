@@ -101,40 +101,69 @@
       <VCol v-if="isLeader" cols="12" sm="12" md="4">
         <VCard
           class="mx-auto mb-4"
-          color="surface-variant"
+          :style="{ 
+            backgroundColor: personalDataComplete ? '#E8F5E9' : '#FFF3E0',
+            transition: 'all 0.3s ease'
+          }"
+          :elevation="2"
           max-width="100%"
           @click="goToPersonalData"
         >
           <VCardTitle class="d-flex align-center">
-            <VIcon class="me-2">mdi-account</VIcon>
+            <VIcon 
+              class="me-2" 
+              :color="personalDataComplete ? 'success' : 'warning'"
+            >
+              mdi-account
+            </VIcon>
             Datos Personales
           </VCardTitle>
-          <VCardSubtitle> Actualiza tu información personal </VCardSubtitle>
-          <template v-slot:actions>
-            <VBtn variant="text" @click="goToPersonalData"> Ir a Datos </VBtn>
-          </template>
+          <VCardSubtitle :class="personalDataComplete ? 'text-success' : 'text-warning'">
+            {{ personalDataComplete ? 'Información completa' : 'Actualiza tu información personal' }}
+          </VCardSubtitle>
+          <VCardActions>
+            <VBtn 
+              variant="tonal"
+              :color="personalDataComplete ? 'success' : 'warning'"
+              @click="goToPersonalData"
+            >
+              Ir a Datos
+            </VBtn>
+          </VCardActions>
         </VCard>
       </VCol>
 
       <VCol v-if="isLeader" cols="12" sm="12" md="4">
         <VCard
           class="mx-auto mb-4"
-          color="surface-variant"
+          :style="{ 
+            backgroundColor: personalDataComplete ? '#E8F5E9' : '#FAFAFA',
+            opacity: personalDataComplete ? 1 : 0.7,
+            transition: 'all 0.3s ease'
+          }"
+          :elevation="2"
           max-width="100%"
+          :class="{ 'disabled-card': !personalDataComplete }"
           @click="goToMinisterialData"
         >
           <VCardTitle class="d-flex align-center">
-            <VIcon class="me-2">mdi-chart-box</VIcon>
+            <VIcon class="me-2" :color="personalDataComplete ? 'success-darken-2' : 'grey'">
+              mdi-chart-box
+            </VIcon>
             Datos Estadísticos
           </VCardTitle>
-          <VCardSubtitle>
-            Gestiona tu información estadística del distrito
+          <VCardSubtitle :class="personalDataComplete ? 'text-success-darken-1' : 'text-grey-darken-1'">
+            {{ personalDataComplete ? 'Gestiona tu información estadística del distrito' : 'Complete sus datos personales primero' }}
           </VCardSubtitle>
-          <template v-slot:actions>
-            <VBtn variant="text" @click="goToMinisterialData">
+          <VCardActions>
+            <VBtn 
+              variant="tonal"
+              :color="personalDataComplete ? 'success' : 'grey'"
+              :disabled="!personalDataComplete"
+            >
               Ir a Estadísticas Distritales
             </VBtn>
-          </template>
+          </VCardActions>
         </VCard>
       </VCol>
     </VRow>
@@ -142,17 +171,65 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from "vue";
+import { computed, ref, onMounted } from "vue";
 import { useAuthStore } from "../stores/auth";
 import { useRouter } from "vue-router";
-import { useAuth } from "../composables/useAuth";
+import { doc, getDoc } from 'firebase/firestore';
+import { db } from '../firebase/config';
 
 const authStore = useAuthStore();
 const router = useRouter();
-const { logout } = useAuth();
+const personalDataComplete = ref(false);
 
 const isAdmin = computed(() => authStore.user?.role === "admin");
 const isLeader = computed(() => authStore.user?.role === "lider");
+
+const cardColor = computed(() => {
+  return personalDataComplete.value ? 'success-lighten-1' : 'grey-lighten-1';
+});
+
+onMounted(async () => {
+  await checkPersonalDataCompletion();
+});
+
+const checkPersonalDataCompletion = async () => {
+  try {
+    const leaderDoc = await getDoc(doc(db, "leaders", authStore.user!.id));
+    if (leaderDoc.exists()) {
+      const data = leaderDoc.data();
+      const personalData = data.personalData || {};
+      
+      // Verificar que todos los campos requeridos estén completos
+      const requiredFields = [
+        'firstName',
+        'lastName',
+        'birthDate',
+        'maritalStatus',
+        'phoneNumber'
+      ];
+      
+      const ministerialFields = [
+        'leadershipTime',
+        'baptized'
+      ];
+
+      const hasAllPersonalFields = requiredFields.every(field => 
+        personalData[field] && personalData[field].toString().trim() !== ''
+      );
+
+      const hasAllMinisterialFields = ministerialFields.every(field => 
+        data.ministerialData?.[field] && data.ministerialData[field].toString().trim() !== ''
+      );
+
+      const hasCourses = data.ministerialData?.courses?.length > 0;
+
+      personalDataComplete.value = hasAllPersonalFields && hasAllMinisterialFields && hasCourses;
+    }
+  } catch (error) {
+    console.error("Error al verificar datos personales:", error);
+    personalDataComplete.value = false;
+  }
+};
 
 const goToUserManagement = () => {
   router.push("/manage-users");
@@ -163,6 +240,10 @@ const goToPersonalData = () => {
 };
 
 const goToMinisterialData = () => {
+  if (!personalDataComplete.value) {
+    alert('Por favor, complete sus datos personales antes de acceder a los datos estadísticos.');
+    return;
+  }
   router.push("/ministerial-data");
 };
 
@@ -193,19 +274,21 @@ const goBack = () => {
 </script>
 
 <style scoped>
+.disabled-card {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.disabled-card:hover {
+  transform: none !important;
+  cursor: not-allowed;
+}
+
 .v-card {
-  transition: transform 0.2s;
-  height: 100%;
+  transition: all 0.3s ease;
 }
 
-.v-card:hover {
+.v-card:not(.disabled-card):hover {
   transform: translateY(-5px);
-  cursor: pointer;
-}
-
-@media (max-width: 600px) {
-  .v-card {
-    margin-bottom: 16px;
-  }
 }
 </style>

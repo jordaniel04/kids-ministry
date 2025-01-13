@@ -76,6 +76,22 @@ import { useAuthStore } from "../../stores/auth";
 import { useRouter } from 'vue-router';
 import NavigationBar from '../../components/NavigationBar.vue';
 
+interface PersonalData {
+    [key: string]: string | Date | null;
+    firstName: string;
+    lastName: string;
+    birthDate: Date | null;
+    maritalStatus: string;
+    phoneNumber: string;
+}
+
+interface MinisterialData {
+    [key: string]: string | string[];
+    leadershipTime: string;
+    baptized: string;
+    courses: string[];
+}
+
 const availableCourses = [
     "Bases del Ministerio",
     "Manual del Ministerio de Niños",
@@ -85,19 +101,18 @@ const availableCourses = [
     "Entrenamiento Evangelístico I",
 ];
 
-const personalData = ref({
+const personalData = ref<PersonalData>({
     firstName: "",
     lastName: "",
-    birthDate: null as Date | null,
+    birthDate: null,
     maritalStatus: "",
     phoneNumber: "",
 });
 
-const ministerialData = ref({
+const ministerialData = ref<MinisterialData>({
     leadershipTime: "",
-    // otherPositions: "",
     baptized: "",
-    courses: [] as string[],
+    courses: [],
 });
 
 const districts = ref<string[]>([]);
@@ -108,21 +123,44 @@ const initialData = ref({
 });
 
 const completionPercentage = computed(() => {
-    const totalFields = 9;
+    // Definir los campos requeridos para cada sección
+    const personalFields = [
+        'firstName',
+        'lastName', 
+        'birthDate',
+        'maritalStatus',
+        'phoneNumber'
+    ];
+
+    const ministerialFields = [
+        'leadershipTime',
+        'baptized',
+        'courses'
+    ];
+
     let filledFields = 0;
 
-    // Validación más estricta para campos personales
-    if (personalData.value.firstName?.trim()) filledFields++;
-    if (personalData.value.lastName?.trim()) filledFields++;
-    if (personalData.value.birthDate) filledFields++;
-    if (personalData.value.maritalStatus?.trim()) filledFields++;
-    if (personalData.value.phoneNumber?.trim()) filledFields++;
+    // Validar campos personales
+    personalFields.forEach(field => {
+        if (field === 'birthDate') {
+            if (personalData.value[field]) filledFields++;
+        } else {
+            const value = personalData.value[field];
+            if (typeof value === 'string' && value.trim()) filledFields++;
+        }
+    });
 
-    // Validación más estricta para campos ministeriales
-    if (ministerialData.value.leadershipTime?.trim()) filledFields++;
-    if (ministerialData.value.baptized?.trim()) filledFields++;
-    if (ministerialData.value.courses?.length > 0) filledFields++;
+    // Validar campos ministeriales
+    ministerialFields.forEach(field => {
+        if (field === 'courses') {
+            if (ministerialData.value[field]?.length > 0) filledFields++;
+        } else {
+            const value = ministerialData.value[field];
+            if (typeof value === 'string' && value.trim()) filledFields++;
+        }
+    });
 
+    const totalFields = personalFields.length + ministerialFields.length;
     return Math.round((filledFields / totalFields) * 100);
 });
 

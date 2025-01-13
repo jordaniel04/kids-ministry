@@ -140,3 +140,7 @@ onMounted(async () => {
     }
 });
 </script>
+
+<script lang="ts">
+export default { name: 'ChurchHistoryDialog' }
+</script>
