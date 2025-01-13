@@ -28,8 +28,9 @@ export interface MinisterialReport {
 export interface ReportPeriod {
     id: string;
     name: string;
+    description?: string;
     startDate: Timestamp;
     endDate: Timestamp;
     isActive: boolean;
-    description?: string;
+    allowEditing: boolean;
 }

@@ -13,5 +13,5 @@ export interface MinisterialData {
     discipleshipGraduates: number;
     connection911Children: number;
     updatedAt: Timestamp;
-    reportPeriodId?: string;
+    reportPeriodId?: string | null;
 } 

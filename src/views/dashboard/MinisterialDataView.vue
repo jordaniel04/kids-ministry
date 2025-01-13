@@ -2,9 +2,19 @@
     <div>
         <NavigationBar />
     <VContainer>
-            <h1>Datos de Iglesias del Distrito: 
-                <span class="district-name">{{ districtName }}</span>
-            </h1>
+            <div class="d-flex justify-space-between align-center mb-4">
+                <h1>Datos de Iglesias del Distrito: 
+                    <span class="district-name">{{ districtName }}</span>
+                </h1>
+                <VBtn
+                    color="primary"
+                    prepend-icon="mdi-plus"
+                    @click="dialog = true"
+                    :disabled="!canManageChurches"
+                >
+                    AGREGAR IGLESIA
+                </VBtn>
+            </div>
 
         <!-- Vista Desktop -->
         <VCard class="mb-4 d-none d-md-block">
@@ -400,19 +410,70 @@
                 </VCardText>
             </VCard>
 
-            <!-- Modal para agregar/editar iglesia -->
-            <ChurchFormDialog
-                v-model="dialog"
-                :edited-item="editedItem"
-                :edited-index="editedIndex"
-                @save="saveChurch"
-                @close="closeDialog"
-            />
+            <!-- Indicador de Progreso -->
+            <VCard class="mb-4" v-if="activePeriod">
+                <VCardText>
+                    <div class="d-flex align-center justify-space-between">
+                        <div>Progreso de Confirmación</div>
+                        <div class="text-h6">{{ completionPercentage }}%</div>
+                    </div>
+                    <VProgressLinear
+                        :model-value="completionPercentage"
+                        color="primary"
+                        height="20"
+                    >
+                        <template v-slot:default="{ value }">
+                            <strong>{{ Math.ceil(value) }}%</strong>
+                        </template>
+                    </VProgressLinear>
+                </VCardText>
+            </VCard>
 
-            <ChurchHistoryDialog
-                v-model="showHistory"
-                :church="selectedChurch"
-            />
+            <!-- Indicador de Estado de Edición -->
+            <VAlert
+                v-if="activePeriod"
+                :type="canManageChurches ? 'info' : 'warning'"
+                class="mb-4"
+            >
+                <div v-if="canManageChurches">
+                    Período activo: {{ activePeriod.name }}. La edición está habilitada.
+                </div>
+                <div v-else>
+                    Período activo: {{ activePeriod.name }}. La edición está deshabilitada.
+                </div>
+            </VAlert>
+
+            <!-- Botones en las acciones de cada iglesia -->
+            <template #[`item.actions`]="{ item }">
+                <div class="d-flex align-center gap-2">
+                    <VBtn
+                        icon
+                        :disabled="!canManageChurches"
+                        @click="editItem(item)"
+                    >
+                        <VIcon>mdi-pencil</VIcon>
+                    </VBtn>
+                    
+                    <VBtn
+                        icon
+                        color="error"
+                        :disabled="!canManageChurches"
+                        @click="deleteItem(item)"
+                    >
+                        <VIcon>mdi-delete</VIcon>
+                    </VBtn>
+
+                    <!-- Botón de confirmación solo visible si hay período activo -->
+                    <VBtn
+                        v-if="activePeriod && !isChurchConfirmed(item.id)"
+                        color="success"
+                        size="small"
+                        @click="confirmChurchData(item.id)"
+                    >
+                        Confirmar Datos
+                    </VBtn>
+                </div>
+            </template>
     </VContainer>
     </div>
 </template>
@@ -426,11 +487,13 @@ import NavigationBar from '../../components/NavigationBar.vue';
 import type { ReportPeriod, MinisterialReport } from '../../types/MinisterialReport';
 import type { Church } from '../../types/Church';
 import type { MinisterialData } from '../../types/MinisterialData';
+import type { ChurchPeriodConfirmation } from '../../types/ChurchPeriodConfirmation';
 const ChurchFormDialog = defineAsyncComponent(() => import('../../components/ChurchFormDialog.vue'));
 const ChurchHistoryDialog = defineAsyncComponent(() => import('../../components/ChurchHistoryDialog.vue'));
 
 const authStore = useAuthStore();
 const districtName = ref('');
+const currentDistrict = ref<{ id: string }>({ id: '' });
 const userData = ref<MinisterialData | null>(null);
 const churches = ref<Church[]>([]);
 const showDetailsFor = ref<string | null>(null);
@@ -542,7 +605,10 @@ const loadData = async () => {
             const districtDoc = await getDoc(doc(db, "districts", districtLeader.districtId));
             if (districtDoc.exists()) {
                 const districtData = districtDoc.data();
-                districtName.value = districtData.location; // Aquí establecemos el nombre del distrito
+                districtName.value = districtData.location;
+                currentDistrict.value = {
+                    id: districtDoc.id
+                };
             }
 
             // 3. Cargar las iglesias del distrito
@@ -756,6 +822,122 @@ const headers = [
     { title: 'Bautizados', key: 'ministerialData.baptizedChildren', sortable: true },
     { title: 'Acciones', key: 'actions', sortable: false }
 ];
+
+// Estados
+const churchConfirmations = ref(new Map());
+const completionPercentage = ref(0);
+
+// Función para calcular el porcentaje de completitud
+const calculateCompletionPercentage = () => {
+    if (!churches.value.length) return 0;
+    const confirmedCount = Array.from(churchConfirmations.value.values())
+        .filter(conf => conf.isConfirmed).length;
+    return Math.round((confirmedCount / churches.value.length) * 100);
+};
+
+// Función para confirmar datos de una iglesia
+const confirmChurchData = async (churchId: string) => {
+    try {
+        if (!activePeriod.value) throw new Error("No hay período activo");
+
+        // 1. Verificar datos ministeriales
+        const church = churches.value.find(c => c.id === churchId);
+        if (!church?.ministerialData?.length) {
+            throw new Error("No hay datos ministeriales para confirmar");
+        }
+
+        // 2. Guardar confirmación
+        await addDoc(collection(db, "church_confirmations"), {
+            churchId,
+            periodId: activePeriod.value.id,
+            districtId: currentDistrict.value.id,
+            confirmedAt: Timestamp.now(),
+            confirmedBy: authStore.user?.id,
+            isConfirmed: true,
+            ministerialData: church.ministerialData[church.ministerialData.length - 1]
+        });
+
+        await loadConfirmations();
+        completionPercentage.value = calculateCompletionPercentage();
+        
+    } catch (error) {
+        console.error("Error al confirmar datos:", error);
+        alert("Error al confirmar los datos de la iglesia");
+    }
+};
+
+// Desbloquear edición (solo admin)
+const unlockChurchEditing = async (churchId: string) => {
+    try {
+        if (!activePeriod.value) return;
+        
+        const confirmationsRef = collection(db, "church_period_confirmations");
+        const q = query(
+            confirmationsRef,
+            where("churchId", "==", churchId),
+            where("periodId", "==", activePeriod.value.id)
+        );
+        
+        const snapshot = await getDocs(q);
+        if (!snapshot.empty) {
+            const confirmationDoc = snapshot.docs[0];
+            await updateDoc(doc(db, "church_period_confirmations", confirmationDoc.id), {
+                isLocked: false,
+                unlockedAt: Timestamp.now(),
+                unlockedBy: authStore.user?.id
+            });
+        }
+
+        await loadConfirmations();
+    } catch (error) {
+        console.error("Error al desbloquear edición:", error);
+        alert("Error al desbloquear la edición");
+    }
+};
+
+const isChurchConfirmed = (churchId: string) => {
+    return churchConfirmations.value.get(churchId)?.isConfirmed || false;
+};
+
+const loadConfirmations = async () => {
+    if (!activePeriod.value) return;
+
+    const confirmationsRef = collection(db, "church_confirmations");
+    const q = query(
+        confirmationsRef,
+        where("periodId", "==", activePeriod.value.id),
+        where("districtId", "==", currentDistrict.value.id)
+    );
+    
+    const snapshot = await getDocs(q);
+    
+    churchConfirmations.value.clear();
+    snapshot.docs.forEach(doc => {
+        const data = doc.data();
+        churchConfirmations.value.set(data.churchId, {
+            id: doc.id,
+            ...data
+        });
+    });
+    
+    completionPercentage.value = calculateCompletionPercentage();
+};
+
+const canManageChurches = computed(() => {
+    return activePeriod.value?.allowEditing && activePeriod.value?.isActive;
+});
+
+const canConfirmChurch = (churchId: string) => {
+    const church = churches.value.find(c => c.id === churchId);
+    if (!church?.ministerialData?.length) return false;
+    
+    const latestData = church.ministerialData[church.ministerialData.length - 1];
+    return (
+        latestData.totalTeachers > 0 &&
+        latestData.totalChildren > 0 &&
+        latestData.reportPeriodId === activePeriod.value?.id
+    );
+};
 </script>
 <style scoped>
 .totals-card {

@@ -174,11 +174,13 @@
 import { computed, ref, watch } from 'vue';
 import type { Church } from '../types/Church';
 import { Timestamp } from 'firebase/firestore';
+import type { ReportPeriod } from '../types/MinisterialReport';
 
 interface Props {
     modelValue: boolean;
     editedItem: any;
     editedIndex: number;
+    activePeriod?: ReportPeriod;
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -447,6 +449,14 @@ const editItem = (church: Church, index: number) => {
     };
     
     dialog.value = true;
+};
+
+const getMinisterialData = () => {
+    return {
+        ...editedItem.value.ministerialData[0],
+        updatedAt: Timestamp.now(),
+        reportPeriodId: props.activePeriod?.id
+    };
 };
 </script>
 

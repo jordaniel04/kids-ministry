@@ -43,12 +43,12 @@
         >
           <VCardTitle class="d-flex align-center">
             <VIcon class="me-2">mdi-account-group</VIcon>
-            Ver Estadísticas
+            Gestión de Períodos de Reporte
           </VCardTitle>
-          <VCardSubtitle> Ver las estadísticas del sistema </VCardSubtitle>
+          <VCardSubtitle> Organizar los datos ministeriales por períodos </VCardSubtitle>
           <template v-slot:actions>
             <VBtn variant="text" @click="goToStatistics">
-              Ir a Estadísticas
+              Gestión de Períodos
             </VBtn>
           </template>
         </VCard>
