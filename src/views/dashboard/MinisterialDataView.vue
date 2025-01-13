@@ -35,7 +35,7 @@
                 </h2>
                 <div class="d-flex gap-2">
                     <VBtn 
-                        v-if="activePeriod?.allowEditing" 
+                        v-if="activePeriod?.allowEditing && !isConfirmed" 
                         color="primary" 
                         prepend-icon="mdi-plus"
                         @click="openNewChurchDialog"
@@ -116,21 +116,20 @@
                                 </td>
                                 <td class="text-center">
                                     <VIcon 
-                                        v-if="activePeriod?.allowEditing"
+                                        v-if="activePeriod?.allowEditing && !isConfirmed"
                                         color="primary" 
                                         icon="mdi-pencil" 
                                         size="small" 
-                                        class="me-2 cursor-pointer"
+                                        class="me-2"
                                         @click="editItem(church, index)"
                                     >
                                         <VTooltip activator="parent" location="top">Editar</VTooltip>
                                     </VIcon>
                                     <VIcon 
-                                        v-if="activePeriod?.allowEditing"
+                                        v-if="activePeriod?.allowEditing && !isConfirmed"
                                         color="error" 
                                         icon="mdi-delete" 
-                                        size="small" 
-                                        class="cursor-pointer"
+                                        size="small"
                                         @click="deleteItem(church, index)"
                                     >
                                         <VTooltip activator="parent" location="top">Eliminar</VTooltip>
@@ -376,12 +375,28 @@
 
                             <VCardActions>
                                 <VSpacer />
-                                <VIcon color="primary" icon="mdi-pencil" size="small" class="me-2"
-                                    @click="editItem(church, churches.indexOf(church))" />
-                                <VIcon color="error" icon="mdi-delete" size="small"
-                                    @click="deleteItem(church, churches.indexOf(church))" />
-                                <VIcon color="info" icon="mdi-history" size="small" class="me-2"
-                                    @click="viewHistory(church)" />
+                                <VIcon 
+                                    v-if="activePeriod?.allowEditing && !isConfirmed"
+                                    color="primary" 
+                                    icon="mdi-pencil" 
+                                    size="small" 
+                                    class="me-2"
+                                    @click="editItem(church, churches.indexOf(church))" 
+                                />
+                                <VIcon 
+                                    v-if="activePeriod?.allowEditing && !isConfirmed"
+                                    color="error" 
+                                    icon="mdi-delete" 
+                                    size="small"
+                                    @click="deleteItem(church, churches.indexOf(church))" 
+                                />
+                                <VIcon 
+                                    color="info" 
+                                    icon="mdi-history" 
+                                    size="small" 
+                                    class="me-2"
+                                    @click="viewHistory(church)" 
+                                />
                             </VCardActions>
                         </VCard>
                     </VCol>
@@ -561,7 +576,7 @@ import ChurchFormDialog from "../../components/ChurchFormDialog.vue";
 
 const authStore = useAuthStore();
 const districtName = ref("");
-const currentDistrict = ref<{ id: string }>({ id: "" });
+const currentDistrict = ref<{ id: string; }>({ id: "" });
 const churches = ref<Church[]>([]);
 const showDetailsFor = ref<string | null>(null);
 const activePeriod = ref<ReportPeriod | null>(null);
@@ -708,17 +723,27 @@ const loadData = async () => {
         const periodSnapshot = await getDocs(periodQuery);
 
         if (!periodSnapshot.empty) {
-            const data = periodSnapshot.docs[0].data();
-            const period: ReportPeriod = {
+            const periodData = periodSnapshot.docs[0].data();
+            activePeriod.value = {
                 id: periodSnapshot.docs[0].id,
-                name: data.name,
-                description: data.description,
-                startDate: data.startDate,
-                endDate: data.endDate,
-                isActive: data.isActive,
-                allowEditing: data.allowEditing ?? false,
+                name: periodData.name,
+                description: periodData.description,
+                startDate: periodData.startDate,
+                endDate: periodData.endDate,
+                isActive: periodData.isActive,
+                allowEditing: periodData.allowEditing ?? false
             };
-            activePeriod.value = period;
+
+            // 2. Verificar confirmación del distrito
+            if (currentDistrict.value?.id) {
+                const confirmationQuery = query(
+                    collection(db, "district_confirmations"),
+                    where("districtId", "==", currentDistrict.value.id),
+                    where("periodId", "==", periodSnapshot.docs[0].id)
+                );
+                const confirmationSnapshot = await getDocs(confirmationQuery);
+                isConfirmed.value = !confirmationSnapshot.empty;
+            }
         }
 
         // 2. Cargar distrito del líder actual
@@ -772,6 +797,7 @@ const loadData = async () => {
         }
     } catch (error) {
         console.error("Error al cargar datos:", error);
+        alert("Error al cargar los datos");
     }
 };
 
@@ -1124,6 +1150,10 @@ const processDistrictConfirmation = async () => {
                 sum + (church.ministerialData?.[0]?.totalChildren || 0), 0),
             convertedChildren: churches.value.reduce((sum: number, church) => 
                 sum + (church.ministerialData?.[0]?.convertedChildren || 0), 0),
+            memberChildren: churches.value.reduce((sum: number, church) => 
+                sum + (church.ministerialData?.[0]?.memberChildren || 0), 0),
+            nonRepentantChildren: churches.value.reduce((sum: number, church) => 
+                sum + (church.ministerialData?.[0]?.nonRepentantChildren || 0), 0),
             baptizedChildren: churches.value.reduce((sum: number, church) => 
                 sum + (church.ministerialData?.[0]?.baptizedChildren || 0), 0),
             consolidatedGraduates: churches.value.reduce((sum: number, church) => 
@@ -1140,6 +1170,8 @@ const processDistrictConfirmation = async () => {
                 districtId: currentDistrict.value.id,
                 confirmedAt: Timestamp.now(),
                 confirmedBy: authStore.user.id,
+                churchName: church.name,
+                leaderName: church.leaderName,
                 ministerialData: church.ministerialData[0]
             });
         }

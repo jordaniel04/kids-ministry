@@ -50,6 +50,12 @@ const routes: Array<RouteRecordRaw> = [
     name: 'district-reports',
     component: DistrictReportsView,
     meta: { requiresAuth: true, requiresAdmin: true }
+  },
+  {
+    path: '/admin/district-historical',
+    name: 'district-historical',
+    component: () => import('../views/admin/DistrictHistoricalView.vue'),
+    meta: { requiresAuth: true, requiresAdmin: true }
   }
 ];
 
