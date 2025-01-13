@@ -18,40 +18,53 @@
             </VCard>
 
             <!-- Indicador de Estado de Edición -->
-            <VAlert v-if="activePeriod" :type="activePeriod.allowEditing ? 'info' : 'warning'" class="mb-4">
+            <VAlert 
+                v-if="activePeriod" 
+                :type="isConfirmed ? 'success' : (activePeriod.allowEditing ? 'info' : 'warning')" 
+                class="mb-4"
+            >
                 <div>
-                    Período activo: {{ activePeriod.name }}.
-                    {{
-                        activePeriod.allowEditing
-                            ? "La edición está habilitada."
-                            : "La edición está deshabilitada."
-                    }}
+                    <span class="font-weight-bold">{{ activePeriod.name }}</span>
+                    <template v-if="isConfirmed">
+                        - Reporte confirmado exitosamente
+                    </template>
+                    <template v-else>
+                        - {{
+                            activePeriod.allowEditing
+                                ? "La edición está habilitada."
+                                : "La edición está deshabilitada."
+                        }}
+                    </template>
                 </div>
             </VAlert>
 
-            <div class="d-flex justify-space-between align-center mb-4">
-                <h2 class="text-h4">
-                    Datos de las iglesias del Distrito: {{ districtName }}
-                </h2>
-                <div class="d-flex gap-2">
-                    <VBtn 
-                        v-if="activePeriod?.allowEditing && !isConfirmed" 
-                        color="primary" 
-                        prepend-icon="mdi-plus"
-                        @click="openNewChurchDialog"
-                    >
-                        Agregar Iglesia
-                    </VBtn>
-                    <VBtn
-                        v-if="activePeriod && !isConfirmed"
-                        color="success"
-                        prepend-icon="mdi-check-circle"
-                        @click="confirmDistrictData"
-                        :loading="confirming"
-                    >
-                        Confirmar Datos del Distrito
-                    </VBtn>
-                </div>
+            <div class="d-flex gap-2 mb-4">
+                <VBtn
+                    v-if="activePeriod && !isConfirmed"
+                    color="success"
+                    prepend-icon="mdi-check-circle"
+                    @click="confirmDistrictData"
+                    :loading="confirming"
+                    size="x-large"
+                    block
+                >
+                    Confirmar Datos del Distrito
+                </VBtn>
+            </div>
+
+            <h2 class="text-h4 mb-4">
+                Datos de las iglesias del Distrito: {{ districtName }}
+            </h2>
+
+            <div class="d-flex gap-2">
+                <VBtn 
+                    v-if="activePeriod?.allowEditing && !isConfirmed" 
+                    color="primary" 
+                    prepend-icon="mdi-plus"
+                    @click="openNewChurchDialog"
+                >
+                    Agregar Iglesia
+                </VBtn>
             </div>
 
 
