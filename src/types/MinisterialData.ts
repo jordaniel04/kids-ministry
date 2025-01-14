@@ -9,9 +9,7 @@ export interface MinisterialData {
     baptizedChildren: number;
     consolidatedGraduates: number;
     sacramentsGraduates: number;
-    rescueClubChildren: number;
     discipleshipGraduates: number;
-    connection911Children: number;
     updatedAt: Timestamp;
     reportPeriodId?: string | null;
 }

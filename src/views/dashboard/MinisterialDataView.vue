@@ -76,7 +76,6 @@
                                     <th scope="col" class="text-center">Bautizados E.S.</th>
                                     <th scope="col" class="text-center">Graduados Consolidado</th>
                                     <th scope="col" class="text-center">Graduados Sacramentos</th>
-                                    <th scope="col" class="text-center">Club Al Rescate</th>
                                     <th scope="col" class="text-center">Graduados Discipulado</th>
                                     <th scope="col" class="text-center">Acciones</th>
                                 </tr>
@@ -108,9 +107,6 @@
                                     </td>
                                     <td class="text-center">
                                         {{ getLatestMinisterialData(church).sacramentsGraduates }}
-                                    </td>
-                                    <td class="text-center">
-                                        {{ getLatestMinisterialData(church).rescueClubChildren }}
                                     </td>
                                     <td class="text-center">
                                         {{ getLatestMinisterialData(church).discipleshipGraduates }}
@@ -232,15 +228,6 @@
                                         </div>
                                     </div>
 
-                                    <!-- Club Al Rescate -->
-                                    <div class="d-flex align-center mb-4">
-                                        <VIcon color="orange" class="me-2">mdi-lifebuoy</VIcon>
-                                        <div>
-                                            <div class="text-caption">Club Al Rescate</div>
-                                            <div class="text-h6">{{ totals.rescueClubChildren }}</div>
-                                        </div>
-                                    </div>
-
                                     <!-- Graduados Discipulado -->
                                     <div class="d-flex align-center mb-4">
                                         <VIcon color="blue-grey" class="me-2">mdi-school-outline</VIcon>
@@ -329,14 +316,6 @@
                                                     <div>
                                                         {{
                                                             getLatestMinisterialData(church).sacramentsGraduates
-                                                        }}
-                                                    </div>
-                                                </div>
-                                                <div class="d-flex justify-space-between mb-2">
-                                                    <div class="text-caption">Club Al Rescate</div>
-                                                    <div>
-                                                        {{
-                                                            getLatestMinisterialData(church).rescueClubChildren
                                                         }}
                                                     </div>
                                                 </div>
@@ -463,15 +442,6 @@
                             </VCol>
                             <VCol cols="12" sm="6" md="3">
                                 <div class="d-flex align-center mb-2">
-                                    <VIcon color="orange" class="me-2">mdi-lifebuoy</VIcon>
-                                    <div>
-                                        <div class="text-caption">Club Al Rescate</div>
-                                        <div class="text-h6">{{ totals.rescueClubChildren }}</div>
-                                    </div>
-                                </div>
-                            </VCol>
-                            <VCol cols="12" sm="6" md="3">
-                                <div class="d-flex align-center mb-2">
                                     <VIcon color="blue-grey" class="me-2">mdi-book-open-variant</VIcon>
                                     <div>
                                         <div class="text-caption">Graduados Discipulado</div>
@@ -592,7 +562,6 @@ const defaultItem = {
         baptizedChildren: 0,
         consolidatedGraduates: 0,
         sacramentsGraduates: 0,
-        rescueClubChildren: 0,
         discipleshipGraduates: 0,
         updatedAt: Timestamp.now(),
         reportPeriodId: activePeriod.value?.id
@@ -634,7 +603,6 @@ interface TotalAccumulator {
     baptizedChildren: number;
     consolidatedGraduates: number;
     sacramentsGraduates: number;
-    rescueClubChildren: number;
     discipleshipGraduates: number;
 }
 
@@ -648,7 +616,6 @@ const totals = computed(() => {
         baptizedChildren: 0,
         consolidatedGraduates: 0,
         sacramentsGraduates: 0,
-        rescueClubChildren: 0,
         discipleshipGraduates: 0,
     };
 
@@ -663,7 +630,6 @@ const totals = computed(() => {
             baptizedChildren: sum.baptizedChildren + Number(data.baptizedChildren || 0),
             consolidatedGraduates: sum.consolidatedGraduates + Number(data.consolidatedGraduates || 0),
             sacramentsGraduates: sum.sacramentsGraduates + Number(data.sacramentsGraduates || 0),
-            rescueClubChildren: sum.rescueClubChildren + Number(data.rescueClubChildren || 0),
             discipleshipGraduates: sum.discipleshipGraduates + Number(data.discipleshipGraduates || 0),
         };
     }, initialValue);
@@ -691,29 +657,19 @@ const loadActivePeriod = async () => {
 
 const loadData = async () => {
     try {
-        const [periodSnapshot, districtLeaderDocs] = await Promise.all([
-            getDocs(query(
-                collection(db, "report_periods"), 
-                where("isActive", "==", true)
-            )),
-            getDocs(query(
-                collection(db, "district_leaders"),
-                where("userId", "==", authStore.user?.id),
-                where("isActive", "==", true)
-            ))
-        ]);
+        // 1. Obtener el líder del distrito
+        const districtLeaderDocs = await getDocs(query(
+            collection(db, "district_leaders"),
+            where("userId", "==", authStore.user?.id),
+            where("isActive", "==", true)
+        ));
 
-        if (!periodSnapshot.empty && !districtLeaderDocs.empty) {
-            const periodData = periodSnapshot.docs[0].data();
+        if (!districtLeaderDocs.empty) {
             const districtLeader = districtLeaderDocs.docs[0].data();
             
-            const [districtDoc, confirmationSnapshot, churchesSnapshot] = await Promise.all([
+            // 2. Cargar datos del distrito y sus iglesias
+            const [districtDoc, churchesSnapshot] = await Promise.all([
                 getDoc(doc(db, "districts", districtLeader.districtId)),
-                getDocs(query(
-                    collection(db, "district_confirmations"),
-                    where("districtId", "==", districtLeader.districtId),
-                    where("periodId", "==", periodSnapshot.docs[0].id)
-                )),
                 getDocs(query(
                     collection(db, "churches"),
                     where("districtId", "==", districtLeader.districtId),
@@ -721,22 +677,42 @@ const loadData = async () => {
                 ))
             ]);
 
-            // Actualizar estados solo después de tener todos los datos
-            activePeriod.value = {
-                id: periodSnapshot.docs[0].id,
-                name: periodData.name,
-                description: periodData.description,
-                startDate: periodData.startDate,
-                endDate: periodData.endDate,
-                isActive: periodData.isActive,
-                allowEditing: periodData.allowEditing ?? false
-            };
+            // 3. Cargar período activo si existe
+            const periodSnapshot = await getDocs(query(
+                collection(db, "report_periods"), 
+                where("isActive", "==", true)
+            ));
 
+            // Actualizar el período activo si existe
+            if (!periodSnapshot.empty) {
+                const periodData = periodSnapshot.docs[0].data();
+                activePeriod.value = {
+                    id: periodSnapshot.docs[0].id,
+                    name: periodData.name,
+                    description: periodData.description,
+                    startDate: periodData.startDate,
+                    endDate: periodData.endDate,
+                    isActive: periodData.isActive,
+                    allowEditing: periodData.allowEditing ?? false
+                };
+
+                // Cargar confirmaciones solo si hay período activo
+                const confirmationSnapshot = await getDocs(query(
+                    collection(db, "district_confirmations"),
+                    where("districtId", "==", districtLeader.districtId),
+                    where("periodId", "==", periodSnapshot.docs[0].id)
+                ));
+                isConfirmed.value = !confirmationSnapshot.empty;
+            } else {
+                activePeriod.value = null;
+                isConfirmed.value = false;
+            }
+
+            // Cargar datos del distrito y las iglesias independientemente del período
             if (districtDoc.exists()) {
                 const districtData = districtDoc.data();
                 districtName.value = districtData.location;
                 currentDistrict.value = { id: districtDoc.id };
-                isConfirmed.value = !confirmationSnapshot.empty;
 
                 churches.value = churchesSnapshot.docs.map((doc) => ({
                     id: doc.id,
@@ -754,7 +730,7 @@ const loadData = async () => {
         }
     } catch (error) {
         console.error("Error al cargar datos:", error);
-        throw error; // Propagar el error para manejarlo en onMounted
+        throw error;
     }
 };
 
@@ -780,7 +756,6 @@ const closeDialog = () => {
             baptizedChildren: 0,
             consolidatedGraduates: 0,
             sacramentsGraduates: 0,
-            rescueClubChildren: 0,
             discipleshipGraduates: 0,
             updatedAt: Timestamp.now(),
             reportPeriodId: activePeriod.value?.id
@@ -1115,11 +1090,7 @@ const processDistrictConfirmation = async () => {
             consolidatedGraduates: churches.value.reduce((sum: number, church) => 
                 sum + (church.ministerialData?.[0]?.consolidatedGraduates || 0), 0),
             sacramentsGraduates: churches.value.reduce((sum: number, church) => 
-                sum + (church.ministerialData?.[0]?.sacramentsGraduates || 0), 0),
-            rescueClubChildren: churches.value.reduce((sum: number, church) => 
-                sum + (church.ministerialData?.[0]?.rescueClubChildren || 0), 0),
-            discipleshipGraduates: churches.value.reduce((sum: number, church) => 
-                sum + (church.ministerialData?.[0]?.discipleshipGraduates || 0), 0)
+                sum + (church.ministerialData?.[0]?.sacramentsGraduates || 0), 0)
         });
 
         // Confirmar cada iglesia individualmente

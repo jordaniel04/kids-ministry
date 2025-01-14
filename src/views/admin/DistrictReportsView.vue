@@ -104,7 +104,6 @@ const periods = ref<ReportPeriod[]>([]);
 const selectedDistrict = ref('');
 const selectedPeriod = ref('');
 const churchesData = ref<ChurchSummary[]>([]);
-const showChurchesDetail = ref(false);
 const activeTab = ref('period');
 const selectedHistoricalDistrict = ref('');
 const historicalData = ref<any[]>([]);
@@ -161,12 +160,6 @@ const headers = [
         align: 'end' as const
     },
     {
-        title: 'Club Al Rescate',
-        key: 'ministerialData[0].rescueClubChildren',
-        sortable: true,
-        align: 'end' as const
-    },
-    {
         title: 'Graduados Discipulado',
         key: 'ministerialData[0].discipleshipGraduates',
         sortable: true,
@@ -184,7 +177,6 @@ const historicalHeaders = [
     { title: 'Bautizados', key: 'baptizedChildren', sortable: true, align: 'end' as const },
     { title: 'Graduados Consolidados', key: 'consolidatedGraduates', sortable: true, align: 'end' as const },
     { title: 'Graduados Sacramentos', key: 'sacramentsGraduates', sortable: true, align: 'end' as const },
-    { title: 'Club Al Rescate', key: 'rescueClubChildren', sortable: true, align: 'end' as const },
     { title: 'Graduados Discipulado', key: 'discipleshipGraduates', sortable: true, align: 'end' as const },
     { title: 'Total Iglesias', key: 'churchesCount', sortable: true, align: 'end' as const }
 ];
@@ -247,9 +239,7 @@ const loadDistrictData = async () => {
                     sacramentsGraduates: Number(data.ministerialData.sacramentsGraduates) || 0,
                     memberChildren: Number(data.ministerialData.memberChildren) || 0,
                     nonRepentantChildren: Number(data.ministerialData.nonRepentantChildren) || 0,
-                    rescueClubChildren: Number(data.ministerialData.rescueClubChildren) || 0,
                     discipleshipGraduates: Number(data.ministerialData.discipleshipGraduates) || 0,
-                    connection911Children: Number(data.ministerialData.connection911Children) || 0,
                     reportPeriodId: selectedPeriod.value,
                     updatedAt: data.ministerialData.updatedAt || new Date()
                 }]
@@ -293,7 +283,6 @@ const loadHistoricalData = async () => {
             baptizedChildren: conf.baptizedChildren || 0,
             consolidatedGraduates: conf.consolidatedGraduates || 0,
             sacramentsGraduates: conf.sacramentsGraduates || 0,
-            rescueClubChildren: conf.rescueClubChildren || 0,
             discipleshipGraduates: conf.discipleshipGraduates || 0,
             churchesCount: conf.churchesCount || 0
         }));
@@ -308,7 +297,7 @@ const loadHistoricalData = async () => {
 
 type TotalKeys = 'totalTeachers' | 'totalChildren' | 'convertedChildren' | 'memberChildren' | 
     'nonRepentantChildren' | 'baptizedChildren' | 'consolidatedGraduates' | 'sacramentsGraduates' | 
-    'rescueClubChildren' | 'discipleshipGraduates';
+    'discipleshipGraduates';
 
 const labels: Record<TotalKeys, string> = {
     totalTeachers: 'Total Maestras',
@@ -319,7 +308,6 @@ const labels: Record<TotalKeys, string> = {
     baptizedChildren: 'Niños Bautizados',
     consolidatedGraduates: 'Graduados Consolidados',
     sacramentsGraduates: 'Graduados Sacramentos',
-    rescueClubChildren: 'Club Al Rescate',
     discipleshipGraduates: 'Graduados Discipulado'
 };
 
@@ -344,7 +332,6 @@ const districtTotals = computed(() => {
         baptizedChildren: 0,
         consolidatedGraduates: 0,
         sacramentsGraduates: 0,
-        rescueClubChildren: 0,
         discipleshipGraduates: 0
     });
 });
