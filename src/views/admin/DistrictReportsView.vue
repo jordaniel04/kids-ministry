@@ -5,7 +5,7 @@
             <h1>Reportes por Distrito</h1>
 
             <!-- Tabs para cambiar entre vistas -->
-            <VTabs v-model="activeTab" class="mb-4">
+            <VTabs v-model="activeTab" class="mb-4" :touch="false">
                 <VTab value="period">Por Período</VTab>
                 <VTab value="historical">Histórico</VTab>
             </VTabs>
@@ -18,24 +18,12 @@
                         <VCardText>
                             <VRow>
                                 <VCol cols="12" sm="6" md="4">
-                                    <VSelect
-                                        v-model="selectedDistrict"
-                                        :items="districts"
-                                        label="Distrito"
-                                        item-title="location"
-                                        item-value="id"
-                                        @update:model-value="loadDistrictData"
-                                    />
+                                    <VSelect v-model="selectedDistrict" :items="districts" label="Distrito"
+                                        item-title="location" item-value="id" @update:model-value="loadDistrictData" />
                                 </VCol>
                                 <VCol cols="12" sm="6" md="4">
-                                    <VSelect
-                                        v-model="selectedPeriod"
-                                        :items="periods"
-                                        label="Período"
-                                        item-title="name"
-                                        item-value="id"
-                                        @update:model-value="loadDistrictData"
-                                    />
+                                    <VSelect v-model="selectedPeriod" :items="periods" label="Período" item-title="name"
+                                        item-value="id" @update:model-value="loadDistrictData" />
                                 </VCol>
                             </VRow>
                         </VCardText>
@@ -45,11 +33,7 @@
                     <VCard v-if="selectedDistrict && selectedPeriod">
                         <VCardTitle>Datos del Distrito</VCardTitle>
                         <VCardText>
-                            <VDataTable
-                                :headers="headers"
-                                :items="churchesData"
-                                :loading="loading"
-                            >
+                            <VDataTable :headers="headers" :items="churchesData" :loading="loading">
                                 <template #bottom>
                                     <div class="d-flex justify-end pt-4">
                                         <div class="text-subtitle-1 font-weight-bold">
@@ -81,25 +65,15 @@
                 <VWindowItem value="historical">
                     <VCard class="mb-4">
                         <VCardText>
-                            <VSelect
-                                v-model="selectedHistoricalDistrict"
-                                :items="districts"
-                                label="Distrito"
-                                item-title="location"
-                                item-value="id"
-                                @update:model-value="loadHistoricalData"
-                            />
+                            <VSelect v-model="selectedHistoricalDistrict" :items="districts" label="Distrito"
+                                item-title="location" item-value="id" @update:model-value="loadHistoricalData" />
                         </VCardText>
                     </VCard>
 
                     <VCard v-if="selectedHistoricalDistrict && historicalData.length > 0">
                         <VCardTitle>Totales por Período</VCardTitle>
                         <VCardText>
-                            <VDataTable
-                                :headers="historicalHeaders"
-                                :items="historicalData"
-                                :loading="loading"
-                            />
+                            <VDataTable :headers="historicalHeaders" :items="historicalData" :loading="loading" />
                         </VCardText>
                     </VCard>
                 </VWindowItem>
@@ -138,39 +112,63 @@ const historicalData = ref<any[]>([]);
 const headers = [
     { title: 'Iglesia', key: 'name', sortable: true },
     { title: 'Líder', key: 'leaderName', sortable: true },
-    { 
-        title: 'Total Maestras', 
-        key: 'ministerialData[0].totalTeachers', 
+    {
+        title: 'Total Maestras',
+        key: 'ministerialData[0].totalTeachers',
         sortable: true,
         align: 'end' as const
     },
-    { 
-        title: 'Total Niños', 
-        key: 'ministerialData[0].totalChildren', 
+    {
+        title: 'Total Niños',
+        key: 'ministerialData[0].totalChildren',
         sortable: true,
         align: 'end' as const
     },
-    { 
-        title: 'Niños Convertidos', 
-        key: 'ministerialData[0].convertedChildren', 
+    {
+        title: 'Niños Convertidos',
+        key: 'ministerialData[0].convertedChildren',
         sortable: true,
         align: 'end' as const
     },
-    { 
-        title: 'Niños Bautizados', 
-        key: 'ministerialData[0].baptizedChildren', 
+    {
+        title: 'Niños Miembros',
+        key: 'ministerialData[0].memberChildren',
         sortable: true,
         align: 'end' as const
     },
-    { 
-        title: 'Graduados Consolidados', 
-        key: 'ministerialData[0].consolidatedGraduates', 
+    {
+        title: 'Niños Sin Arrepentir',
+        key: 'ministerialData[0].nonRepentantChildren',
         sortable: true,
         align: 'end' as const
     },
-    { 
-        title: 'Graduados Sacramentos', 
-        key: 'ministerialData[0].sacramentsGraduates', 
+    {
+        title: 'Niños Bautizados',
+        key: 'ministerialData[0].baptizedChildren',
+        sortable: true,
+        align: 'end' as const
+    },
+    {
+        title: 'Graduados Consolidados',
+        key: 'ministerialData[0].consolidatedGraduates',
+        sortable: true,
+        align: 'end' as const
+    },
+    {
+        title: 'Graduados Sacramentos',
+        key: 'ministerialData[0].sacramentsGraduates',
+        sortable: true,
+        align: 'end' as const
+    },
+    {
+        title: 'Club Al Rescate',
+        key: 'ministerialData[0].rescueClubChildren',
+        sortable: true,
+        align: 'end' as const
+    },
+    {
+        title: 'Graduados Discipulado',
+        key: 'ministerialData[0].discipleshipGraduates',
         sortable: true,
         align: 'end' as const
     }
@@ -186,6 +184,8 @@ const historicalHeaders = [
     { title: 'Bautizados', key: 'baptizedChildren', sortable: true, align: 'end' as const },
     { title: 'Graduados Consolidados', key: 'consolidatedGraduates', sortable: true, align: 'end' as const },
     { title: 'Graduados Sacramentos', key: 'sacramentsGraduates', sortable: true, align: 'end' as const },
+    { title: 'Club Al Rescate', key: 'rescueClubChildren', sortable: true, align: 'end' as const },
+    { title: 'Graduados Discipulado', key: 'discipleshipGraduates', sortable: true, align: 'end' as const },
     { title: 'Total Iglesias', key: 'churchesCount', sortable: true, align: 'end' as const }
 ];
 
@@ -221,7 +221,7 @@ onMounted(async () => {
 
 const loadDistrictData = async () => {
     if (!selectedDistrict.value || !selectedPeriod.value) return;
-    
+
     loading.value = true;
     try {
         const confirmationsRef = collection(db, "church_confirmations");
@@ -230,7 +230,7 @@ const loadDistrictData = async () => {
             where("districtId", "==", selectedDistrict.value),
             where("periodId", "==", selectedPeriod.value)
         );
-        
+
         const confirmationsSnapshot = await getDocs(confirmationsQuery);
         churchesData.value = confirmationsSnapshot.docs.map(doc => {
             const data = doc.data();
@@ -265,7 +265,7 @@ const loadDistrictData = async () => {
 
 const loadHistoricalData = async () => {
     if (!selectedHistoricalDistrict.value) return;
-    
+
     loading.value = true;
     try {
         const confirmationsRef = collection(db, "district_confirmations");
@@ -273,7 +273,7 @@ const loadHistoricalData = async () => {
             confirmationsRef,
             where("districtId", "==", selectedHistoricalDistrict.value)
         );
-        
+
         const confirmationsSnapshot = await getDocs(confirmationsQuery);
         const confirmations = confirmationsSnapshot.docs.map(doc => doc.data());
 
@@ -293,6 +293,8 @@ const loadHistoricalData = async () => {
             baptizedChildren: conf.baptizedChildren || 0,
             consolidatedGraduates: conf.consolidatedGraduates || 0,
             sacramentsGraduates: conf.sacramentsGraduates || 0,
+            rescueClubChildren: conf.rescueClubChildren || 0,
+            discipleshipGraduates: conf.discipleshipGraduates || 0,
             churchesCount: conf.churchesCount || 0
         }));
 
@@ -304,15 +306,21 @@ const loadHistoricalData = async () => {
     }
 };
 
-type TotalKeys = 'totalTeachers' | 'totalChildren' | 'convertedChildren' | 'baptizedChildren' | 'consolidatedGraduates' | 'sacramentsGraduates';
+type TotalKeys = 'totalTeachers' | 'totalChildren' | 'convertedChildren' | 'memberChildren' | 
+    'nonRepentantChildren' | 'baptizedChildren' | 'consolidatedGraduates' | 'sacramentsGraduates' | 
+    'rescueClubChildren' | 'discipleshipGraduates';
 
 const labels: Record<TotalKeys, string> = {
     totalTeachers: 'Total Maestras',
     totalChildren: 'Total Niños',
     convertedChildren: 'Niños Convertidos',
+    memberChildren: 'Niños Miembros',
+    nonRepentantChildren: 'Niños Sin Arrepentir',
     baptizedChildren: 'Niños Bautizados',
     consolidatedGraduates: 'Graduados Consolidados',
-    sacramentsGraduates: 'Graduados Sacramentos'
+    sacramentsGraduates: 'Graduados Sacramentos',
+    rescueClubChildren: 'Club Al Rescate',
+    discipleshipGraduates: 'Graduados Discipulado'
 };
 
 const formatTotalLabel = (key: TotalKeys): string => {
@@ -331,9 +339,25 @@ const districtTotals = computed(() => {
         totalTeachers: 0,
         totalChildren: 0,
         convertedChildren: 0,
+        memberChildren: 0,
+        nonRepentantChildren: 0,
         baptizedChildren: 0,
         consolidatedGraduates: 0,
-        sacramentsGraduates: 0
+        sacramentsGraduates: 0,
+        rescueClubChildren: 0,
+        discipleshipGraduates: 0
     });
 });
-</script> 
+</script>
+
+<style scoped>
+.v-data-table {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch; /* Para mejor comportamiento en iOS */
+}
+
+/* Prevenir interacción de gestos no deseada */
+.v-data-table__wrapper {
+    touch-action: pan-y pinch-zoom;
+}
+</style>

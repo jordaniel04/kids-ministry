@@ -117,7 +117,7 @@
             <VCardTitle class="d-flex align-center">
               <VIcon 
                 class="me-2" 
-                :color="personalDataComplete ? 'success' : 'warning'"
+                :color="personalDataComplete ? 'success-darken-2' : 'warning'"
               >
                 mdi-account
               </VIcon>
@@ -142,7 +142,7 @@
           <VCard
             class="mx-auto mb-4"
             :style="{ 
-              backgroundColor: personalDataComplete ? '#E8F5E9' : '#FAFAFA',
+              backgroundColor: hasPendingReport ? '#FFF3E0' : (personalDataComplete ? '#E8F5E9' : '#FAFAFA'),
               opacity: personalDataComplete ? 1 : 0.7,
               transition: 'all 0.3s ease'
             }"
@@ -152,18 +152,27 @@
             @click="goToMinisterialData"
           >
             <VCardTitle class="d-flex align-center">
-              <VIcon class="me-2" :color="personalDataComplete ? 'success-darken-2' : 'grey'">
-                mdi-chart-box
+              <VIcon 
+                :color="hasPendingReport ? 'warning' : 'success'"
+                class="mr-2"
+              >
+                {{ hasPendingReport ? 'mdi-alert' : 'mdi-chart-box' }}
               </VIcon>
               Datos Estadísticos
             </VCardTitle>
-            <VCardSubtitle :class="personalDataComplete ? 'text-success-darken-1' : 'text-grey-darken-1'">
-              {{ personalDataComplete ? 'Gestiona tu información estadística del distrito' : 'Complete sus datos personales primero' }}
+            <VCardSubtitle :class="personalDataComplete ? (hasPendingReport ? 'text-warning' : 'text-success-darken-1') : 'text-grey-darken-1'">
+              {{ 
+                !personalDataComplete 
+                  ? 'Complete sus datos personales primero' 
+                  : (hasPendingReport 
+                      ? 'Tienes un período de reporte pendiente.'
+                      : 'Gestiona tu información estadística del distrito')
+              }}
             </VCardSubtitle>
             <VCardActions>
               <VBtn 
                 variant="tonal"
-                :color="personalDataComplete ? 'success' : 'grey'"
+                :color="personalDataComplete ? (hasPendingReport ? 'warning' : 'success') : 'grey'"
                 :disabled="!personalDataComplete"
               >
                 Ir a Estadísticas Distritales
@@ -180,13 +189,14 @@
 import { computed, ref, onMounted } from "vue";
 import { useAuthStore } from "../stores/auth";
 import { useRouter } from "vue-router";
-import { doc, getDoc } from 'firebase/firestore';
+import { doc, getDoc, getDocs, query, collection, where } from 'firebase/firestore';
 import { db } from '../firebase/config';
 
 const authStore = useAuthStore();
 const router = useRouter();
 const personalDataComplete = ref(false);
 const loading = ref(true);
+const hasPendingReport = ref(false);
 
 const isAdmin = computed(() => authStore.user?.role === "admin");
 const isLeader = computed(() => authStore.user?.role === "lider");
@@ -197,7 +207,12 @@ const cardColor = computed(() => {
 
 onMounted(async () => {
   try {
-    await checkPersonalDataCompletion();
+    await Promise.all([
+      checkPersonalDataCompletion(),
+      checkPendingReports()
+    ]);
+  } catch (error) {
+    console.error("Error en la carga inicial:", error);
   } finally {
     loading.value = false;
   }
@@ -239,6 +254,43 @@ const checkPersonalDataCompletion = async () => {
   } catch (error) {
     console.error("Error al verificar datos personales:", error);
     personalDataComplete.value = false;
+  }
+};
+
+const checkPendingReports = async () => {
+  if (!authStore.user?.id) return;
+  
+  try {
+    // 1. Obtener el período activo
+    const periodSnapshot = await getDocs(query(
+      collection(db, "report_periods"),
+      where("isActive", "==", true)
+    ));
+
+    if (!periodSnapshot.empty) {
+      // 2. Obtener el distrito del líder
+      const districtLeaderSnapshot = await getDocs(query(
+        collection(db, "district_leaders"),
+        where("userId", "==", authStore.user.id),
+        where("isActive", "==", true)
+      ));
+
+      if (!districtLeaderSnapshot.empty) {
+        const districtLeader = districtLeaderSnapshot.docs[0].data();
+        const activePeriod = periodSnapshot.docs[0];
+
+        // 3. Verificar si existe confirmación
+        const confirmationSnapshot = await getDocs(query(
+          collection(db, "district_confirmations"),
+          where("districtId", "==", districtLeader.districtId),
+          where("periodId", "==", activePeriod.id)
+        ));
+
+        hasPendingReport.value = confirmationSnapshot.empty;
+      }
+    }
+  } catch (error) {
+    console.error("Error al verificar reportes pendientes:", error);
   }
 };
 

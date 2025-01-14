@@ -70,11 +70,6 @@
                                 :rules="[rules.nonNegative, rules.graduateRules.discipleship]"
                                 @focus="clearDefaultValue('discipleshipGraduates')" required></VTextField>
                         </VCol>
-                        <VCol cols="12" sm="6">
-                            <VTextField v-model="localItem.ministerialData.connection911Children"
-                                label="Niños Conexión 911" type="number" :rules="[rules.nonNegative]"
-                                @focus="clearDefaultValue('connection911Children')" required></VTextField>
-                        </VCol>
                     </VRow>
                 </VContainer>
             </VCardText>
@@ -233,7 +228,6 @@ export default defineComponent({
                 'sacramentsGraduates',
                 'rescueClubChildren',
                 'discipleshipGraduates',
-                'connection911Children'
             ];
 
             for (const field of numericalFields) {

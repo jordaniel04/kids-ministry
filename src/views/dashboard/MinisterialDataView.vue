@@ -78,7 +78,6 @@
                                     <th scope="col" class="text-center">Graduados Sacramentos</th>
                                     <th scope="col" class="text-center">Club Al Rescate</th>
                                     <th scope="col" class="text-center">Graduados Discipulado</th>
-                                    <th scope="col" class="text-center">Conexión 9.11</th>
                                     <th scope="col" class="text-center">Acciones</th>
                                 </tr>
                             </thead>
@@ -115,9 +114,6 @@
                                     </td>
                                     <td class="text-center">
                                         {{ getLatestMinisterialData(church).discipleshipGraduates }}
-                                    </td>
-                                    <td class="text-center">
-                                        {{ getLatestMinisterialData(church).connection911Children }}
                                     </td>
                                     <td class="text-center">
                                         <VIcon 
@@ -255,17 +251,6 @@
                                             </div>
                                         </div>
                                     </div>
-
-                                    <!-- Conexión 9.11 -->
-                                    <div class="d-flex align-center mb-4">
-                                        <VIcon color="cyan" class="me-2">mdi-connection</VIcon>
-                                        <div>
-                                            <div class="text-caption">Conexión 9.11</div>
-                                            <div class="text-h6">
-                                                {{ totals.connection911Children }}
-                                            </div>
-                                        </div>
-                                    </div>
                                 </VCol>
                             </VRow>
                         </VCardText>
@@ -361,15 +346,6 @@
                                                         {{
                                                             getLatestMinisterialData(church)
                                                                 .discipleshipGraduates
-                                                        }}
-                                                    </div>
-                                                </div>
-                                                <div class="d-flex justify-space-between mb-2">
-                                                    <div class="text-caption">Conexión 9.11</div>
-                                                    <div>
-                                                        {{
-                                                            getLatestMinisterialData(church)
-                                                                .connection911Children
                                                         }}
                                                     </div>
                                                 </div>
@@ -503,15 +479,6 @@
                                     </div>
                                 </div>
                             </VCol>
-                            <VCol cols="12" sm="6" md="3">
-                                <div class="d-flex align-center mb-2">
-                                    <VIcon color="cyan" class="me-2">mdi-connection</VIcon>
-                                    <div>
-                                        <div class="text-caption">Conexión 9.11</div>
-                                        <div class="text-h6">{{ totals.connection911Children }}</div>
-                                    </div>
-                                </div>
-                            </VCol>
                         </VRow>
                     </VCardText>
                 </VCard>
@@ -627,7 +594,6 @@ const defaultItem = {
         sacramentsGraduates: 0,
         rescueClubChildren: 0,
         discipleshipGraduates: 0,
-        connection911Children: 0,
         updatedAt: Timestamp.now(),
         reportPeriodId: activePeriod.value?.id
     }]
@@ -651,7 +617,6 @@ const getLatestMinisterialData = (church: Church) => {
             sacramentsGraduates: 0,
             rescueClubChildren: 0,
             discipleshipGraduates: 0,
-            connection911Children: 0
         };
     }
 
@@ -671,7 +636,6 @@ interface TotalAccumulator {
     sacramentsGraduates: number;
     rescueClubChildren: number;
     discipleshipGraduates: number;
-    connection911Children: number;
 }
 
 const totals = computed(() => {
@@ -686,7 +650,6 @@ const totals = computed(() => {
         sacramentsGraduates: 0,
         rescueClubChildren: 0,
         discipleshipGraduates: 0,
-        connection911Children: 0
     };
 
     return churches.value.reduce((sum, church) => {
@@ -702,7 +665,6 @@ const totals = computed(() => {
             sacramentsGraduates: sum.sacramentsGraduates + Number(data.sacramentsGraduates || 0),
             rescueClubChildren: sum.rescueClubChildren + Number(data.rescueClubChildren || 0),
             discipleshipGraduates: sum.discipleshipGraduates + Number(data.discipleshipGraduates || 0),
-            connection911Children: sum.connection911Children + Number(data.connection911Children || 0)
         };
     }, initialValue);
 });
@@ -820,7 +782,6 @@ const closeDialog = () => {
             sacramentsGraduates: 0,
             rescueClubChildren: 0,
             discipleshipGraduates: 0,
-            connection911Children: 0,
             updatedAt: Timestamp.now(),
             reportPeriodId: activePeriod.value?.id
         }]
@@ -949,7 +910,7 @@ onMounted(async () => {
         console.error("Error en la carga inicial:", error);
         alert("Error al cargar los datos iniciales");
     } finally {
-        loading.value = false; // Desactivar loading solo cuando todo esté cargado
+        loading.value = false; 
     }
 });
 
@@ -1154,7 +1115,11 @@ const processDistrictConfirmation = async () => {
             consolidatedGraduates: churches.value.reduce((sum: number, church) => 
                 sum + (church.ministerialData?.[0]?.consolidatedGraduates || 0), 0),
             sacramentsGraduates: churches.value.reduce((sum: number, church) => 
-                sum + (church.ministerialData?.[0]?.sacramentsGraduates || 0), 0)
+                sum + (church.ministerialData?.[0]?.sacramentsGraduates || 0), 0),
+            rescueClubChildren: churches.value.reduce((sum: number, church) => 
+                sum + (church.ministerialData?.[0]?.rescueClubChildren || 0), 0),
+            discipleshipGraduates: churches.value.reduce((sum: number, church) => 
+                sum + (church.ministerialData?.[0]?.discipleshipGraduates || 0), 0)
         });
 
         // Confirmar cada iglesia individualmente
