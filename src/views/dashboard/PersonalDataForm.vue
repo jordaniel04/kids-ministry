@@ -1,70 +1,76 @@
 <template>
     <div>
-        <NavigationBar />
-        <VContainer>
-            <h1>Datos del Líder Distrital</h1>
-            <div class="text-subtitle-1 mb-4">
-                {{ `Área ${userData?.areaNumber || ''} - Distrito ${userData?.districtNumber || ''} - ${userData?.location || ''}` }}
-            </div>
-            <VForm @submit.prevent="savePersonalData">
-                <VCard class="mb-4 pa-4">
-                    <VCardTitle>Datos Personales</VCardTitle>
-                    <VCardText>
-                        <VTextField label="Nombres" v-model="personalData.firstName" required></VTextField>
-                        <VTextField label="Apellidos" v-model="personalData.lastName" required></VTextField>
-                        <VDateInput 
-                            label="Fecha de Nacimiento" 
-                            prepend-icon=""
-                            v-model="personalData.birthDate"
-                            placeholder="DD-MM-AAAA"
-                            locale="es-ES"
-                            required
-                        ></VDateInput>
-                        <VSelect :items="['Soltero', 'Casado']" label="Estado Civil" v-model="personalData.maritalStatus"
-                            required>
-                        </VSelect>
-                        <VTextField label="Número de Celular" v-model="personalData.phoneNumber" required></VTextField>
-                    </VCardText>
-                </VCard>
+        <VOverlay v-model="loading" class="align-center justify-center">
+            <VProgressCircular indeterminate size="64"/>
+        </VOverlay>
+        
+        <template v-if="!loading">
+            <NavigationBar />
+            <VContainer>
+                <h1>Datos del Líder Distrital</h1>
+                <div class="text-subtitle-1 mb-4">
+                    {{ `Área ${userData?.areaNumber || ''} - Distrito ${userData?.districtNumber || ''} - ${userData?.location || ''}` }}
+                </div>
+                <VForm @submit.prevent="savePersonalData">
+                    <VCard class="mb-4 pa-4">
+                        <VCardTitle>Datos Personales</VCardTitle>
+                        <VCardText>
+                            <VTextField label="Nombres" v-model="personalData.firstName" required></VTextField>
+                            <VTextField label="Apellidos" v-model="personalData.lastName" required></VTextField>
+                            <VDateInput 
+                                label="Fecha de Nacimiento" 
+                                prepend-icon=""
+                                v-model="personalData.birthDate"
+                                placeholder="DD-MM-AAAA"
+                                locale="es-ES"
+                                required
+                            ></VDateInput>
+                            <VSelect :items="['Soltero', 'Casado']" label="Estado Civil" v-model="personalData.maritalStatus"
+                                required>
+                            </VSelect>
+                            <VTextField label="Número de Celular" v-model="personalData.phoneNumber" required></VTextField>
+                        </VCardText>
+                    </VCard>
 
-                <VCard class="mb-4 pa-4">
-                    <VCardTitle>Datos Ministeriales</VCardTitle>
-                    <VCardText>
-                        <VTextField 
-                            label="Tiempo en el Liderazgo" 
-                            v-model="ministerialData.leadershipTime" 
-                            required
-                        ></VTextField>
-                        <VSelect :items="['Sí', 'No']" label="Bautizado con el Espíritu Santo"
-                            v-model="ministerialData.baptized" required></VSelect>
-                        <VRow>
-                            <VCol cols="12">
-                                <div class="text-h7 mb-1">Capacitaciones recibidas de la RUTA DE FORMACIÓN DE LIDERAZGO
-                                    (Marca solo los cursos que has llevado)</div>
-                                <VCheckbox v-for="course in availableCourses" :key="course"
-                                    v-model="ministerialData.courses" :label="course" :value="course"></VCheckbox>
-                            </VCol>
-                        </VRow>
-                    </VCardText>
-                </VCard>
+                    <VCard class="mb-4 pa-4">
+                        <VCardTitle>Datos Ministeriales</VCardTitle>
+                        <VCardText>
+                            <VTextField 
+                                label="Tiempo en el Liderazgo" 
+                                v-model="ministerialData.leadershipTime" 
+                                required
+                            ></VTextField>
+                            <VSelect :items="['Sí', 'No']" label="Bautizado con el Espíritu Santo"
+                                v-model="ministerialData.baptized" required></VSelect>
+                            <VRow>
+                                <VCol cols="12">
+                                    <div class="text-h7 mb-1">Capacitaciones recibidas de la RUTA DE FORMACIÓN DE LIDERAZGO
+                                        (Marca solo los cursos que has llevado)</div>
+                                    <VCheckbox v-for="course in availableCourses" :key="course"
+                                        v-model="ministerialData.courses" :label="course" :value="course"></VCheckbox>
+                                </VCol>
+                            </VRow>
+                        </VCardText>
+                    </VCard>
 
-                <!-- Barra de Progreso -->
-                <VProgressLinear :value="completionPercentage" color="primary" height="20" class="mt-4">
-                    {{ completionPercentage }}%
-                </VProgressLinear>
+                    <!-- Barra de Progreso -->
+                    <VProgressLinear :value="completionPercentage" color="primary" height="20" class="mt-4">
+                        {{ completionPercentage }}%
+                    </VProgressLinear>
 
-                <VBtn 
-                    type="submit" 
-                    color="primary" 
-                    class="mt-4" 
-                    block 
-                    :loading="loading" 
-                    :disabled="loading || !hasChanges || completionPercentage < 100"
-                >
-                    {{ loading ? 'Guardando...' : 'Guardar Datos' }}
-                </VBtn>
-            </VForm>
-        </VContainer>
+                    <VBtn 
+                        type="submit" 
+                        color="primary" 
+                        class="mt-4" 
+                        block 
+                        :loading="loading" 
+                        :disabled="loading || !hasChanges || completionPercentage < 100"
+                    >
+                        {{ loading ? 'Guardando...' : 'Guardar Datos' }}
+                    </VBtn>
+                </VForm>
+            </VContainer>
+        </template>
     </div>
 </template>
 
@@ -166,7 +172,7 @@ const completionPercentage = computed(() => {
 
 const authStore = useAuthStore();
 
-const loading = ref(false);
+const loading = ref(true);
 
 const router = useRouter();
 
@@ -248,8 +254,17 @@ const loadDistricts = async () => {
 
 // Cargar datos al montar el componente
 onMounted(async () => {
-    await loadDistricts();
-    await loadUserData();
+    try {
+        await Promise.all([
+            loadDistricts(),
+            loadUserData()
+        ]);
+    } catch (error) {
+        console.error("Error al cargar datos iniciales:", error);
+        alert("Error al cargar los datos");
+    } finally {
+        loading.value = false;
+    }
 });
 
 const savePersonalData = async () => {
