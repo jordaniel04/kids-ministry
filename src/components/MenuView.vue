@@ -103,6 +103,26 @@
           </VCard>
         </VCol>
 
+        <VCol v-if="isAdmin" cols="12" sm="12" md="4">
+          <VCard
+            class="mx-auto mb-4"
+            color="surface-variant"
+            max-width="100%"
+            @click="goToBirthdayList"
+          >
+            <VCardTitle class="d-flex align-center">
+              <VIcon class="me-2">mdi-cake-variant</VIcon>
+              Lista de Cumpleaños
+            </VCardTitle>
+            <VCardSubtitle>Ver líderes por fecha de cumpleaños</VCardSubtitle>
+            <template v-slot:actions>
+              <VBtn variant="text" @click="goToBirthdayList">
+                Ver Lista
+              </VBtn>
+            </template>
+          </VCard>
+        </VCol>
+
         <VCol v-if="isLeader" cols="12" sm="12" md="4">
           <VCard
             class="mx-auto mb-4"
@@ -321,6 +341,10 @@ const goToDistrictManagement = () => {
 
 const goToDistrictReports = () => {
   router.push("/admin/district-reports");
+};
+
+const goToBirthdayList = () => {
+  router.push("/birthday-list");
 };
 
 const handleLogout = async () => {

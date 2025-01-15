@@ -47,11 +47,26 @@
                     <VCard class="mb-4 pa-4">
                         <VCardTitle>Datos Ministeriales</VCardTitle>
                         <VCardText>
-                            <VTextField 
-                                label="Tiempo en el Liderazgo" 
-                                v-model="ministerialData.leadershipTime" 
-                                required
-                            ></VTextField>
+                            <VRow>
+                                <VCol cols="12" sm="6">
+                                    <VSelect
+                                        v-model="appointmentMonth"
+                                        :items="months"
+                                        label="Mes de Nombramiento"
+                                        required
+                                        @update:model-value="updateAppointmentDate"
+                                    ></VSelect>
+                                </VCol>
+                                <VCol cols="12" sm="6">
+                                    <VSelect
+                                        v-model="appointmentYear"
+                                        :items="years"
+                                        label="Año de Nombramiento"
+                                        required
+                                        @update:model-value="updateAppointmentDate"
+                                    ></VSelect>
+                                </VCol>
+                            </VRow>
                             <VSelect :items="['Sí', 'No']" label="Bautizado con el Espíritu Santo"
                                 v-model="ministerialData.baptized" required></VSelect>
                             <VRow>
@@ -118,8 +133,8 @@ interface PersonalData {
 }
 
 interface MinisterialData {
-    [key: string]: string | string[];
-    leadershipTime: string;
+    [key: string]: string | string[] | Date | null;
+    appointmentDate: Date | null;
     baptized: string;
     courses: string[];
 }
@@ -142,7 +157,7 @@ const personalData = ref<PersonalData>({
 });
 
 const ministerialData = ref<MinisterialData>({
-    leadershipTime: "",
+    appointmentDate: null,
     baptized: "",
     courses: [],
 });
@@ -181,7 +196,7 @@ const completionPercentage = computed(() => {
     ];
 
     const ministerialFields = [
-        'leadershipTime',
+        'appointmentDate',
         'baptized',
         'courses'
     ];
@@ -204,6 +219,10 @@ const completionPercentage = computed(() => {
             if ((ministerialData.value[field]?.length > 0 && !noCourses.value) || noCourses.value) {
                 filledFields++;
             }
+        } else if (field === 'appointmentDate') {
+            if (ministerialData.value.appointmentDate) {
+                filledFields++;
+            }
         } else {
             const value = ministerialData.value[field];
             if (typeof value === 'string' && value.trim()) filledFields++;
@@ -221,6 +240,43 @@ const loading = ref(true);
 const router = useRouter();
 
 const userData = ref<any>(null);
+
+const appointmentMonth = ref<number | null>(null);
+const appointmentYear = ref<number | null>(null);
+
+const months = [
+    { title: 'Enero', value: 0 },
+    { title: 'Febrero', value: 1 },
+    { title: 'Marzo', value: 2 },
+    { title: 'Abril', value: 3 },
+    { title: 'Mayo', value: 4 },
+    { title: 'Junio', value: 5 },
+    { title: 'Julio', value: 6 },
+    { title: 'Agosto', value: 7 },
+    { title: 'Septiembre', value: 8 },
+    { title: 'Octubre', value: 9 },
+    { title: 'Noviembre', value: 10 },
+    { title: 'Diciembre', value: 11 }
+];
+
+const years = computed(() => {
+    const currentYear = new Date().getFullYear();
+    const years = [];
+    for (let year = 2000; year <= currentYear; year++) {
+        years.push(year);
+    }
+    return years;
+});
+
+const updateAppointmentDate = () => {
+    if (appointmentMonth.value !== null && appointmentYear.value !== null) {
+        ministerialData.value.appointmentDate = new Date(
+            appointmentYear.value,
+            appointmentMonth.value,
+            1
+        );
+    }
+};
 
 const loadUserData = async () => {
     try {
@@ -270,12 +326,17 @@ const loadUserData = async () => {
 
             if (leaderData.ministerialData) {
                 ministerialData.value = {
-                    leadershipTime: leaderData.ministerialData.leadershipTime || "",
+                    appointmentDate: leaderData.ministerialData.appointmentDate?.toDate() || null,
                     baptized: leaderData.ministerialData.baptized || "",
                     courses: leaderData.ministerialData.courses || [],
                 };
                 
-                // Sincronizar el estado de noCourses basado en los cursos cargados
+                if (ministerialData.value.appointmentDate) {
+                    const date = ministerialData.value.appointmentDate;
+                    appointmentMonth.value = date.getMonth();
+                    appointmentYear.value = date.getFullYear();
+                }
+                
                 noCourses.value = ministerialData.value.courses.includes('NO_COURSES');
             }
 
