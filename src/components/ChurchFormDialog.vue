@@ -60,11 +60,6 @@
                                 @focus="clearDefaultValue('sacramentsGraduates')" required></VTextField>
                         </VCol>
                         <VCol cols="12" sm="6">
-                            <VTextField v-model="localItem.ministerialData.rescueClubChildren" label="Club al Rescate"
-                                type="number" :rules="[rules.nonNegative, rules.graduateRules.rescue]"
-                                @focus="clearDefaultValue('rescueClubChildren')" required></VTextField>
-                        </VCol>
-                        <VCol cols="12" sm="6">
                             <VTextField v-model="localItem.ministerialData.discipleshipGraduates"
                                 label="Graduados Discipulado" type="number"
                                 :rules="[rules.nonNegative, rules.graduateRules.discipleship]"
@@ -110,9 +105,7 @@ export default defineComponent({
                 baptizedChildren: 0,
                 consolidatedGraduates: 0,
                 sacramentsGraduates: 0,
-                rescueClubChildren: 0,
                 discipleshipGraduates: 0,
-                connection911Children: 0,
                 updatedAt: Timestamp.now(),
                 reportPeriodId: null
             }
@@ -133,9 +126,7 @@ export default defineComponent({
                         baptizedChildren: ministerialData.baptizedChildren || 0,
                         consolidatedGraduates: ministerialData.consolidatedGraduates || 0,
                         sacramentsGraduates: ministerialData.sacramentsGraduates || 0,
-                        rescueClubChildren: ministerialData.rescueClubChildren || 0,
                         discipleshipGraduates: ministerialData.discipleshipGraduates || 0,
-                        connection911Children: ministerialData.connection911Children || 0,
                         updatedAt: Timestamp.now(),
                         reportPeriodId: ministerialData.reportPeriodId || null
                     }
@@ -153,9 +144,7 @@ export default defineComponent({
                         baptizedChildren: 0,
                         consolidatedGraduates: 0,
                         sacramentsGraduates: 0,
-                        rescueClubChildren: 0,
                         discipleshipGraduates: 0,
-                        connection911Children: 0,
                         updatedAt: Timestamp.now(),
                         reportPeriodId: props.activePeriod?.id || null
                     }
@@ -226,7 +215,6 @@ export default defineComponent({
                 'baptizedChildren',
                 'consolidatedGraduates',
                 'sacramentsGraduates',
-                'rescueClubChildren',
                 'discipleshipGraduates',
             ];
 
@@ -263,10 +251,6 @@ export default defineComponent({
             }
             if (md.sacramentsGraduates > md.consolidatedGraduates) {
                 alert('Graduados Sacramentos no puede ser mayor que Graduados Consolidados');
-                return false;
-            }
-            if (md.rescueClubChildren > md.sacramentsGraduates) {
-                alert('Club al Rescate no puede ser mayor que Graduados Sacramentos');
                 return false;
             }
             if (md.discipleshipGraduates > md.sacramentsGraduates) {

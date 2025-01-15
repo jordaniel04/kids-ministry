@@ -28,7 +28,19 @@
                             <VSelect :items="['Soltero', 'Casado']" label="Estado Civil" v-model="personalData.maritalStatus"
                                 required>
                             </VSelect>
-                            <VTextField label="Número de Celular" v-model="personalData.phoneNumber" required></VTextField>
+                            <VTextField
+                                v-model="personalData.phoneNumber"
+                                label="Número de Celular"
+                                :rules="[
+                                    v => !!v || 'El número de celular es requerido',
+                                    v => /^[0-9]{9}$/.test(v) || 'El número debe tener 9 dígitos',
+                                    v => !isNaN(v) || 'Solo se permiten números'
+                                ]"
+                                @input="validatePhoneNumber"
+                                maxlength="9"
+                                counter
+                                :error-messages="phoneError"
+                            />
                         </VCardText>
                     </VCard>
 
@@ -44,10 +56,24 @@
                                 v-model="ministerialData.baptized" required></VSelect>
                             <VRow>
                                 <VCol cols="12">
-                                    <div class="text-h7 mb-1">Capacitaciones recibidas de la RUTA DE FORMACIÓN DE LIDERAZGO
-                                        (Marca solo los cursos que has llevado)</div>
-                                    <VCheckbox v-for="course in availableCourses" :key="course"
-                                        v-model="ministerialData.courses" :label="course" :value="course"></VCheckbox>
+                                    <div class="text-h7 mb-1">
+                                        Capacitaciones recibidas de la RUTA DE FORMACIÓN DE LIDERAZGO
+                                    </div>
+                                    <VCheckbox
+                                        v-model="noCourses"
+                                        label="No he realizado ninguna capacitación"
+                                        @update:model-value="handleNoCourses"
+                                    ></VCheckbox>
+                                    
+                                    <VCheckbox 
+                                        v-for="course in availableCourses" 
+                                        :key="course"
+                                        v-model="ministerialData.courses" 
+                                        :label="course" 
+                                        :value="course"
+                                        :disabled="noCourses"
+                                        @update:model-value="handleCourseSelection"
+                                    ></VCheckbox>
                                 </VCol>
                             </VRow>
                         </VCardText>
@@ -75,7 +101,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from "vue";
+import { ref, computed, onMounted, watch } from "vue";
 import { doc, setDoc, collection, getDocs, Timestamp, getDoc, query, where } from "firebase/firestore";
 import { db } from "../../firebase/config";
 import { useAuthStore } from "../../stores/auth";
@@ -128,6 +154,22 @@ const initialData = ref({
     ministerial: {} as any
 });
 
+const noCourses = ref(false);
+
+const handleNoCourses = (value: boolean | null) => {
+    if (value) {
+        ministerialData.value.courses = ['NO_COURSES'];
+    } else {
+        ministerialData.value.courses = [];
+    }
+};
+
+const handleCourseSelection = () => {
+    if (ministerialData.value.courses.length > 0) {
+        noCourses.value = false;
+    }
+};
+
 const completionPercentage = computed(() => {
     // Definir los campos requeridos para cada sección
     const personalFields = [
@@ -159,7 +201,9 @@ const completionPercentage = computed(() => {
     // Validar campos ministeriales
     ministerialFields.forEach(field => {
         if (field === 'courses') {
-            if (ministerialData.value[field]?.length > 0) filledFields++;
+            if ((ministerialData.value[field]?.length > 0 && !noCourses.value) || noCourses.value) {
+                filledFields++;
+            }
         } else {
             const value = ministerialData.value[field];
             if (typeof value === 'string' && value.trim()) filledFields++;
@@ -230,6 +274,9 @@ const loadUserData = async () => {
                     baptized: leaderData.ministerialData.baptized || "",
                     courses: leaderData.ministerialData.courses || [],
                 };
+                
+                // Sincronizar el estado de noCourses basado en los cursos cargados
+                noCourses.value = ministerialData.value.courses.includes('NO_COURSES');
             }
 
             initialData.value = {
@@ -307,6 +354,34 @@ const savePersonalData = async () => {
 const hasChanges = computed(() => {
     return JSON.stringify(initialData.value.personal) !== JSON.stringify(personalData.value) ||
            JSON.stringify(initialData.value.ministerial) !== JSON.stringify(ministerialData.value);
+});
+
+const phoneNumber = ref('');
+const phoneError = ref('');
+
+const validatePhoneNumber = (event: Event) => {
+    const input = event.target as HTMLInputElement;
+    const value = input.value;
+    
+    // Remover cualquier caracter que no sea número
+    input.value = value.replace(/\D/g, '');
+    
+    // Validar longitud
+    if (input.value.length > 9) {
+        input.value = input.value.slice(0, 9);
+    }
+    
+    phoneNumber.value = input.value;
+};
+
+watch(phoneNumber, (newValue) => {
+    if (newValue.length > 0 && newValue.length < 9) {
+        phoneError.value = 'El número debe tener 9 dígitos';
+    } else if (!/^[0-9]*$/.test(newValue)) {
+        phoneError.value = 'Solo se permiten números';
+    } else {
+        phoneError.value = '';
+    }
 });
 </script>
 <style scoped>

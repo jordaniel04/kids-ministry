@@ -8,6 +8,7 @@
             <VTabs v-model="activeTab" class="mb-4" :touch="false">
                 <VTab value="period">Por Período</VTab>
                 <VTab value="historical">Histórico</VTab>
+                <VTab value="national">Reporte Nacional</VTab>
             </VTabs>
 
             <!-- Vista por Período -->
@@ -77,6 +78,141 @@
                         </VCardText>
                     </VCard>
                 </VWindowItem>
+
+                <!-- Vista Nacional -->
+                <VWindowItem value="national">
+                    <VCard class="mb-4">
+                        <VCardText>
+                            <VSelect 
+                                v-model="selectedNationalPeriod" 
+                                :items="periods" 
+                                label="Período" 
+                                item-title="name"
+                                item-value="id" 
+                                @update:model-value="loadNationalData" 
+                            />
+                        </VCardText>
+                    </VCard>
+
+                    <VCard v-if="nationalData.length > 0">
+                        <VCardTitle>Totales Nacionales por Distrito</VCardTitle>
+                        <VCardText>
+                            <VDataTable 
+                                :headers="nationalHeaders" 
+                                :items="nationalData.slice(0, -1)" 
+                                :loading="loading"
+                            />
+                            
+                            <!-- Resumen de Totales Nacionales -->
+                            <VCard class="mt-4 totals-card">
+                                <VCardTitle>Resumen Nacional</VCardTitle>
+                                <VCardText>
+                                    <VRow>
+                                        <VCol cols="12" sm="6" md="3">
+                                            <div class="d-flex align-center mb-2">
+                                                <VIcon color="primary" class="me-2">mdi-account-group</VIcon>
+                                                <div>
+                                                    <div class="text-caption">Total Maestras</div>
+                                                    <div class="text-h6">{{ nationalTotals.totalTeachers }}</div>
+                                                </div>
+                                            </div>
+                                        </VCol>
+
+                                        <VCol cols="12" sm="6" md="3">
+                                            <div class="d-flex align-center mb-2">
+                                                <VIcon color="info" class="me-2">mdi-account-child</VIcon>
+                                                <div>
+                                                    <div class="text-caption">Total Niños</div>
+                                                    <div class="text-h6">{{ nationalTotals.totalChildren }}</div>
+                                                </div>
+                                            </div>
+                                        </VCol>
+
+                                        <VCol cols="12" sm="6" md="3">
+                                            <div class="d-flex align-center mb-2">
+                                                <VIcon color="success" class="me-2">mdi-heart</VIcon>
+                                                <div>
+                                                    <div class="text-caption">Convertidos</div>
+                                                    <div class="text-h6">{{ nationalTotals.convertedChildren }}</div>
+                                                </div>
+                                            </div>
+                                        </VCol>
+
+                                        <VCol cols="12" sm="6" md="3">
+                                            <div class="d-flex align-center mb-2">
+                                                <VIcon color="warning" class="me-2">mdi-account-check</VIcon>
+                                                <div>
+                                                    <div class="text-caption">Miembros</div>
+                                                    <div class="text-h6">{{ nationalTotals.memberChildren }}</div>
+                                                </div>
+                                            </div>
+                                        </VCol>
+
+                                        <VCol cols="12" sm="6" md="3">
+                                            <div class="d-flex align-center mb-2">
+                                                <VIcon color="error" class="me-2">mdi-account-alert</VIcon>
+                                                <div>
+                                                    <div class="text-caption">Sin Arrepentir</div>
+                                                    <div class="text-h6">{{ nationalTotals.nonRepentantChildren }}</div>
+                                                </div>
+                                            </div>
+                                        </VCol>
+
+                                        <VCol cols="12" sm="6" md="3">
+                                            <div class="d-flex align-center mb-2">
+                                                <VIcon color="purple" class="me-2">mdi-water</VIcon>
+                                                <div>
+                                                    <div class="text-caption">Bautizados</div>
+                                                    <div class="text-h6">{{ nationalTotals.baptizedChildren }}</div>
+                                                </div>
+                                            </div>
+                                        </VCol>
+
+                                        <VCol cols="12" sm="6" md="3">
+                                            <div class="d-flex align-center mb-2">
+                                                <VIcon color="deep-purple" class="me-2">mdi-school</VIcon>
+                                                <div>
+                                                    <div class="text-caption">Graduados Consolidados</div>
+                                                    <div class="text-h6">{{ nationalTotals.consolidatedGraduates }}</div>
+                                                </div>
+                                            </div>
+                                        </VCol>
+
+                                        <VCol cols="12" sm="6" md="3">
+                                            <div class="d-flex align-center mb-2">
+                                                <VIcon color="indigo" class="me-2">mdi-certificate</VIcon>
+                                                <div>
+                                                    <div class="text-caption">Graduados Sacramentos</div>
+                                                    <div class="text-h6">{{ nationalTotals.sacramentsGraduates }}</div>
+                                                </div>
+                                            </div>
+                                        </VCol>
+
+                                        <VCol cols="12" sm="6" md="3">
+                                            <div class="d-flex align-center mb-2">
+                                                <VIcon color="blue-grey" class="me-2">mdi-school-outline</VIcon>
+                                                <div>
+                                                    <div class="text-caption">Graduados Discipulado</div>
+                                                    <div class="text-h6">{{ nationalTotals.discipleshipGraduates }}</div>
+                                                </div>
+                                            </div>
+                                        </VCol>
+
+                                        <VCol cols="12" sm="6" md="3">
+                                            <div class="d-flex align-center mb-2">
+                                                <VIcon color="teal" class="me-2">mdi-church</VIcon>
+                                                <div>
+                                                    <div class="text-caption">Total Iglesias</div>
+                                                    <div class="text-h6">{{ nationalTotals.churchesCount }}</div>
+                                                </div>
+                                            </div>
+                                        </VCol>
+                                    </VRow>
+                                </VCardText>
+                            </VCard>
+                        </VCardText>
+                    </VCard>
+                </VWindowItem>
             </VWindow>
         </VContainer>
     </div>
@@ -107,6 +243,8 @@ const churchesData = ref<ChurchSummary[]>([]);
 const activeTab = ref('period');
 const selectedHistoricalDistrict = ref('');
 const historicalData = ref<any[]>([]);
+const selectedNationalPeriod = ref('');
+const nationalData = ref<any[]>([]);
 
 const headers = [
     { title: 'Iglesia', key: 'name', sortable: true },
@@ -169,6 +307,20 @@ const headers = [
 
 const historicalHeaders = [
     { title: 'Período', key: 'periodName', sortable: true },
+    { title: 'Total Maestras', key: 'totalTeachers', sortable: true, align: 'end' as const },
+    { title: 'Total Niños', key: 'totalChildren', sortable: true, align: 'end' as const },
+    { title: 'Convertidos', key: 'convertedChildren', sortable: true, align: 'end' as const },
+    { title: 'Miembros', key: 'memberChildren', sortable: true, align: 'end' as const },
+    { title: 'Niños Sin Arrepentir', key: 'nonRepentantChildren', sortable: true, align: 'end' as const },
+    { title: 'Bautizados', key: 'baptizedChildren', sortable: true, align: 'end' as const },
+    { title: 'Graduados Consolidados', key: 'consolidatedGraduates', sortable: true, align: 'end' as const },
+    { title: 'Graduados Sacramentos', key: 'sacramentsGraduates', sortable: true, align: 'end' as const },
+    { title: 'Graduados Discipulado', key: 'discipleshipGraduates', sortable: true, align: 'end' as const },
+    { title: 'Total Iglesias', key: 'churchesCount', sortable: true, align: 'end' as const }
+];
+
+const nationalHeaders = [
+    { title: 'Distrito', key: 'districtName', sortable: true },
     { title: 'Total Maestras', key: 'totalTeachers', sortable: true, align: 'end' as const },
     { title: 'Total Niños', key: 'totalChildren', sortable: true, align: 'end' as const },
     { title: 'Convertidos', key: 'convertedChildren', sortable: true, align: 'end' as const },
@@ -295,6 +447,77 @@ const loadHistoricalData = async () => {
     }
 };
 
+const loadNationalData = async () => {
+    if (!selectedNationalPeriod.value) return;
+
+    loading.value = true;
+    try {
+        const confirmationsRef = collection(db, "district_confirmations");
+        const confirmationsQuery = query(
+            confirmationsRef,
+            where("periodId", "==", selectedNationalPeriod.value)
+        );
+
+        const confirmationsSnapshot = await getDocs(confirmationsQuery);
+        const confirmations = confirmationsSnapshot.docs.map(doc => doc.data());
+
+        // Agrupar por distrito
+        const districtTotals = new Map();
+        
+        for (const conf of confirmations) {
+            if (!districtTotals.has(conf.districtId)) {
+                const district = districts.value.find(d => d.id === conf.districtId);
+                districtTotals.set(conf.districtId, {
+                    districtName: district ? `${district.location}` : 'Distrito Desconocido',
+                    totalTeachers: conf.totalTeachers || 0,
+                    totalChildren: conf.totalChildren || 0,
+                    convertedChildren: conf.convertedChildren || 0,
+                    memberChildren: conf.memberChildren || 0,
+                    nonRepentantChildren: conf.nonRepentantChildren || 0,
+                    baptizedChildren: conf.baptizedChildren || 0,
+                    consolidatedGraduates: conf.consolidatedGraduates || 0,
+                    sacramentsGraduates: conf.sacramentsGraduates || 0,
+                    discipleshipGraduates: conf.discipleshipGraduates || 0,
+                    churchesCount: conf.churchesCount || 0
+                });
+            }
+        }
+
+        nationalData.value = Array.from(districtTotals.values());
+
+        // Calcular totales pero mantenerlos separados
+        const totals = nationalData.value.reduce((acc, curr) => {
+            Object.keys(curr).forEach(key => {
+                if (key !== 'districtName' && typeof curr[key] === 'number') {
+                    acc[key] = (acc[key] || 0) + curr[key];
+                }
+            });
+            return acc;
+        }, { 
+            districtName: 'TOTAL NACIONAL',
+            totalTeachers: 0,
+            totalChildren: 0,
+            convertedChildren: 0,
+            memberChildren: 0,
+            nonRepentantChildren: 0,
+            baptizedChildren: 0,
+            consolidatedGraduates: 0,
+            sacramentsGraduates: 0,
+            discipleshipGraduates: 0,
+            churchesCount: 0
+        });
+
+        // Agregar los totales al final del array pero no se mostrarán en la tabla
+        nationalData.value.push(totals);
+
+    } catch (error) {
+        console.error("Error al cargar datos nacionales:", error);
+        alert("Error al cargar los datos nacionales");
+    } finally {
+        loading.value = false;
+    }
+};
+
 type TotalKeys = 'totalTeachers' | 'totalChildren' | 'convertedChildren' | 'memberChildren' | 
     'nonRepentantChildren' | 'baptizedChildren' | 'consolidatedGraduates' | 'sacramentsGraduates' | 
     'discipleshipGraduates';
@@ -335,16 +558,41 @@ const districtTotals = computed(() => {
         discipleshipGraduates: 0
     });
 });
+
+const nationalTotals = computed(() => {
+    if (!nationalData.value.length) return {};
+    return nationalData.value[nationalData.value.length - 1];
+});
 </script>
 
 <style scoped>
 .v-data-table {
     overflow-x: auto;
-    -webkit-overflow-scrolling: touch; /* Para mejor comportamiento en iOS */
+    -webkit-overflow-scrolling: touch;
 }
 
-/* Prevenir interacción de gestos no deseada */
 .v-data-table__wrapper {
     touch-action: pan-y pinch-zoom;
+}
+
+:deep(.national-total-row) {
+    background-color: #1867C0 !important;
+}
+
+:deep(.national-total-row td) {
+    color: white !important;
+    font-weight: 700 !important;
+    font-size: 1.1em !important;
+    letter-spacing: 0.5px !important;
+    text-transform: uppercase !important;
+}
+
+:deep(.national-total-row:hover td) {
+    background-color: #1867C0 !important;
+    color: white !important;
+}
+
+:deep(.national-total-row td:first-child) {
+    font-size: 1.2em !important;
 }
 </style>

@@ -247,7 +247,8 @@ const checkPersonalDataCompletion = async () => {
         data.ministerialData?.[field] && data.ministerialData[field].toString().trim() !== ''
       );
 
-      const hasCourses = data.ministerialData?.courses?.length > 0;
+      const hasCourses = data.ministerialData?.courses?.length > 0 || 
+                        data.ministerialData?.courses?.includes('NO_COURSES');
 
       personalDataComplete.value = hasAllPersonalFields && hasAllMinisterialFields && hasCourses;
     }
