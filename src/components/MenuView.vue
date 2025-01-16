@@ -108,6 +108,28 @@
             class="mx-auto mb-4"
             color="surface-variant"
             max-width="100%"
+            @click="goToReportMatrix"
+          >
+            <VCardTitle class="d-flex align-center">
+              <VIcon class="me-2">mdi-table</VIcon>
+              Matriz de Reportes
+            </VCardTitle>
+            <VCardSubtitle>
+              Ver matriz de reportes por distrito y período
+            </VCardSubtitle>
+            <template v-slot:actions>
+              <VBtn variant="text" @click="goToReportMatrix">
+                Ver Matriz
+              </VBtn>
+            </template>
+          </VCard>
+        </VCol>
+
+        <VCol v-if="isAdmin" cols="12" sm="12" md="4">
+          <VCard
+            class="mx-auto mb-4"
+            color="surface-variant"
+            max-width="100%"
             @click="goToBirthdayList"
           >
             <VCardTitle class="d-flex align-center">
@@ -341,6 +363,10 @@ const goToDistrictManagement = () => {
 
 const goToDistrictReports = () => {
   router.push("/admin/district-reports");
+};
+
+const goToReportMatrix = () => {
+  router.push("/admin/report-matrix");
 };
 
 const goToBirthdayList = () => {

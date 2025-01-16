@@ -62,6 +62,12 @@ const routes: Array<RouteRecordRaw> = [
     name: 'BirthdayList',
     component: () => import('../views/dashboard/BirthdayListView.vue'),
     meta: { requiresAuth: true, requiresAdmin: true }
+  },
+  {
+    path: '/admin/report-matrix',
+    name: 'report-matrix',
+    component: () => import('../views/admin/ReportMatrixView.vue'),
+    meta: { requiresAuth: true, requiresAdmin: true }
   }
 ];
 
