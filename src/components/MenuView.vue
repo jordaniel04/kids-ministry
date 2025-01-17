@@ -266,9 +266,10 @@ const checkPersonalDataCompletion = async () => {
     if (leaderDoc.exists()) {
       const data = leaderDoc.data();
       const personalData = data.personalData || {};
+      const ministerialData = data.ministerialData || {};
       
-      // Verificar que todos los campos requeridos estén completos
-      const requiredFields = [
+      // Verificar campos personales
+      const requiredPersonalFields = [
         'firstName',
         'lastName',
         'birthDate',
@@ -276,23 +277,34 @@ const checkPersonalDataCompletion = async () => {
         'phoneNumber'
       ];
       
-      const ministerialFields = [
-        'leadershipTime',
-        'baptized'
+      const hasAllPersonalFields = requiredPersonalFields.every(field => 
+        personalData[field] && 
+        (field === 'birthDate' ? true : personalData[field].toString().trim() !== '')
+      );
+
+      // Verificar campos ministeriales
+      const requiredMinisterialFields = [
+        'baptized',
+        'appointmentDate'
       ];
 
-      const hasAllPersonalFields = requiredFields.every(field => 
-        personalData[field] && personalData[field].toString().trim() !== ''
+      const hasAllMinisterialFields = requiredMinisterialFields.every(field => 
+        ministerialData[field] && 
+        (field === 'appointmentDate' ? true : ministerialData[field].toString().trim() !== '')
       );
 
-      const hasAllMinisterialFields = ministerialFields.every(field => 
-        data.ministerialData?.[field] && data.ministerialData[field].toString().trim() !== ''
-      );
+      // Verificar cursos
+      const hasCourses = ministerialData.courses?.length > 0;
 
-      const hasCourses = data.ministerialData?.courses?.length > 0 || 
-                        data.ministerialData?.courses?.includes('NO_COURSES');
-
+      // Actualizar estado
       personalDataComplete.value = hasAllPersonalFields && hasAllMinisterialFields && hasCourses;
+      
+      console.log('Estado de completitud:', {
+        hasAllPersonalFields,
+        hasAllMinisterialFields,
+        hasCourses,
+        personalDataComplete: personalDataComplete.value
+      });
     }
   } catch (error) {
     console.error("Error al verificar datos personales:", error);
