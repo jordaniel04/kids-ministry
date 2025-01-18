@@ -151,6 +151,7 @@
                                     item-value="id"
                                     label="Lugar"
                                     :loading="loadingDistricts"
+                                    return-object
                                     required
                                 ></VSelect>
                             </VCol>
@@ -185,15 +186,14 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from "vue";
+import { ref, computed, onMounted, watch } from "vue";
 import { db } from "../../firebase/config";
-import { collection, getDocs, doc, setDoc, deleteDoc, Timestamp, query, where, getDoc, updateDoc } from "firebase/firestore";
-import { getAuth, createUserWithEmailAndPassword, deleteUser as deleteAuthUser } from "firebase/auth";
+import { collection, getDocs, doc, setDoc, deleteDoc, Timestamp, query, where, getDoc, updateDoc, writeBatch } from "firebase/firestore";
+import { getAuth, createUserWithEmailAndPassword } from "firebase/auth";
 import type { User } from "../../types/User";
-import NavigationBar from '../../components/NavigationBar.vue';
 import type { District } from "../../types/District";
-import type { DistrictLeader } from '../../types/DistrictLeader';
 import { useAuthStore } from '../../stores/auth';
+import NavigationBar from '../../components/NavigationBar.vue';
 
 const authStore = useAuthStore();
 
@@ -205,13 +205,24 @@ const loading = ref(true);
 const search = ref("");
 const isEditing = ref(false);
 
-const editedItem = ref({
+interface EditedItem {
+    id: string;
+    email: string;
+    password: string;
+    role: string;
+    areaNumber: number | undefined;
+    districtNumber: number | undefined;
+    location: string;
+}
+
+const editedItem = ref<EditedItem>({
     id: '',
     email: '',
     password: '',
     role: 'lider',
-    areaNumber: undefined as number | undefined,
-    districtNumber: undefined as number | undefined
+    areaNumber: undefined,
+    districtNumber: undefined,
+    location: ''
 });
 
 const headers = [
@@ -244,10 +255,11 @@ const openCreateDialog = () => {
         email: '',
         password: '',
         role: 'lider',
-        areaNumber: undefined as number | undefined,
-        districtNumber: undefined as number | undefined
+        areaNumber: undefined,
+        districtNumber: undefined,
+        location: ''
     };
-    selectedDistrict.value = '';
+    selectedDistrict.value = null;
     leaderRole.value = 'primary';
     dialog.value = true;
 };
@@ -278,23 +290,27 @@ const editUser = async (user: User) => {
                     password: '',
                     role: user.role,
                     areaNumber: districtData.areaNumber,
-                    districtNumber: districtData.districtNumber
+                    districtNumber: districtData.districtNumber,
+                    location: districtData.location
                 };
                 
-                selectedDistrict.value = districtLeader.districtId;
+                selectedDistrict.value = {
+                    id: districtLeader.districtId,
+                    location: districtData.location
+                };
                 leaderRole.value = districtLeader.role || 'primary';
             }
         } else {
-            // Si no tiene distrito asignado, cargar solo datos básicos
             editedItem.value = {
                 id: user.id,
                 email: user.email,
                 password: '',
                 role: user.role,
                 areaNumber: undefined,
-                districtNumber: undefined
+                districtNumber: undefined,
+                location: ''
             };
-            selectedDistrict.value = '';
+            selectedDistrict.value = null;
             leaderRole.value = 'primary';
         }
         
@@ -335,7 +351,7 @@ const deleteUser = async (user: User) => {
     }
 };
 
-const selectedDistrict = ref('');
+const selectedDistrict = ref<any>(null);
 const leaderRole = ref<'primary' | 'secondary'>('primary');
 const loadingDistricts = ref(false);
 
@@ -343,20 +359,75 @@ const saveUser = async () => {
     try {
         saving.value = true;
         const now = Timestamp.now();
-        const auth = getAuth();
 
         if (editedItem.value.id) {
-            // Código de actualización existente...
+            // 1. Actualizar usuario en users collection
+            const userRef = doc(db, "users", editedItem.value.id);
+            await updateDoc(userRef, {
+                email: editedItem.value.email,
+                role: editedItem.value.role,
+                updatedAt: now,
+                updatedBy: authStore.user?.id
+            });
+
+            // 2. Si es líder, actualizar o crear relación distrito-líder
+            if (editedItem.value.role === 'lider') {
+                // Desactivar distrito anterior si existe
+                const oldDistrictLeadersQuery = query(
+                    collection(db, "district_leaders"),
+                    where("userId", "==", editedItem.value.id),
+                    where("isActive", "==", true)
+                );
+                const oldDistrictLeaderDocs = await getDocs(oldDistrictLeadersQuery);
+                
+                const batch = writeBatch(db);
+                
+                // Desactivar registros anteriores
+                oldDistrictLeaderDocs.forEach(doc => {
+                    batch.update(doc.ref, { 
+                        isActive: false,
+                        updatedAt: now,
+                        updatedBy: authStore.user?.id
+                    });
+                });
+
+                // Obtener datos del nuevo distrito
+                const districtDoc = await getDoc(doc(db, "districts", selectedDistrict.value.id));
+                if (!districtDoc.exists()) {
+                    throw new Error("Distrito no encontrado");
+                }
+                const districtData = districtDoc.data();
+
+                // Crear nueva relación distrito-líder
+                const newDistrictLeaderRef = doc(collection(db, "district_leaders"));
+                batch.set(newDistrictLeaderRef, {
+                    id: newDistrictLeaderRef.id,
+                    districtId: selectedDistrict.value.id,
+                    userId: editedItem.value.id,
+                    role: leaderRole.value,
+                    areaNumber: districtData.areaNumber,
+                    districtNumber: districtData.districtNumber,
+                    location: districtData.location,
+                    startDate: now,
+                    isActive: true,
+                    createdAt: now,
+                    updatedAt: now,
+                    createdBy: authStore.user?.id,
+                    updatedBy: authStore.user?.id
+                });
+
+                await batch.commit();
+            }
         } else {
             // 1. Crear usuario en Authentication
             const userCredential = await createUserWithEmailAndPassword(
-                auth,
+                getAuth(),
                 editedItem.value.email,
                 editedItem.value.password
             );
 
             // 2. Obtener datos del distrito seleccionado
-            const districtDoc = await getDoc(doc(db, "districts", selectedDistrict.value));
+            const districtDoc = await getDoc(doc(db, "districts", selectedDistrict.value.id));
             if (!districtDoc.exists()) {
                 throw new Error("Distrito no encontrado");
             }
@@ -390,7 +461,7 @@ const saveUser = async () => {
                 const districtLeaderRef = doc(collection(db, "district_leaders"));
                 await setDoc(districtLeaderRef, {
                     id: districtLeaderRef.id,
-                    districtId: selectedDistrict.value,
+                    districtId: selectedDistrict.value.id,
                     userId: userCredential.user.uid,
                     role: leaderRole.value,
                     areaNumber: districtData.areaNumber,
@@ -424,7 +495,8 @@ const closeDialog = () => {
         password: '',
         role: 'lider',
         areaNumber: undefined,
-        districtNumber: undefined
+        districtNumber: undefined,
+        location: ''
     };
 };
 
@@ -508,6 +580,15 @@ const loadDistricts = async () => {
         loadingDistricts.value = false;
     }
 };
+
+// Modificar el watcher
+watch(selectedDistrict, async (newDistrict) => {
+    if (newDistrict && newDistrict.id) {
+        editedItem.value.location = newDistrict.location;
+    } else {
+        editedItem.value.location = '';
+    }
+});
 
 onMounted(async () => {
     await loadDistricts();
