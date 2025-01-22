@@ -71,9 +71,16 @@
 
             <VCardActions>
                 <VSpacer></VSpacer>
-                <VBtn color="error" variant="text" @click="close">Cancelar</VBtn>
-                <VBtn color="success" variant="text" @click="save">Guardar</VBtn>
+                <VBtn color="error" variant="text" @click="close" :disabled="loading">Cancelar</VBtn>
+                <VBtn color="success" variant="text" @click="save" :loading="loading" :disabled="loading">
+                    Guardar
+                </VBtn>
             </VCardActions>
+
+            <!-- Indicador de Carga Global -->
+            <VOverlay :model-value="loading" absolute>
+                <VProgressCircular indeterminate color="primary"></VProgressCircular>
+            </VOverlay>
         </VCard>
     </VDialog>
 </template>
@@ -88,9 +95,22 @@ export default defineComponent({
     name: 'ChurchFormDialog',
     emits: ['update:modelValue', 'save', 'close'],
     props: {
-        modelValue: Boolean,
-        church: Object,
-        activePeriod: Object as () => ReportPeriod | null
+        modelValue: {
+            type: Boolean,
+            required: true
+        },
+        church: {
+            type: Object,
+            default: null
+        },
+        activePeriod: {
+            type: Object as () => ReportPeriod | null,
+            default: null
+        },
+        loading: {
+            type: Boolean,
+            default: false
+        }
     },
     setup(props, { emit }) {
         const localItem = ref<LocalItem>({
@@ -107,7 +127,7 @@ export default defineComponent({
                 sacramentsGraduates: 0,
                 discipleshipGraduates: 0,
                 updatedAt: Timestamp.now(),
-                reportPeriodId: null
+                reportPeriodId: props.activePeriod?.id || null
             }
         });
 
@@ -161,8 +181,8 @@ export default defineComponent({
             graduateRules: {
                 baptized: (v: number) => Number(v) <= totalChildren.value ||
                     'Bautizados E.S. no puede ser mayor que el Total de Niños',
-                consolidated: (v: number) => Number(v) <= Number(localItem.value.ministerialData.convertedChildren) ||
-                    'Graduados Consolidados no puede ser mayor que Niños Convertidos',
+                consolidated: (v: number) => Number(v) <= totalConvertedAndMembers.value ||
+                    'Graduados Consolidados no puede ser mayor que la suma de Niños Convertidos y Niños Miembros',
                 sacraments: (v: number) => Number(v) <= Number(localItem.value.ministerialData.consolidatedGraduates) ||
                     'Graduados Sacramentos no puede ser mayor que Graduados Consolidados',
                 rescue: (v: number) => Number(v) <= Number(localItem.value.ministerialData.sacramentsGraduates) ||
@@ -194,6 +214,11 @@ export default defineComponent({
             const members = getNumericValue(md.memberChildren);
             const nonRepentant = getNumericValue(md.nonRepentantChildren);
             return converted + members + nonRepentant;
+        });
+
+        const totalConvertedAndMembers = computed(() => {
+            return Number(localItem.value.ministerialData.convertedChildren) +
+                Number(localItem.value.ministerialData.memberChildren);
         });
 
         const close = () => {
@@ -245,8 +270,8 @@ export default defineComponent({
         const validateGraduateRules = () => {
             const md = localItem.value.ministerialData;
 
-            if (md.consolidatedGraduates > md.convertedChildren) {
-                alert('Graduados Consolidados no puede ser mayor que Niños Convertidos');
+            if (md.consolidatedGraduates > (md.convertedChildren + md.memberChildren)) {
+                alert('Graduados Consolidados no puede ser mayor que la suma de Niños Convertidos y Niños Miembros');
                 return false;
             }
             if (md.sacramentsGraduates > md.consolidatedGraduates) {
@@ -268,6 +293,7 @@ export default defineComponent({
             clearDefaultValue,
             handleInput,
             totalChildren,
+            totalConvertedAndMembers,
             close,
             save,
             validateGraduateRules

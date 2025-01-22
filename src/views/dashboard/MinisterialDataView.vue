@@ -1,411 +1,206 @@
 <template>
     <div>
-        <template v-if="loading">
-            <VOverlay :model-value="loading" class="align-center justify-center">
-                <VProgressCircular indeterminate size="64"/>
-            </VOverlay>
-        </template>
+        <!-- Overlay con fondo semi-transparente -->
+        <VOverlay 
+            :model-value="loading || loadingDelete" 
+            class="align-center justify-center"
+            persistent
+            :scrim="'rgba(255, 255, 255, 0.5)'"
+            :z-index="9999"
+        >
+            <VProgressCircular 
+                indeterminate 
+                size="64"
+                color="primary"
+            />
+        </VOverlay>
         
-        <template v-else>
-            <NavigationBar />
-            <VContainer>
-                <!-- Indicador de Estado de Edición -->
-                <VAlert 
-                    v-if="activePeriod" 
-                    :type="isConfirmed ? 'success' : (activePeriod.allowEditing ? 'info' : 'warning')" 
-                    class="mb-4"
+        <!-- Contenido principal (sin v-if) -->
+        <NavigationBar />
+        <VContainer>
+            <!-- Indicador de Estado de Edición -->
+            <VAlert 
+                v-if="activePeriod" 
+                :type="isConfirmed ? 'success' : (activePeriod.allowEditing ? 'info' : 'warning')" 
+                class="mb-4"
+            >
+                <div>
+                    <span class="font-weight-bold">{{ activePeriod.name }}</span>
+                    <template v-if="isConfirmed">
+                        - Reporte confirmado exitosamente
+                    </template>
+                    <template v-else>
+                        - {{
+                            activePeriod.allowEditing
+                                ? "La edición está habilitada."
+                                : "La edición está deshabilitada."
+                        }}
+                    </template>
+                </div>
+            </VAlert>
+
+            <div class="d-flex gap-2 mb-4">
+                <VBtn
+                    v-if="activePeriod && !isConfirmed"
+                    color="success"
+                    prepend-icon="mdi-check-circle"
+                    @click="confirmDistrictData"
+                    :loading="confirming"
+                    size="x-large"
+                    block
                 >
-                    <div>
-                        <span class="font-weight-bold">{{ activePeriod.name }}</span>
-                        <template v-if="isConfirmed">
-                            - Reporte confirmado exitosamente
-                        </template>
-                        <template v-else>
-                            - {{
-                                activePeriod.allowEditing
-                                    ? "La edición está habilitada."
-                                    : "La edición está deshabilitada."
-                            }}
-                        </template>
-                    </div>
-                </VAlert>
+                    Confirmar Datos del Distrito
+                </VBtn>
+            </div>
 
-                <div class="d-flex gap-2 mb-4">
-                    <VBtn
-                        v-if="activePeriod && !isConfirmed"
-                        color="success"
-                        prepend-icon="mdi-check-circle"
-                        @click="confirmDistrictData"
-                        :loading="confirming"
-                        size="x-large"
-                        block
-                    >
-                        Confirmar Datos del Distrito
-                    </VBtn>
-                </div>
+            <h2 class="text-h4 mb-4">
+                Datos de las iglesias del Distrito: {{ districtName }}
+            </h2>
 
-                <h2 class="text-h4 mb-4">
-                    Datos de las iglesias del Distrito: {{ districtName }}
-                </h2>
-
-                <div class="d-flex gap-2">
-                    <VBtn 
-                        v-if="activePeriod?.allowEditing && !isConfirmed" 
-                        color="primary" 
-                        prepend-icon="mdi-plus"
-                        @click="openNewChurchDialog"
-                    >
-                        Agregar Iglesia
-                    </VBtn>
-                </div>
+            <div class="d-flex gap-2">
+                <VBtn 
+                    v-if="activePeriod?.allowEditing && !isConfirmed" 
+                    color="primary" 
+                    prepend-icon="mdi-plus"
+                    @click="openNewChurchDialog"
+                    :disabled="loadingSave || loadingDelete"
+                >
+                    Agregar Iglesia
+                </VBtn>
+            </div>
 
 
-                <!-- Vista Desktop -->
-                <VCard class="mb-4 d-none d-md-block">
-                    <VCardText>
-                        <VTable fixed-header height="300px">
-                            <thead>
-                                <tr>
-                                    <th scope="col" class="text-left">Nombre de la Iglesia</th>
-                                    <th scope="col" class="text-left">Nombre del Líder</th>
-                                    <th scope="col" class="text-center">Total Maestras</th>
-                                    <th scope="col" class="text-center">Total Niños</th>
-                                    <th scope="col" class="text-center">Niños Convertidos</th>
-                                    <th scope="col" class="text-center">Niños Miembros</th>
-                                    <th scope="col" class="text-center">Niños Sin Arrepentir</th>
-                                    <th scope="col" class="text-center">Bautizados E.S.</th>
-                                    <th scope="col" class="text-center">Graduados Consolidado</th>
-                                    <th scope="col" class="text-center">Graduados Sacramentos</th>
-                                    <th scope="col" class="text-center">Graduados Discipulado</th>
-                                    <th scope="col" class="text-center">Acciones</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <tr v-for="(church, index) in churches" :key="church.name">
-                                    <td>{{ church.name }}</td>
-                                    <td>{{ church.leaderName }}</td>
-                                    <td class="text-center">
-                                        {{ getLatestMinisterialData(church).totalTeachers }}
-                                    </td>
-                                    <td class="text-center">
-                                        {{ getLatestMinisterialData(church).totalChildren }}
-                                    </td>
-                                    <td class="text-center">
-                                        {{ getLatestMinisterialData(church).convertedChildren }}
-                                    </td>
-                                    <td class="text-center">
-                                        {{ getLatestMinisterialData(church).memberChildren }}
-                                    </td>
-                                    <td class="text-center">
-                                        {{ getLatestMinisterialData(church).nonRepentantChildren }}
-                                    </td>
-                                    <td class="text-center">
-                                        {{ getLatestMinisterialData(church).baptizedChildren }}
-                                    </td>
-                                    <td class="text-center">
-                                        {{ getLatestMinisterialData(church).consolidatedGraduates }}
-                                    </td>
-                                    <td class="text-center">
-                                        {{ getLatestMinisterialData(church).sacramentsGraduates }}
-                                    </td>
-                                    <td class="text-center">
-                                        {{ getLatestMinisterialData(church).discipleshipGraduates }}
-                                    </td>
-                                    <td class="text-center">
-                                        <VIcon 
-                                            v-if="activePeriod?.allowEditing && !isConfirmed"
-                                            color="primary" 
-                                            icon="mdi-pencil" 
-                                            size="small" 
-                                            class="me-2"
-                                            @click="editItem(church, index)"
-                                        >
-                                            <VTooltip activator="parent" location="top">Editar</VTooltip>
-                                        </VIcon>
-                                        <VIcon 
-                                            v-if="activePeriod?.allowEditing && !isConfirmed"
-                                            color="error" 
-                                            icon="mdi-delete" 
-                                            size="small"
-                                            @click="deleteItem(church, index)"
-                                        >
-                                            <VTooltip activator="parent" location="top">Eliminar</VTooltip>
-                                        </VIcon>
-                                        <VIcon color="info" icon="mdi-history" size="small" class="me-2 cursor-pointer"
-                                            @click="viewHistory(church)">
-                                            <VTooltip activator="parent" location="top">Ver Historial</VTooltip>
-                                        </VIcon>
-                                    </td>
-                                </tr>
-                            </tbody>
-                        </VTable>
-                    </VCardText>
-                </VCard>
-
-                <!-- Vista Móvil -->
-                <div class="d-md-none">
-                    <!-- Tarjeta de Resumen de Totales para Móvil -->
-                    <VCard class="mb-4">
-                        <VCardTitle>Resumen de Totales</VCardTitle>
-                        <VCardText>
-                            <VRow>
-                                <!-- Columna Izquierda -->
-                                <VCol cols="6">
-                                    <!-- Total Maestras -->
-                                    <div class="d-flex align-center mb-4">
-                                        <VIcon color="primary" class="me-2">mdi-account-group</VIcon>
-                                        <div>
-                                            <div class="text-caption">Total Maestras</div>
-                                            <div class="text-h6">{{ totals.totalTeachers }}</div>
-                                        </div>
-                                    </div>
-
-                                    <!-- Total Niños -->
-                                    <div class="d-flex align-center mb-4">
-                                        <VIcon color="info" class="me-2">mdi-account-child</VIcon>
-                                        <div>
-                                            <div class="text-caption">Total Niños</div>
-                                            <div class="text-h6">{{ totals.totalChildren }}</div>
-                                        </div>
-                                    </div>
-
-                                    <!-- Niños Convertidos -->
-                                    <div class="d-flex align-center mb-4">
-                                        <VIcon color="success" class="me-2">mdi-school</VIcon>
-                                        <div>
-                                            <div class="text-caption">Niños Convertidos</div>
-                                            <div class="text-h6">{{ totals.convertedChildren }}</div>
-                                        </div>
-                                    </div>
-
-                                    <!-- Niños Miembros -->
-                                    <div class="d-flex align-center mb-4">
-                                        <VIcon color="warning" class="me-2">mdi-heart</VIcon>
-                                        <div>
-                                            <div class="text-caption">Niños Miembros</div>
-                                            <div class="text-h6">{{ totals.memberChildren }}</div>
-                                        </div>
-                                    </div>
-
-                                    <!-- Niños Sin Arrepentir -->
-                                    <div class="d-flex align-center mb-4">
-                                        <VIcon color="error" class="me-2">mdi-account-alert</VIcon>
-                                        <div>
-                                            <div class="text-caption">Niños Sin Arrepentir</div>
-                                            <div class="text-h6">{{ totals.nonRepentantChildren }}</div>
-                                        </div>
-                                    </div>
-                                </VCol>
-
-                                <!-- Columna Derecha -->
-                                <VCol cols="6">
-                                    <!-- Bautizados E.S. -->
-                                    <div class="d-flex align-center mb-4">
-                                        <VIcon color="deep-purple" class="me-2">mdi-account-check</VIcon>
-                                        <div>
-                                            <div class="text-caption">Bautizados E.S.</div>
-                                            <div class="text-h6">{{ totals.baptizedChildren }}</div>
-                                        </div>
-                                    </div>
-
-                                    <!-- Graduados Consolidado -->
-                                    <div class="d-flex align-center mb-4">
-                                        <VIcon color="red" class="me-2">mdi-fire</VIcon>
-                                        <div>
-                                            <div class="text-caption">Graduados Consolidado</div>
-                                            <div class="text-h6">
-                                                {{ totals.consolidatedGraduates }}
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    <!-- Graduados Sacramentos -->
-                                    <div class="d-flex align-center mb-4">
-                                        <VIcon color="teal" class="me-2">mdi-certificate</VIcon>
-                                        <div>
-                                            <div class="text-caption">Graduados Sacramentos</div>
-                                            <div class="text-h6">{{ totals.sacramentsGraduates }}</div>
-                                        </div>
-                                    </div>
-
-                                    <!-- Graduados Discipulado -->
-                                    <div class="d-flex align-center mb-4">
-                                        <VIcon color="blue-grey" class="me-2">mdi-school-outline</VIcon>
-                                        <div>
-                                            <div class="text-caption">Graduados Discipulado</div>
-                                            <div class="text-h6">
-                                                {{ totals.discipleshipGraduates }}
-                                            </div>
-                                        </div>
-                                    </div>
-                                </VCol>
-                            </VRow>
-                        </VCardText>
-                    </VCard>
-
-                    <!-- Cards de Iglesias -->
-                    <VRow>
-                        <VCol v-for="church in churches" :key="church.name" cols="12">
-                            <VCard>
-                                <VCardTitle>{{ church.name }}</VCardTitle>
-                                <VCardSubtitle>{{ church.leaderName }}</VCardSubtitle>
-
-                                <!-- Resumen -->
-                                <VCardText>
-                                    <div class="d-flex justify-space-between align-center mb-2">
-                                        <div>
-                                            <div class="text-caption">Total Maestras</div>
-                                            <div class="text-h6">
-                                                {{ getLatestMinisterialData(church).totalTeachers }}
-                                            </div>
-                                        </div>
-                                        <div>
-                                            <div class="text-caption">Total Niños</div>
-                                            <div class="text-h6">
-                                                {{ getLatestMinisterialData(church).totalChildren }}
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    <VBtn block variant="text" @click="toggleDetails(church.name)" class="mt-2">
-                                        {{
-                                            showDetailsFor === church.name
-                                                ? "Ocultar Detalles"
-                                                : "Ver Detalles"
-                                        }}
-                                    </VBtn>
-
-                                    <!-- Detalles expandibles -->
-                                    <VExpandTransition>
-                                        <div v-if="showDetailsFor === church.name">
-                                            <VDivider class="my-2"></VDivider>
-                                            <div class="mt-2">
-                                                <div class="d-flex justify-space-between mb-2">
-                                                    <div class="text-caption">Niños Convertidos</div>
-                                                    <div>
-                                                        {{
-                                                            getLatestMinisterialData(church).convertedChildren
-                                                        }}
-                                                    </div>
-                                                </div>
-                                                <div class="d-flex justify-space-between mb-2">
-                                                    <div class="text-caption">Niños Miembros</div>
-                                                    <div>
-                                                        {{ getLatestMinisterialData(church).memberChildren }}
-                                                    </div>
-                                                </div>
-                                                <div class="d-flex justify-space-between mb-2">
-                                                    <div class="text-caption">Bautizados E.S.</div>
-                                                    <div>
-                                                        {{
-                                                            getLatestMinisterialData(church).baptizedChildren
-                                                        }}
-                                                    </div>
-                                                </div>
-                                                <div class="d-flex justify-space-between mb-2">
-                                                    <div class="text-caption">Graduados Consolidado</div>
-                                                    <div>
-                                                        {{
-                                                            getLatestMinisterialData(church)
-                                                                .consolidatedGraduates
-                                                        }}
-                                                    </div>
-                                                </div>
-                                                <div class="d-flex justify-space-between mb-2">
-                                                    <div class="text-caption">Graduados Sacramentos</div>
-                                                    <div>
-                                                        {{
-                                                            getLatestMinisterialData(church).sacramentsGraduates
-                                                        }}
-                                                    </div>
-                                                </div>
-                                                <div class="d-flex justify-space-between mb-2">
-                                                    <div class="text-caption">Graduados Discipulado</div>
-                                                    <div>
-                                                        {{
-                                                            getLatestMinisterialData(church)
-                                                                .discipleshipGraduates
-                                                        }}
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </VExpandTransition>
-                                </VCardText>
-
-                                <VCardActions>
-                                    <VSpacer />
+            <!-- Vista Desktop -->
+            <VCard class="mb-4 d-none d-md-block">
+                <VCardText>
+                    <VTable fixed-header height="300px">
+                        <thead>
+                            <tr>
+                                <th scope="col" class="text-left">Nombre de la Iglesia</th>
+                                <th scope="col" class="text-left">Nombre del Líder</th>
+                                <th scope="col" class="text-center">Total Maestras</th>
+                                <th scope="col" class="text-center">Total Niños</th>
+                                <th scope="col" class="text-center">Niños Convertidos</th>
+                                <th scope="col" class="text-center">Niños Miembros</th>
+                                <th scope="col" class="text-center">Niños Sin Arrepentir</th>
+                                <th scope="col" class="text-center">Bautizados E.S.</th>
+                                <th scope="col" class="text-center">Graduados Consolidado</th>
+                                <th scope="col" class="text-center">Graduados Sacramentos</th>
+                                <th scope="col" class="text-center">Graduados Discipulado</th>
+                                <th scope="col" class="text-center">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr v-for="(church, index) in churches" :key="church.name">
+                                <td>{{ church.name }}</td>
+                                <td>{{ church.leaderName }}</td>
+                                <td class="text-center">
+                                    {{ getLatestMinisterialData(church).totalTeachers }}
+                                </td>
+                                <td class="text-center">
+                                    {{ getLatestMinisterialData(church).totalChildren }}
+                                </td>
+                                <td class="text-center">
+                                    {{ getLatestMinisterialData(church).convertedChildren }}
+                                </td>
+                                <td class="text-center">
+                                    {{ getLatestMinisterialData(church).memberChildren }}
+                                </td>
+                                <td class="text-center">
+                                    {{ getLatestMinisterialData(church).nonRepentantChildren }}
+                                </td>
+                                <td class="text-center">
+                                    {{ getLatestMinisterialData(church).baptizedChildren }}
+                                </td>
+                                <td class="text-center">
+                                    {{ getLatestMinisterialData(church).consolidatedGraduates }}
+                                </td>
+                                <td class="text-center">
+                                    {{ getLatestMinisterialData(church).sacramentsGraduates }}
+                                </td>
+                                <td class="text-center">
+                                    {{ getLatestMinisterialData(church).discipleshipGraduates }}
+                                </td>
+                                <td class="text-center">
                                     <VIcon 
                                         v-if="activePeriod?.allowEditing && !isConfirmed"
                                         color="primary" 
                                         icon="mdi-pencil" 
                                         size="small" 
                                         class="me-2"
-                                        @click="editItem(church, churches.indexOf(church))" 
-                                    />
+                                        @click="editItem(church, index)"
+                                    >
+                                        <VTooltip activator="parent" location="top">Editar</VTooltip>
+                                    </VIcon>
                                     <VIcon 
                                         v-if="activePeriod?.allowEditing && !isConfirmed"
                                         color="error" 
                                         icon="mdi-delete" 
                                         size="small"
-                                        @click="deleteItem(church, churches.indexOf(church))" 
-                                    />
-                                    <VIcon 
-                                        color="info" 
-                                        icon="mdi-history" 
-                                        size="small" 
-                                        class="me-2"
-                                        @click="viewHistory(church)" 
-                                    />
-                                </VCardActions>
-                            </VCard>
-                        </VCol>
-                    </VRow>
-                </div>
+                                        @click="deleteItem(church, index)"
+                                        :loading="loadingDelete"
+                                        :disabled="loadingDelete || !activePeriod?.allowEditing"
+                                    >
+                                        <VTooltip activator="parent" location="top">Eliminar</VTooltip>
+                                    </VIcon>
+                                    <VIcon color="info" icon="mdi-history" size="small" class="me-2 cursor-pointer"
+                                        @click="viewHistory(church)">
+                                        <VTooltip activator="parent" location="top">Ver Historial</VTooltip>
+                                    </VIcon>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </VTable>
+                </VCardText>
+            </VCard>
 
-                <!-- Tarjeta de Resumen de Totales para Desktop -->
-                <VCard class="mt-4 d-none d-md-block">
+            <!-- Vista Móvil -->
+            <div class="d-md-none">
+                <!-- Tarjeta de Resumen de Totales para Móvil -->
+                <VCard class="mb-4">
                     <VCardTitle>Resumen de Totales</VCardTitle>
                     <VCardText>
                         <VRow>
-                            <VCol cols="12" sm="6" md="3">
-                                <div class="d-flex align-center mb-2">
+                            <!-- Columna Izquierda -->
+                            <VCol cols="6">
+                                <!-- Total Maestras -->
+                                <div class="d-flex align-center mb-4">
                                     <VIcon color="primary" class="me-2">mdi-account-group</VIcon>
                                     <div>
                                         <div class="text-caption">Total Maestras</div>
                                         <div class="text-h6">{{ totals.totalTeachers }}</div>
                                     </div>
                                 </div>
-                            </VCol>
-                            <VCol cols="12" sm="6" md="3">
-                                <div class="d-flex align-center mb-2">
+
+                                <!-- Total Niños -->
+                                <div class="d-flex align-center mb-4">
                                     <VIcon color="info" class="me-2">mdi-account-child</VIcon>
                                     <div>
                                         <div class="text-caption">Total Niños</div>
                                         <div class="text-h6">{{ totals.totalChildren }}</div>
                                     </div>
                                 </div>
-                            </VCol>
-                            <VCol cols="12" sm="6" md="3">
-                                <div class="d-flex align-center mb-2">
+
+                                <!-- Niños Convertidos -->
+                                <div class="d-flex align-center mb-4">
                                     <VIcon color="success" class="me-2">mdi-school</VIcon>
                                     <div>
                                         <div class="text-caption">Niños Convertidos</div>
                                         <div class="text-h6">{{ totals.convertedChildren }}</div>
                                     </div>
                                 </div>
-                            </VCol>
-                            <VCol cols="12" sm="6" md="3">
-                                <div class="d-flex align-center mb-2">
+
+                                <!-- Niños Miembros -->
+                                <div class="d-flex align-center mb-4">
                                     <VIcon color="warning" class="me-2">mdi-heart</VIcon>
                                     <div>
                                         <div class="text-caption">Niños Miembros</div>
                                         <div class="text-h6">{{ totals.memberChildren }}</div>
                                     </div>
                                 </div>
-                            </VCol>
-                            <VCol cols="12" sm="6" md="3">
-                                <div class="d-flex align-center mb-2">
+
+                                <!-- Niños Sin Arrepentir -->
+                                <div class="d-flex align-center mb-4">
                                     <VIcon color="error" class="me-2">mdi-account-alert</VIcon>
                                     <div>
                                         <div class="text-caption">Niños Sin Arrepentir</div>
@@ -413,51 +208,278 @@
                                     </div>
                                 </div>
                             </VCol>
-                            <VCol cols="12" sm="6" md="3">
-                                <div class="d-flex align-center mb-2">
+
+                            <!-- Columna Derecha -->
+                            <VCol cols="6">
+                                <!-- Bautizados E.S. -->
+                                <div class="d-flex align-center mb-4">
                                     <VIcon color="red" class="me-2">mdi-fire</VIcon>
                                     <div>
                                         <div class="text-caption">Bautizados E.S.</div>
                                         <div class="text-h6">{{ totals.baptizedChildren }}</div>
                                     </div>
                                 </div>
-                            </VCol>
-                            <VCol cols="12" sm="6" md="3">
-                                <div class="d-flex align-center mb-2">
+
+                                <!-- Graduados Consolidado -->
+                                <div class="d-flex align-center mb-4">
                                     <VIcon color="deep-purple" class="me-2">mdi-school-outline</VIcon>
                                     <div>
                                         <div class="text-caption">Graduados Consolidado</div>
-                                        <div class="text-h6">{{ totals.consolidatedGraduates }}</div>
+                                        <div class="text-h6">
+                                            {{ totals.consolidatedGraduates }}
+                                        </div>
                                     </div>
                                 </div>
-                            </VCol>
-                            <VCol cols="12" sm="6" md="3">
-                                <div class="d-flex align-center mb-2">
+
+                                <!-- Graduados Sacramentos -->
+                                <div class="d-flex align-center mb-4">
                                     <VIcon color="teal" class="me-2">mdi-certificate</VIcon>
                                     <div>
                                         <div class="text-caption">Graduados Sacramentos</div>
                                         <div class="text-h6">{{ totals.sacramentsGraduates }}</div>
                                     </div>
                                 </div>
-                            </VCol>
-                            <VCol cols="12" sm="6" md="3">
-                                <div class="d-flex align-center mb-2">
+
+                                <!-- Graduados Discipulado -->
+                                <div class="d-flex align-center mb-4">
                                     <VIcon color="blue-grey" class="me-2">mdi-book-open-variant</VIcon>
                                     <div>
                                         <div class="text-caption">Graduados Discipulado</div>
-                                        <div class="text-h6">{{ totals.discipleshipGraduates }}</div>
+                                        <div class="text-h6">
+                                            {{
+                                                totals.discipleshipGraduates
+                                            }}
+                                        </div>
                                     </div>
                                 </div>
                             </VCol>
                         </VRow>
                     </VCardText>
                 </VCard>
-            </VContainer>
-        </template>
+
+                <!-- Cards de Iglesias -->
+                <VRow>
+                    <VCol v-for="church in churches" :key="church.name" cols="12">
+                        <VCard>
+                            <VCardTitle>{{ church.name }}</VCardTitle>
+                            <VCardSubtitle>{{ church.leaderName }}</VCardSubtitle>
+
+                            <!-- Resumen -->
+                            <VCardText>
+                                <div class="d-flex justify-space-between align-center mb-2">
+                                    <div>
+                                        <div class="text-caption">Total Maestras</div>
+                                        <div class="text-h6">
+                                            {{ getLatestMinisterialData(church).totalTeachers }}
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <div class="text-caption">Total Niños</div>
+                                        <div class="text-h6">
+                                            {{ getLatestMinisterialData(church).totalChildren }}
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <VBtn block variant="text" @click="toggleDetails(church.name)" class="mt-2">
+                                    {{
+                                        showDetailsFor === church.name
+                                            ? "Ocultar Detalles"
+                                            : "Ver Detalles"
+                                    }}
+                                </VBtn>
+
+                                <!-- Detalles expandibles -->
+                                <VExpandTransition>
+                                    <div v-if="showDetailsFor === church.name">
+                                        <VDivider class="my-2"></VDivider>
+                                        <div class="mt-2">
+                                            <div class="d-flex justify-space-between mb-2">
+                                                <div class="text-caption">Niños Convertidos</div>
+                                                <div>
+                                                    {{
+                                                        getLatestMinisterialData(church).convertedChildren
+                                                    }}
+                                                </div>
+                                            </div>
+                                            <div class="d-flex justify-space-between mb-2">
+                                                <div class="text-caption">Niños Miembros</div>
+                                                <div>
+                                                    {{ getLatestMinisterialData(church).memberChildren }}
+                                                </div>
+                                            </div>
+                                            <div class="d-flex justify-space-between mb-2">
+                                                <div class="text-caption">Bautizados E.S.</div>
+                                                <div>
+                                                    {{
+                                                        getLatestMinisterialData(church)
+                                                            .baptizedChildren
+                                                    }}
+                                                </div>
+                                            </div>
+                                            <div class="d-flex justify-space-between mb-2">
+                                                <div class="text-caption">Graduados Consolidado</div>
+                                                <div>
+                                                    {{
+                                                        getLatestMinisterialData(church)
+                                                            .consolidatedGraduates
+                                                    }}
+                                                </div>
+                                            </div>
+                                            <div class="d-flex justify-space-between mb-2">
+                                                <div class="text-caption">Graduados Sacramentos</div>
+                                                <div>
+                                                    {{
+                                                        getLatestMinisterialData(church).sacramentsGraduates
+                                                    }}
+                                                </div>
+                                            </div>
+                                            <div class="d-flex justify-space-between mb-2">
+                                                <div class="text-caption">Graduados Discipulado</div>
+                                                <div>
+                                                    {{
+                                                        getLatestMinisterialData(church)
+                                                            .discipleshipGraduates
+                                                    }}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </VExpandTransition>
+                            </VCardText>
+
+                            <VCardActions>
+                                <VSpacer />
+                                <VIcon 
+                                    v-if="activePeriod?.allowEditing && !isConfirmed"
+                                    color="primary" 
+                                    icon="mdi-pencil" 
+                                    size="small" 
+                                    class="me-2"
+                                    @click="editItem(church, churches.indexOf(church))" 
+                                />
+                                <VIcon 
+                                    v-if="activePeriod?.allowEditing && !isConfirmed"
+                                    color="error" 
+                                    icon="mdi-delete" 
+                                    size="small"
+                                    @click="deleteItem(church, churches.indexOf(church))" 
+                                    :loading="loadingDelete"
+                                    :disabled="loadingDelete || !activePeriod?.allowEditing"
+                                />
+                                <VIcon 
+                                    color="info" 
+                                    icon="mdi-history" 
+                                    size="small" 
+                                    class="me-2"
+                                    @click="viewHistory(church)" 
+                                />
+                            </VCardActions>
+                        </VCard>
+                    </VCol>
+                </VRow>
+            </div>
+
+            <!-- Tarjeta de Resumen de Totales para Desktop -->
+            <VCard class="mt-4 d-none d-md-block">
+                <VCardTitle>Resumen de Totales</VCardTitle>
+                <VCardText>
+                    <VRow>
+                        <VCol cols="12" sm="6" md="3">
+                            <div class="d-flex align-center mb-2">
+                                <VIcon color="primary" class="me-2">mdi-account-group</VIcon>
+                                <div>
+                                    <div class="text-caption">Total Maestras</div>
+                                    <div class="text-h6">{{ totals.totalTeachers }}</div>
+                                </div>
+                            </div>
+                        </VCol>
+                        <VCol cols="12" sm="6" md="3">
+                            <div class="d-flex align-center mb-2">
+                                <VIcon color="info" class="me-2">mdi-account-child</VIcon>
+                                <div>
+                                    <div class="text-caption">Total Niños</div>
+                                    <div class="text-h6">{{ totals.totalChildren }}</div>
+                                </div>
+                            </div>
+                        </VCol>
+                        <VCol cols="12" sm="6" md="3">
+                            <div class="d-flex align-center mb-2">
+                                <VIcon color="success" class="me-2">mdi-school</VIcon>
+                                <div>
+                                    <div class="text-caption">Niños Convertidos</div>
+                                    <div class="text-h6">{{ totals.convertedChildren }}</div>
+                                </div>
+                            </div>
+                        </VCol>
+                        <VCol cols="12" sm="6" md="3">
+                            <div class="d-flex align-center mb-2">
+                                <VIcon color="warning" class="me-2">mdi-heart</VIcon>
+                                <div>
+                                    <div class="text-caption">Niños Miembros</div>
+                                    <div class="text-h6">{{ totals.memberChildren }}</div>
+                                </div>
+                            </div>
+                        </VCol>
+                        <VCol cols="12" sm="6" md="3">
+                            <div class="d-flex align-center mb-2">
+                                <VIcon color="error" class="me-2">mdi-account-alert</VIcon>
+                                <div>
+                                    <div class="text-caption">Niños Sin Arrepentir</div>
+                                    <div class="text-h6">{{ totals.nonRepentantChildren }}</div>
+                                </div>
+                            </div>
+                        </VCol>
+                        <VCol cols="12" sm="6" md="3">
+                            <div class="d-flex align-center mb-2">
+                                <VIcon color="red" class="me-2">mdi-fire</VIcon>
+                                <div>
+                                    <div class="text-caption">Bautizados E.S.</div>
+                                    <div class="text-h6">{{ totals.baptizedChildren }}</div>
+                                </div>
+                            </div>
+                        </VCol>
+                        <VCol cols="12" sm="6" md="3">
+                            <div class="d-flex align-center mb-2">
+                                <VIcon color="deep-purple" class="me-2">mdi-school-outline</VIcon>
+                                <div>
+                                    <div class="text-caption">Graduados Consolidado</div>
+                                    <div class="text-h6">{{ totals.consolidatedGraduates }}</div>
+                                </div>
+                            </div>
+                        </VCol>
+                        <VCol cols="12" sm="6" md="3">
+                            <div class="d-flex align-center mb-2">
+                                <VIcon color="teal" class="me-2">mdi-certificate</VIcon>
+                                <div>
+                                    <div class="text-caption">Graduados Sacramentos</div>
+                                    <div class="text-h6">{{ totals.sacramentsGraduates }}</div>
+                                </div>
+                            </div>
+                        </VCol>
+                        <VCol cols="12" sm="6" md="3">
+                            <div class="d-flex align-center mb-2">
+                                <VIcon color="blue-grey" class="me-2">mdi-book-open-variant</VIcon>
+                                <div>
+                                    <div class="text-caption">Graduados Discipulado</div>
+                                    <div class="text-h6">{{ totals.discipleshipGraduates }}</div>
+                                </div>
+                            </div>
+                        </VCol>
+                    </VRow>
+                </VCardText>
+            </VCard>
+        </VContainer>
 
         <!-- Diálogo para crear/editar iglesia -->
-        <ChurchFormDialog v-model="dialog" :church="editedItem" :active-period="activePeriod" @save="saveChurch"
-            @close="closeDialog" />
+        <ChurchFormDialog 
+            v-model="dialog" 
+            :church="editedItem" 
+            :active-period="activePeriod" 
+            @save="saveChurch"
+            @close="closeDialog" 
+            :loading="loadingSave"
+        />
 
         <!-- Diálogo de confirmación -->
         <VDialog v-model="confirmDialog" max-width="500px">
@@ -512,6 +534,9 @@ import {
     Timestamp,
     updateDoc,
     addDoc,
+    deleteDoc,
+    type DocumentData,
+    type DocumentReference
 } from "firebase/firestore";
 import { db } from "../../firebase/config";
 import NavigationBar from "../../components/NavigationBar.vue";
@@ -542,6 +567,8 @@ const completionPercentage = ref(0);
 const confirming = ref(false);
 const isConfirmed = ref(false);
 const confirmDialog = ref(false);
+const loadingSave = ref(false);
+const loadingDelete = ref(false);
 
 const defaultItem = {
     id: "",
@@ -764,6 +791,7 @@ const closeDialog = () => {
 };
 
 const saveChurch = async (churchData: any) => {
+    loadingSave.value = true;
     try {
         // 1. Obtener el distrito activo del líder
         const districtLeadersRef = collection(db, "district_leaders");
@@ -833,6 +861,8 @@ const saveChurch = async (churchData: any) => {
     } catch (error) {
         console.error("Error al guardar iglesia:", error);
         alert("Error al guardar la iglesia: " + (error as Error).message);
+    } finally {
+        loadingSave.value = false;
     }
 };
 
@@ -848,23 +878,21 @@ const deleteItem = async (church: Church, index: number) => {
     if (!activePeriod.value?.allowEditing) return;
 
     if (confirm("¿Estás seguro de eliminar esta iglesia?")) {
-        churches.value.splice(index, 1);
-        await saveToFirestore();
-    }
-};
-
-const saveToFirestore = async () => {
-    if (!authStore.user?.id || !currentReport.value?.id) return;
-
-    try {
-        const reportRef = doc(db, "ministerial_reports", currentReport.value.id);
-        await updateDoc(reportRef, {
-            churches: churches.value,
-            updatedAt: Timestamp.now(),
-        });
-    } catch (error) {
-        console.error("Error al guardar:", error);
-        alert("Error al guardar los cambios");
+        loadingDelete.value = true;
+        try {
+            const churchRef: DocumentReference<DocumentData> = doc(db, "churches", church.id);
+            await deleteDoc(churchRef);
+            
+            // Recargar la lista de iglesias
+            await loadData();
+            
+            alert("Iglesia eliminada exitosamente");
+        } catch (error) {
+            console.error("Error al eliminar iglesia:", error);
+            alert("Error al eliminar la iglesia: " + (error as Error).message);
+        } finally {
+            loadingDelete.value = false;
+        }
     }
 };
 

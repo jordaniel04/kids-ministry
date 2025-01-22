@@ -72,22 +72,29 @@ const loadPeriods = async () => {
 };
 
 const loadDistricts = async () => {
+    loading.value = true;
     try {
-        const districtsSnapshot = await getDocs(collection(db, "districts"));
-        const districts = districtsSnapshot.docs.map(doc => ({
-            id: doc.id,
-            location: doc.data().location
-        }));
-
-        // Inicializar la matriz con todos los distritos
-        matrixData.value = districts.map(district => ({
-            id: district.id,
-            location: district.location,
-            reports: {}
-        }));
+        const districtsRef = collection(db, "districts");
+        const districtsSnapshot = await getDocs(districtsRef);
+        
+        // Obtener los distritos y ordenarlos alfabéticamente por ubicación
+        matrixData.value = districtsSnapshot.docs
+            .map(doc => ({
+                id: doc.id,
+                location: doc.data().location,
+                areaNumber: doc.data().areaNumber,
+                districtNumber: doc.data().districtNumber,
+                reports: {}
+            }))
+            .sort((a, b) => a.location.localeCompare(b.location));
+            
+        // Cargar los datos de la matriz después de ordenar los distritos
+        await loadMatrixData();
     } catch (error) {
         console.error("Error al cargar distritos:", error);
-        alert("Error al cargar los distritos");
+        alert("Error al cargar los datos de los distritos");
+    } finally {
+        loading.value = false;
     }
 };
 
