@@ -1,5 +1,13 @@
 <template>
     <div>
+        <NavigationBar />
+        <VOverlay v-model="loading" class="align-center justify-center">
+            <VProgressCircular
+                indeterminate
+                size="64"
+            ></VProgressCircular>
+        </VOverlay>
+        
         <!-- Overlay con fondo semi-transparente -->
         <VOverlay 
             :model-value="loading || loadingDelete" 
@@ -16,8 +24,7 @@
         </VOverlay>
         
         <!-- Contenido principal (sin v-if) -->
-        <NavigationBar />
-        <VContainer>
+        <VContainer v-if="!loading">
             <!-- Indicador de Estado de Edición -->
             <VAlert 
                 v-if="activePeriod" 
@@ -536,7 +543,8 @@ import {
     addDoc,
     deleteDoc,
     type DocumentData,
-    type DocumentReference
+    type DocumentReference,
+    writeBatch
 } from "firebase/firestore";
 import { db } from "../../firebase/config";
 import NavigationBar from "../../components/NavigationBar.vue";
@@ -554,10 +562,8 @@ const currentDistrict = ref<{ id: string; }>({ id: "" });
 const churches = ref<Church[]>([]);
 const showDetailsFor = ref<string | null>(null);
 const activePeriod = ref<ReportPeriod | null>(null);
-const currentReport = ref<MinisterialReport | null>(null);
 const loading = ref(true);
 const dialog = ref(false);
-const historyDialog = ref(false);
 const selectedChurch = ref<Church | undefined>(undefined);
 const editedIndex = ref(-1);
 const editedItem = ref<any>(null);
@@ -907,13 +913,17 @@ const closeHistory = () => {
 };
 
 onMounted(async () => {
+    loading.value = true;
     try {
-        await loadData(); // Cargar todos los datos
+        await Promise.all([
+            loadActivePeriod(),
+            loadData()
+        ]);
     } catch (error) {
-        console.error("Error en la carga inicial:", error);
-        alert("Error al cargar los datos iniciales");
+        console.error("Error al cargar datos iniciales:", error);
+        alert("Error al cargar los datos");
     } finally {
-        loading.value = false; 
+        loading.value = false;
     }
 });
 
@@ -952,73 +962,6 @@ const calculateCompletionPercentage = () => {
         (conf) => conf.isConfirmed
     ).length;
     return Math.round((confirmedCount / churches.value.length) * 100);
-};
-
-// Función para confirmar datos de una iglesia
-const confirmChurchData = async (churchId: string) => {
-    try {
-        if (!activePeriod.value) throw new Error("No hay período activo");
-
-        // 1. Verificar datos ministeriales
-        const church = churches.value.find((c) => c.id === churchId);
-        if (!church?.ministerialData?.length) {
-            throw new Error("No hay datos ministeriales para confirmar");
-        }
-
-        // 2. Guardar confirmación
-        await addDoc(collection(db, "church_confirmations"), {
-            churchId,
-            periodId: activePeriod.value.id,
-            districtId: currentDistrict.value.id,
-            confirmedAt: Timestamp.now(),
-            confirmedBy: authStore.user?.id,
-            isConfirmed: true,
-            ministerialData:
-                church.ministerialData[church.ministerialData.length - 1],
-        });
-
-        await loadConfirmations();
-        completionPercentage.value = calculateCompletionPercentage();
-    } catch (error) {
-        console.error("Error al confirmar datos:", error);
-        alert("Error al confirmar los datos de la iglesia");
-    }
-};
-
-// Desbloquear edición (solo admin)
-const unlockChurchEditing = async (churchId: string) => {
-    try {
-        if (!activePeriod.value) return;
-
-        const confirmationsRef = collection(db, "church_period_confirmations");
-        const q = query(
-            confirmationsRef,
-            where("churchId", "==", churchId),
-            where("periodId", "==", activePeriod.value.id)
-        );
-
-        const snapshot = await getDocs(q);
-        if (!snapshot.empty) {
-            const confirmationDoc = snapshot.docs[0];
-            await updateDoc(
-                doc(db, "church_period_confirmations", confirmationDoc.id),
-                {
-                    isLocked: false,
-                    unlockedAt: Timestamp.now(),
-                    unlockedBy: authStore.user?.id,
-                }
-            );
-        }
-
-        await loadConfirmations();
-    } catch (error) {
-        console.error("Error al desbloquear edición:", error);
-        alert("Error al desbloquear la edición");
-    }
-};
-
-const isChurchConfirmed = (churchId: string) => {
-    return churchConfirmations.value.get(churchId)?.isConfirmed || false;
 };
 
 const loadConfirmations = async () => {
@@ -1118,22 +1061,28 @@ const processDistrictConfirmation = async () => {
             consolidatedGraduates: churches.value.reduce((sum: number, church) => 
                 sum + (church.ministerialData?.[0]?.consolidatedGraduates || 0), 0),
             sacramentsGraduates: churches.value.reduce((sum: number, church) => 
-                sum + (church.ministerialData?.[0]?.sacramentsGraduates || 0), 0)
+                sum + (church.ministerialData?.[0]?.sacramentsGraduates || 0), 0),
+            discipleshipGraduates: churches.value.reduce((sum: number, church) => 
+                sum + (church.ministerialData?.[0]?.discipleshipGraduates || 0), 0)
         });
 
-        // Confirmar cada iglesia individualmente
-        for (const church of churches.value) {
-            await addDoc(collection(db, "church_confirmations"), {
+        // Guardar las confirmaciones de iglesias en una sola operación
+        const batch = writeBatch(db);
+        churches.value.forEach((church) => {
+            const confirmationRef = doc(collection(db, "church_confirmations"));
+            batch.set(confirmationRef, {
                 churchId: church.id,
-                periodId: activePeriod.value.id,
-                districtId: currentDistrict.value.id,
+                periodId: activePeriod.value!.id,
+                districtId: currentDistrict.value!.id,
                 confirmedAt: Timestamp.now(),
-                confirmedBy: authStore.user.id,
+                confirmedBy: authStore.user!.id,
                 churchName: church.name,
                 leaderName: church.leaderName,
                 ministerialData: church.ministerialData[0]
             });
-        }
+        });
+        
+        await batch.commit();
 
         isConfirmed.value = true;
         confirmDialog.value = false;

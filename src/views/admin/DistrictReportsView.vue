@@ -34,7 +34,14 @@
                     <VCard v-if="selectedDistrict && selectedPeriod">
                         <VCardTitle>Datos del Distrito</VCardTitle>
                         <VCardText>
-                            <VDataTable :headers="headers" :items="churchesData" :loading="loading">
+                            <VDataTable 
+                                :headers="headers" 
+                                :items="churchesData" 
+                                :loading="loading"
+                                :items-per-page-options="[10, 25, 50, 100, -1]"
+                                :items-per-page="100"
+                                hover
+                            >
                                 <template #bottom>
                                     <div class="d-flex justify-end pt-4">
                                         <div class="text-subtitle-1 font-weight-bold">
@@ -347,16 +354,18 @@ onMounted(async () => {
             allowEditing: doc.data().allowEditing
         }));
 
-        // Cargar distritos
+        // Cargar distritos y ordenarlos alfabéticamente
         const districtsSnapshot = await getDocs(collection(db, "districts"));
-        districts.value = districtsSnapshot.docs.map(doc => ({
-            id: doc.id,
-            areaNumber: doc.data().areaNumber,
-            districtNumber: doc.data().districtNumber,
-            location: doc.data().location,
-            createdAt: doc.data().createdAt,
-            updatedAt: doc.data().updatedAt
-        }));
+        districts.value = districtsSnapshot.docs
+            .map(doc => ({
+                id: doc.id,
+                areaNumber: doc.data().areaNumber,
+                districtNumber: doc.data().districtNumber,
+                location: doc.data().location,
+                createdAt: doc.data().createdAt,
+                updatedAt: doc.data().updatedAt
+            } as District))
+            .sort((a, b) => a.location.localeCompare(b.location));
     } catch (error) {
         console.error("Error al cargar datos iniciales:", error);
         alert("Error al cargar los datos");

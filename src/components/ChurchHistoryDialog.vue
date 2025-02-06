@@ -59,7 +59,6 @@ const reportPeriods = ref<Map<string, string>>(new Map());
 
 const headers = [
     { title: 'Fecha', key: 'updatedAt', sortable: true },
-    { title: 'Período', key: 'reportPeriod', sortable: true },
     { title: 'Maestras', key: 'totalTeachers', sortable: true },
     { title: 'Niños', key: 'totalChildren', sortable: true },
     { title: 'Convertidos', key: 'convertedChildren', sortable: true },
