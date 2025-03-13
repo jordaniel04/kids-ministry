@@ -38,6 +38,15 @@ export default defineConfig({
       }
     })
   ],
+  server: {
+    hmr: {
+      timeout: 5000,
+      overlay: false
+    },
+    watch: {
+      usePolling: true
+    }
+  },
   build: {
     outDir: 'dist',
     chunkSizeWarningLimit: 1600,

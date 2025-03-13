@@ -73,13 +73,13 @@ const routes: Array<RouteRecordRaw> = [
 ];
 
 const router = createRouter({
-  history: createWebHistory(),
+  history: createWebHistory(import.meta.env.BASE_URL),
   routes
 });
 
-// Guardia de navegación
+// Limpiar todos los listeners antes de cada cambio de ruta
 router.beforeEach((to, from, next) => {
-  // Limpiar todos los listeners de Firestore antes de cambiar de ruta
+  // Limpiar todos los listeners de Firestore
   clearAllFirestoreListeners();
   
   const requiresAuth = to.matched.some(record => record.meta.requiresAuth);

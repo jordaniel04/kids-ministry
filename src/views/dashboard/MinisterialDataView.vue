@@ -544,7 +544,8 @@ import {
     deleteDoc,
     type DocumentData,
     type DocumentReference,
-    writeBatch
+    writeBatch,
+    limit
 } from "firebase/firestore";
 import { db } from "../../firebase/config";
 import NavigationBar from "../../components/NavigationBar.vue";
@@ -627,46 +628,27 @@ const getLatestMinisterialData = (church: Church) => {
     )[0];
 };
 
-interface TotalAccumulator {
-    totalTeachers: number;
-    totalChildren: number;
-    convertedChildren: number;
-    memberChildren: number;
-    nonRepentantChildren: number;
-    baptizedChildren: number;
-    consolidatedGraduates: number;
-    sacramentsGraduates: number;
-    discipleshipGraduates: number;
-}
-
-const totals = computed(() => {
-    const initialValue: TotalAccumulator = {
-        totalTeachers: 0,
-        totalChildren: 0,
-        convertedChildren: 0,
-        memberChildren: 0,
-        nonRepentantChildren: 0,
-        baptizedChildren: 0,
-        consolidatedGraduates: 0,
-        sacramentsGraduates: 0,
-        discipleshipGraduates: 0,
-    };
-
-    return churches.value.reduce((sum, church) => {
-        const data = getLatestMinisterialData(church);
-        return {
-            totalTeachers: sum.totalTeachers + Number(data.totalTeachers || 0),
-            totalChildren: sum.totalChildren + Number(data.totalChildren || 0),
-            convertedChildren: sum.convertedChildren + Number(data.convertedChildren || 0),
-            memberChildren: sum.memberChildren + Number(data.memberChildren || 0),
-            nonRepentantChildren: sum.nonRepentantChildren + Number(data.nonRepentantChildren || 0),
-            baptizedChildren: sum.baptizedChildren + Number(data.baptizedChildren || 0),
-            consolidatedGraduates: sum.consolidatedGraduates + Number(data.consolidatedGraduates || 0),
-            sacramentsGraduates: sum.sacramentsGraduates + Number(data.sacramentsGraduates || 0),
-            discipleshipGraduates: sum.discipleshipGraduates + Number(data.discipleshipGraduates || 0),
-        };
-    }, initialValue);
-});
+// Totales computados
+const totals = computed(() => ({
+  totalTeachers: churches.value.reduce((sum, church) => 
+    sum + (church.ministerialData?.[0]?.totalTeachers || 0), 0),
+  totalChildren: churches.value.reduce((sum, church) => 
+    sum + (church.ministerialData?.[0]?.totalChildren || 0), 0),
+  convertedChildren: churches.value.reduce((sum, church) => 
+    sum + (church.ministerialData?.[0]?.convertedChildren || 0), 0),
+  memberChildren: churches.value.reduce((sum, church) => 
+    sum + (church.ministerialData?.[0]?.memberChildren || 0), 0),
+  nonRepentantChildren: churches.value.reduce((sum, church) => 
+    sum + (church.ministerialData?.[0]?.nonRepentantChildren || 0), 0),
+  baptizedChildren: churches.value.reduce((sum, church) => 
+    sum + (church.ministerialData?.[0]?.baptizedChildren || 0), 0),
+  consolidatedGraduates: churches.value.reduce((sum, church) => 
+    sum + (church.ministerialData?.[0]?.consolidatedGraduates || 0), 0),
+  sacramentsGraduates: churches.value.reduce((sum, church) => 
+    sum + (church.ministerialData?.[0]?.sacramentsGraduates || 0), 0),
+  discipleshipGraduates: churches.value.reduce((sum, church) => 
+    sum + (church.ministerialData?.[0]?.discipleshipGraduates || 0), 0)
+}));
 
 const loadActivePeriod = async () => {
     const periodsRef = collection(db, "report_periods");
@@ -689,38 +671,33 @@ const loadActivePeriod = async () => {
 };
 
 const loadData = async () => {
+    if (!authStore.user) return;
+    
     try {
-        // 1. Obtener el líder del distrito
-        const districtLeaderDocs = await getDocs(query(
-            collection(db, "district_leaders"),
-            where("userId", "==", authStore.user?.id),
-            where("isActive", "==", true)
-        ));
-
-        if (!districtLeaderDocs.empty) {
-            const districtLeader = districtLeaderDocs.docs[0].data();
+        // 1. Obtener el distrito del usuario
+        const districtLeaderQuery = query(
+            collection(db, 'district_leaders'),
+            where('userId', '==', authStore.user.id),
+            where('isActive', '==', true),
+            limit(1)
+        );
+        const districtLeaderSnapshot = await getDocs(districtLeaderQuery);
+        
+        if (!districtLeaderSnapshot.empty) {
+            districtName.value = districtLeaderSnapshot.docs[0].data().districtId;
             
-            // 2. Cargar datos del distrito y sus iglesias
-            const [districtDoc, churchesSnapshot] = await Promise.all([
-                getDoc(doc(db, "districts", districtLeader.districtId)),
-                getDocs(query(
-                    collection(db, "churches"),
-                    where("districtId", "==", districtLeader.districtId),
-                    where("isActive", "==", true)
-                ))
-            ]);
-
-            // 3. Cargar período activo si existe
-            const periodSnapshot = await getDocs(query(
-                collection(db, "report_periods"), 
-                where("isActive", "==", true)
-            ));
-
-            // Actualizar el período activo si existe
-            if (!periodSnapshot.empty) {
-                const periodData = periodSnapshot.docs[0].data();
+            // 2. Obtener período activo
+            const periodsQuery = query(
+                collection(db, 'report_periods'),
+                where('isActive', '==', true),
+                limit(1)
+            );
+            const periodsSnapshot = await getDocs(periodsQuery);
+            
+            if (!periodsSnapshot.empty) {
+                const periodData = periodsSnapshot.docs[0].data();
                 activePeriod.value = {
-                    id: periodSnapshot.docs[0].id,
+                    id: periodsSnapshot.docs[0].id,
                     name: periodData.name,
                     description: periodData.description,
                     startDate: periodData.startDate,
@@ -728,26 +705,17 @@ const loadData = async () => {
                     isActive: periodData.isActive,
                     allowEditing: periodData.allowEditing ?? false
                 };
-
-                // Cargar confirmaciones solo si hay período activo
-                const confirmationSnapshot = await getDocs(query(
-                    collection(db, "district_confirmations"),
-                    where("districtId", "==", districtLeader.districtId),
-                    where("periodId", "==", periodSnapshot.docs[0].id)
-                ));
-                isConfirmed.value = !confirmationSnapshot.empty;
-            } else {
-                activePeriod.value = null;
-                isConfirmed.value = false;
-            }
-
-            // Cargar datos del distrito y las iglesias independientemente del período
-            if (districtDoc.exists()) {
-                const districtData = districtDoc.data();
-                districtName.value = districtData.location;
-                currentDistrict.value = { id: districtDoc.id };
-
-                churches.value = churchesSnapshot.docs.map((doc) => ({
+                
+                // 3. Obtener datos de las iglesias
+                const churchesQuery = query(
+                    collection(db, 'churches'),
+                    where('districtId', '==', districtName.value),
+                    where('isActive', '==', true),
+                    limit(100)
+                );
+                const churchesSnapshot = await getDocs(churchesQuery);
+                
+                churches.value = churchesSnapshot.docs.map(doc => ({
                     id: doc.id,
                     name: doc.data().name,
                     leaderName: doc.data().leaderName,
@@ -757,13 +725,24 @@ const loadData = async () => {
                     createdBy: doc.data().createdBy,
                     updatedBy: doc.data().updatedBy,
                     isActive: doc.data().isActive,
-                    ministerialData: doc.data().ministerialData || [],
+                    ministerialData: doc.data().ministerialData || []
                 }));
+                
+                // 4. Verificar si el reporte está confirmado
+                const confirmationQuery = query(
+                    collection(db, 'district_confirmations'),
+                    where('districtId', '==', districtName.value),
+                    where('periodId', '==', activePeriod.value.id),
+                    limit(1)
+                );
+                const confirmationSnapshot = await getDocs(confirmationQuery);
+                isConfirmed.value = !confirmationSnapshot.empty;
             }
         }
     } catch (error) {
-        console.error("Error al cargar datos:", error);
-        throw error;
+        console.error('Error al cargar datos:', error);
+    } finally {
+        loading.value = false;
     }
 };
 
@@ -912,19 +891,8 @@ const closeHistory = () => {
     showHistory.value = false;
 };
 
-onMounted(async () => {
-    loading.value = true;
-    try {
-        await Promise.all([
-            loadActivePeriod(),
-            loadData()
-        ]);
-    } catch (error) {
-        console.error("Error al cargar datos iniciales:", error);
-        alert("Error al cargar los datos");
-    } finally {
-        loading.value = false;
-    }
+onMounted(() => {
+    loadData();
 });
 
 const headers = [
