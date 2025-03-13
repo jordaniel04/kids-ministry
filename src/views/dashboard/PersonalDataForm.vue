@@ -1,15 +1,16 @@
 <template>
     <div>
         <VOverlay v-model="loading" class="align-center justify-center">
-            <VProgressCircular indeterminate size="64"/>
+            <VProgressCircular indeterminate size="64" />
         </VOverlay>
-        
+
         <template v-if="!loading">
             <NavigationBar />
             <VContainer>
                 <h1>Datos del Líder Distrital</h1>
                 <div class="text-subtitle-1 mb-4">
-                    {{ `Área ${userData?.areaNumber || ''} - Distrito ${userData?.districtNumber || ''} - ${userData?.location || ''}` }}
+                    {{ `Área ${userData?.areaNumber || ''} - Distrito ${userData?.districtNumber || ''} -
+                    ${userData?.location || ''}` }}
                 </div>
                 <VForm @submit.prevent="savePersonalData">
                     <VCard class="mb-4 pa-4">
@@ -17,30 +18,16 @@
                         <VCardText>
                             <VTextField label="Nombres" v-model="personalData.firstName" required></VTextField>
                             <VTextField label="Apellidos" v-model="personalData.lastName" required></VTextField>
-                            <VDateInput 
-                                label="Fecha de Nacimiento" 
-                                prepend-icon=""
-                                v-model="personalData.birthDate"
-                                placeholder="DD-MM-AAAA"
-                                locale="es-ES"
-                                required
-                            ></VDateInput>
-                            <VSelect :items="['Soltero', 'Casado']" label="Estado Civil" v-model="personalData.maritalStatus"
-                                required>
+                            <VDateInput label="Fecha de Nacimiento" prepend-icon="" v-model="personalData.birthDate"
+                                placeholder="DD-MM-AAAA" locale="es-ES" required></VDateInput>
+                            <VSelect :items="['Soltero', 'Casado']" label="Estado Civil"
+                                v-model="personalData.maritalStatus" required>
                             </VSelect>
-                            <VTextField
-                                v-model="personalData.phoneNumber"
-                                label="Número de Celular"
-                                :rules="[
-                                    v => !!v || 'El número de celular es requerido',
-                                    v => /^[0-9]{9}$/.test(v) || 'El número debe tener 9 dígitos',
-                                    v => !isNaN(v) || 'Solo se permiten números'
-                                ]"
-                                @input="validatePhoneNumber"
-                                maxlength="9"
-                                counter
-                                :error-messages="phoneError"
-                            />
+                            <VTextField v-model="personalData.phoneNumber" label="Número de Celular" :rules="[
+            v => !!v || 'El número de celular es requerido',
+            v => /^[0-9]{9}$/.test(v) || 'El número debe tener 9 dígitos',
+            v => !isNaN(v) || 'Solo se permiten números'
+        ]" @input="validatePhoneNumber" maxlength="9" counter :error-messages="phoneError" />
                         </VCardText>
                     </VCard>
 
@@ -49,22 +36,12 @@
                         <VCardText>
                             <VRow>
                                 <VCol cols="12" sm="6">
-                                    <VSelect
-                                        v-model="appointmentMonth"
-                                        :items="months"
-                                        label="Mes de Nombramiento"
-                                        required
-                                        @update:model-value="updateAppointmentDate"
-                                    ></VSelect>
+                                    <VSelect v-model="appointmentMonth" :items="months" label="Mes de Nombramiento"
+                                        required @update:model-value="updateAppointmentDate"></VSelect>
                                 </VCol>
                                 <VCol cols="12" sm="6">
-                                    <VSelect
-                                        v-model="appointmentYear"
-                                        :items="years"
-                                        label="Año de Nombramiento"
-                                        required
-                                        @update:model-value="updateAppointmentDate"
-                                    ></VSelect>
+                                    <VSelect v-model="appointmentYear" :items="years" label="Año de Nombramiento"
+                                        required @update:model-value="updateAppointmentDate"></VSelect>
                                 </VCol>
                             </VRow>
                             <VSelect :items="['Sí', 'No']" label="Bautizado con el Espíritu Santo"
@@ -74,21 +51,12 @@
                                     <div class="text-h7 mb-1">
                                         Capacitaciones recibidas de la RUTA DE FORMACIÓN DE LIDERAZGO
                                     </div>
-                                    <VCheckbox
-                                        v-model="noCourses"
-                                        label="No he realizado ninguna capacitación"
-                                        @update:model-value="handleNoCourses"
-                                    ></VCheckbox>
-                                    
-                                    <VCheckbox 
-                                        v-for="course in availableCourses" 
-                                        :key="course"
-                                        v-model="ministerialData.courses" 
-                                        :label="course" 
-                                        :value="course"
-                                        :disabled="noCourses"
-                                        @update:model-value="handleCourseSelection"
-                                    ></VCheckbox>
+                                    <VCheckbox v-model="noCourses" label="No he realizado ninguna capacitación"
+                                        @update:model-value="handleNoCourses"></VCheckbox>
+
+                                    <VCheckbox v-for="course in availableCourses" :key="course"
+                                        v-model="ministerialData.courses" :label="course" :value="course"
+                                        :disabled="noCourses" @update:model-value="handleCourseSelection"></VCheckbox>
                                 </VCol>
                             </VRow>
                         </VCardText>
@@ -99,14 +67,8 @@
                         {{ completionPercentage }}%
                     </VProgressLinear>
 
-                    <VBtn 
-                        type="submit" 
-                        color="primary" 
-                        class="mt-4" 
-                        block 
-                        :loading="loading" 
-                        :disabled="loading || !hasChanges || completionPercentage < 100"
-                    >
+                    <VBtn type="submit" color="primary" class="mt-4" block :loading="loading"
+                        :disabled="loading || !hasChanges || completionPercentage < 100">
                         {{ loading ? 'Guardando...' : 'Guardar Datos' }}
                     </VBtn>
                 </VForm>
@@ -116,7 +78,8 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, watch } from "vue";
+// Importaciones
+import { ref, computed, onMounted, watch, onUnmounted } from "vue";
 import { doc, setDoc, collection, getDocs, Timestamp, getDoc, query, where } from "firebase/firestore";
 import { db } from "../../firebase/config";
 import { useAuthStore } from "../../stores/auth";
@@ -189,7 +152,7 @@ const completionPercentage = computed(() => {
     // Definir los campos requeridos para cada sección
     const personalFields = [
         'firstName',
-        'lastName', 
+        'lastName',
         'birthDate',
         'maritalStatus',
         'phoneNumber'
@@ -278,42 +241,51 @@ const updateAppointmentDate = () => {
     }
 };
 
+// Variable para controlar si ya se han cargado los datos
+const dataLoaded = ref(false);
+
+// Array para almacenar las funciones de desuscripción
+const unsubscribers = ref<(() => void)[]>([]);
+
+// Remove duplicate declaration and keep single implementation
 const loadUserData = async () => {
+    // Si ya cargamos los datos, no hacemos nada
+    if (dataLoaded.value) return;
+
     try {
-        // 1. Cargar datos básicos del usuario
-        const userDoc = await getDoc(doc(db, "users", authStore.user!.id));
-        if (userDoc.exists()) {
-            const basicUserData = userDoc.data();
-            
-            // 2. Cargar datos del district_leaders para obtener el districtId
+        loading.value = true;
+
+        // 1. Obtener datos del líder desde el store (usa caché si está disponible)
+        const leaderData = await authStore.getUserData();
+
+        if (leaderData) {
+            // 2. Obtener información del distrito en una sola consulta
             const districtLeadersRef = collection(db, "district_leaders");
             const q = query(
-                districtLeadersRef, 
+                districtLeadersRef,
                 where("userId", "==", authStore.user!.id),
                 where("isActive", "==", true)
             );
             const districtLeaderDocs = await getDocs(q);
-            
+
             if (!districtLeaderDocs.empty) {
                 const districtLeader = districtLeaderDocs.docs[0].data();
-                
-                // 3. Cargar datos del distrito
-                const districtDoc = await getDoc(doc(db, "districts", districtLeader.districtId));
-                if (districtDoc.exists()) {
-                    const districtData = districtDoc.data();
-                    userData.value = {
-                        ...basicUserData,
-                        areaNumber: districtData.areaNumber,
-                        districtNumber: districtData.districtNumber,
-                        location: districtData.location
-                    };
+
+                // Cargar datos del distrito solo si tenemos el ID
+                if (districtLeader.districtId) {
+                    const districtDoc = await getDoc(doc(db, "districts", districtLeader.districtId));
+                    if (districtDoc.exists()) {
+                        const districtData = districtDoc.data();
+                        userData.value = {
+                            areaNumber: districtData.areaNumber,
+                            districtNumber: districtData.districtNumber,
+                            location: districtData.location
+                        };
+                    }
                 }
             }
-        }
 
-        // 4. Cargar datos personales y ministeriales del líder
-        const leaderData = await authStore.getUserData();
-        if (leaderData) {
+            // 3. Procesar datos personales
             if (leaderData.personalData) {
                 personalData.value = {
                     firstName: leaderData.personalData.firstName || "",
@@ -324,49 +296,47 @@ const loadUserData = async () => {
                 };
             }
 
+            // 4. Procesar datos ministeriales
             if (leaderData.ministerialData) {
                 ministerialData.value = {
                     appointmentDate: leaderData.ministerialData.appointmentDate?.toDate() || null,
                     baptized: leaderData.ministerialData.baptized || "",
                     courses: leaderData.ministerialData.courses || [],
                 };
-                
+
                 if (ministerialData.value.appointmentDate) {
                     const date = ministerialData.value.appointmentDate;
                     appointmentMonth.value = date.getMonth();
                     appointmentYear.value = date.getFullYear();
                 }
-                
+
                 noCourses.value = ministerialData.value.courses.includes('NO_COURSES');
             }
 
             initialData.value = {
-                personal: { ...personalData.value },
-                ministerial: { ...ministerialData.value }
+                personal: JSON.parse(JSON.stringify(personalData.value)),
+                ministerial: JSON.parse(JSON.stringify(ministerialData.value))
             };
         }
     } catch (error) {
-        console.error("Error al cargar los datos:", error);
+        console.error("Error al cargar datos:", error);
+    } finally {
+        loading.value = false;
     }
 };
 
-const loadDistricts = async () => {
-    try {
-        const querySnapshot = await getDocs(collection(db, "districts"));
-        districts.value = querySnapshot.docs.map(doc => doc.data().name);
-    } catch (error) {
-        console.error("Error al cargar distritos:", error);
-        districts.value = [];
-    }
-};
+// Añadir el hook onUnmounted para limpiar los listeners
+onUnmounted(() => {
+    // Limpiar todos los listeners cuando el componente se desmonta
+    unsubscribers.value.forEach(unsub => unsub());
+    unsubscribers.value = [];
+    console.log('Componente PersonalDataForm desmontado, listeners limpiados');
+});
 
-// Cargar datos al montar el componente
+// Mantener solo un onMounted
 onMounted(async () => {
     try {
-        await Promise.all([
-            loadDistricts(),
-            loadUserData()
-        ]);
+        await loadUserData();
     } catch (error) {
         console.error("Error al cargar datos iniciales:", error);
         alert("Error al cargar los datos");
@@ -374,6 +344,21 @@ onMounted(async () => {
         loading.value = false;
     }
 });
+
+// Eliminar o comentar el segundo onMounted
+// onMounted(async () => {
+//   try {
+//     await Promise.all([
+//       loadDistricts(),
+//       loadUserData()
+//     ]);
+//   } catch (error) {
+//     console.error("Error al cargar datos iniciales:", error);
+//     alert("Error al cargar los datos");
+//   } finally {
+//     loading.value = false;
+//   }
+// });
 
 const savePersonalData = async () => {
     // Validar que todos los campos requeridos estén completos
@@ -414,7 +399,7 @@ const savePersonalData = async () => {
 
 const hasChanges = computed(() => {
     return JSON.stringify(initialData.value.personal) !== JSON.stringify(personalData.value) ||
-           JSON.stringify(initialData.value.ministerial) !== JSON.stringify(ministerialData.value);
+        JSON.stringify(initialData.value.ministerial) !== JSON.stringify(ministerialData.value);
 });
 
 const phoneNumber = ref('');
@@ -423,15 +408,15 @@ const phoneError = ref('');
 const validatePhoneNumber = (event: Event) => {
     const input = event.target as HTMLInputElement;
     const value = input.value;
-    
+
     // Remover cualquier caracter que no sea número
     input.value = value.replace(/\D/g, '');
-    
+
     // Validar longitud
     if (input.value.length > 9) {
         input.value = input.value.slice(0, 9);
     }
-    
+
     phoneNumber.value = input.value;
 };
 
@@ -448,4 +433,3 @@ watch(phoneNumber, (newValue) => {
 <style scoped>
 /* Estilos específicos para el formulario de datos personales */
 </style>
-

@@ -15,58 +15,58 @@
             <VWindow v-model="activeTab">
                 <VWindowItem value="period">
                     <!-- Filtros existentes -->
-                    <VCard class="mb-4">
-                        <VCardText>
-                            <VRow>
-                                <VCol cols="12" sm="6" md="4">
+            <VCard class="mb-4">
+                <VCardText>
+                    <VRow>
+                        <VCol cols="12" sm="6" md="4">
                                     <VSelect v-model="selectedDistrict" :items="districts" label="Distrito"
                                         item-title="location" item-value="id" @update:model-value="loadDistrictData" />
-                                </VCol>
-                                <VCol cols="12" sm="6" md="4">
+                        </VCol>
+                        <VCol cols="12" sm="6" md="4">
                                     <VSelect v-model="selectedPeriod" :items="periods" label="Período" item-title="name"
                                         item-value="id" @update:model-value="loadDistrictData" />
-                                </VCol>
-                            </VRow>
-                        </VCardText>
-                    </VCard>
+                        </VCol>
+                    </VRow>
+                </VCardText>
+            </VCard>
 
-                    <!-- Tabla de Datos -->
-                    <VCard v-if="selectedDistrict && selectedPeriod">
-                        <VCardTitle>Datos del Distrito</VCardTitle>
-                        <VCardText>
-                            <VDataTable 
-                                :headers="headers" 
-                                :items="churchesData" 
-                                :loading="loading"
+            <!-- Tabla de Datos -->
+            <VCard v-if="selectedDistrict && selectedPeriod">
+                <VCardTitle>Datos del Distrito</VCardTitle>
+                <VCardText>
+                    <VDataTable
+                        :headers="headers"
+                        :items="churchesData"
+                        :loading="loading"
                                 :items-per-page-options="[10, 25, 50, 100, -1]"
                                 :items-per-page="100"
                                 hover
-                            >
-                                <template #bottom>
-                                    <div class="d-flex justify-end pt-4">
-                                        <div class="text-subtitle-1 font-weight-bold">
-                                            Total Iglesias: {{ churchesData.length }}
-                                        </div>
-                                    </div>
-                                </template>
-                            </VDataTable>
-                        </VCardText>
-                    </VCard>
+                    >
+                        <template #bottom>
+                            <div class="d-flex justify-end pt-4">
+                                <div class="text-subtitle-1 font-weight-bold">
+                                    Total Iglesias: {{ churchesData.length }}
+                                </div>
+                            </div>
+                        </template>
+                    </VDataTable>
+                </VCardText>
+            </VCard>
 
-                    <!-- Resumen de Totales -->
-                    <VCard v-if="churchesData.length > 0" class="mt-4">
-                        <VCardTitle>Resumen del Distrito</VCardTitle>
-                        <VCardText>
-                            <VRow>
-                                <VCol v-for="(total, key) in districtTotals" :key="key" cols="12" sm="6" md="3">
-                                    <div class="d-flex align-center justify-space-between pa-2 rounded bg-surface">
-                                        <span class="text-subtitle-2">{{ formatTotalLabel(key) }}:</span>
-                                        <span class="text-h6">{{ total }}</span>
-                                    </div>
-                                </VCol>
-                            </VRow>
-                        </VCardText>
-                    </VCard>
+            <!-- Resumen de Totales -->
+            <VCard v-if="churchesData.length > 0" class="mt-4">
+                <VCardTitle>Resumen del Distrito</VCardTitle>
+                <VCardText>
+                    <VRow>
+                        <VCol v-for="(total, key) in districtTotals" :key="key" cols="12" sm="6" md="3">
+                            <div class="d-flex align-center justify-space-between pa-2 rounded bg-surface">
+                                <span class="text-subtitle-2">{{ formatTotalLabel(key) }}:</span>
+                                <span class="text-h6">{{ total }}</span>
+                            </div>
+                        </VCol>
+                    </VRow>
+                </VCardText>
+            </VCard>
                 </VWindowItem>
 
                 <!-- Vista Histórica -->
@@ -358,12 +358,12 @@ onMounted(async () => {
         const districtsSnapshot = await getDocs(collection(db, "districts"));
         districts.value = districtsSnapshot.docs
             .map(doc => ({
-                id: doc.id,
-                areaNumber: doc.data().areaNumber,
-                districtNumber: doc.data().districtNumber,
-                location: doc.data().location,
-                createdAt: doc.data().createdAt,
-                updatedAt: doc.data().updatedAt
+            id: doc.id,
+            areaNumber: doc.data().areaNumber,
+            districtNumber: doc.data().districtNumber,
+            location: doc.data().location,
+            createdAt: doc.data().createdAt,
+            updatedAt: doc.data().updatedAt
             } as District))
             .sort((a, b) => a.location.localeCompare(b.location));
     } catch (error) {
@@ -374,7 +374,7 @@ onMounted(async () => {
 
 const loadDistrictData = async () => {
     if (!selectedDistrict.value || !selectedPeriod.value) return;
-
+    
     loading.value = true;
     try {
         const confirmationsRef = collection(db, "church_confirmations");
@@ -383,12 +383,12 @@ const loadDistrictData = async () => {
             where("districtId", "==", selectedDistrict.value),
             where("periodId", "==", selectedPeriod.value)
         );
-
+        
         const confirmationsSnapshot = await getDocs(confirmationsQuery);
         churchesData.value = confirmationsSnapshot.docs.map(doc => {
-            const data = doc.data();
-            return {
-                id: doc.id,
+                const data = doc.data();
+                return {
+                    id: doc.id,
                 name: data.churchName as string,
                 leaderName: data.leaderName as string,
                 ministerialData: [{
@@ -404,8 +404,8 @@ const loadDistrictData = async () => {
                     reportPeriodId: selectedPeriod.value,
                     updatedAt: data.ministerialData.updatedAt || new Date()
                 }]
-            };
-        });
+                };
+            });
     } catch (error) {
         console.error("Error al cargar datos:", error);
         alert("Error al cargar los datos del distrito");
@@ -572,7 +572,7 @@ const nationalTotals = computed(() => {
     if (!nationalData.value.length) return {};
     return nationalData.value[nationalData.value.length - 1];
 });
-</script>
+</script> 
 
 <style scoped>
 .v-data-table {

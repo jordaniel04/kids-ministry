@@ -86,12 +86,24 @@ export const useAuthStore = defineStore('auth', {
     async getUserData() {
       if (!this.user?.id) return null;
       
+      // Si ya tenemos los datos y no han pasado más de 5 minutos, devolver los datos en caché
+      if (this.userData && this.userData._lastFetched) {
+        const fiveMinutesAgo = new Date().getTime() - 5 * 60 * 1000;
+        if (this.userData._lastFetched > fiveMinutesAgo) {
+          return this.userData;
+        }
+      }
+      
       try {
         const leaderRef = doc(db, "leaders", this.user.id);
         const leaderDoc = await getDoc(leaderRef);
         
         if (leaderDoc.exists()) {
-          this.userData = leaderDoc.data();
+          // Añadir timestamp para control de caché
+          this.userData = {
+            ...leaderDoc.data(),
+            _lastFetched: new Date().getTime()
+          };
           return this.userData;
         }
         return null;
@@ -107,11 +119,17 @@ export const useAuthStore = defineStore('auth', {
       try {
         const leaderRef = doc(db, "leaders", this.user.id);
         await setDoc(leaderRef, data, { merge: true });
-        this.userData = { ...this.userData, ...data };
+        
+        // Actualizar caché local inmediatamente
+        this.userData = { 
+          ...this.userData, 
+          ...data,
+          _lastFetched: new Date().getTime() 
+        };
       } catch (error) {
         console.error("Error al actualizar datos:", error);
         throw error;
       }
     }
   }
-}); 
+});

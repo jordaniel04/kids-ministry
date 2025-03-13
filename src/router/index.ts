@@ -1,6 +1,7 @@
 import { createRouter, createWebHistory, type RouteRecordRaw } from 'vue-router';
 import { auth } from '../firebase/config';
 import DistrictReportsView from '../views/admin/DistrictReportsView.vue'
+import { clearAllFirestoreListeners } from '../composables/useFirestoreListeners';
 
 const routes: Array<RouteRecordRaw> = [
   {
@@ -78,6 +79,9 @@ const router = createRouter({
 
 // Guardia de navegación
 router.beforeEach((to, from, next) => {
+  // Limpiar todos los listeners de Firestore antes de cambiar de ruta
+  clearAllFirestoreListeners();
+  
   const requiresAuth = to.matched.some(record => record.meta.requiresAuth);
   const isAuthenticated = auth.currentUser;
 

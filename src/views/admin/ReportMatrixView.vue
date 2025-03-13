@@ -4,9 +4,25 @@
         <VContainer>
             <h1>Matriz de Reportes por Distrito</h1>
 
+            <!-- Indicador de carga -->
+            <div v-if="loading" class="d-flex justify-center my-4">
+                <VProgressCircular indeterminate color="primary"></VProgressCircular>
+            </div>
+
             <!-- Tabla de Matriz -->
-            <VCard>
-                <VCardTitle>Matriz de Reportes</VCardTitle>
+            <VCard v-else>
+                <VCardTitle class="d-flex justify-space-between align-center">
+                    <span>Matriz de Reportes</span>
+                    <VBtn 
+                        icon 
+                        variant="text" 
+                        color="primary" 
+                        @click="refreshData"
+                        :disabled="loading"
+                    >
+                        <VIcon>mdi-refresh</VIcon>
+                    </VBtn>
+                </VCardTitle>
                 <VCardText>
                     <div class="matrix-table-container">
                         <table class="matrix-table">
@@ -38,10 +54,11 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue';
-import { collection, getDocs } from 'firebase/firestore';
+import { ref, onMounted, onUnmounted } from 'vue';
+import { collection, getDocs, query, limit } from 'firebase/firestore';
 import { db } from '../../firebase/config';
 import NavigationBar from '../../components/NavigationBar.vue';
+import { useFirestoreListeners } from '../../composables/useFirestoreListeners';
 
 interface MatrixDistrict {
     id: string;
@@ -49,36 +66,133 @@ interface MatrixDistrict {
     reports: Record<string, boolean>;
 }
 
-const loading = ref(false);
+const loading = ref(true);
 const periods = ref<any[]>([]);
 const matrixData = ref<MatrixDistrict[]>([]);
+const dataLoaded = ref(false);
+const componentId = 'ReportMatrixView';
+const { clearListeners } = useFirestoreListeners(componentId);
 
-onMounted(async () => {
-    await Promise.all([loadDistricts(), loadPeriods()]);
-    await loadMatrixData();
+// Claves para el caché
+const CACHE_KEYS = {
+    PERIODS: 'report-matrix-periods',
+    DISTRICTS: 'report-matrix-districts',
+    CONFIRMATIONS: 'report-matrix-confirmations',
+    TIMESTAMP: 'report-matrix-timestamp'
+};
+
+// Tiempo de expiración del caché: 30 minutos (en lugar de 5)
+const CACHE_EXPIRY = 30 * 60 * 1000;
+
+// Funciones de caché simplificadas
+const getFromCache = (key: string) => {
+    try {
+        const cachedData = localStorage.getItem(key);
+        if (!cachedData) return null;
+        
+        const timestamp = localStorage.getItem(CACHE_KEYS.TIMESTAMP);
+        if (!timestamp) return null;
+        
+        // Verificar si el caché ha expirado
+        if (Date.now() - Number(timestamp) > CACHE_EXPIRY) {
+            return null;
+        }
+        
+        return JSON.parse(cachedData);
+    } catch (error) {
+        console.error(`Error al recuperar ${key} del caché:`, error);
+        return null;
+    }
+};
+
+const setInCache = (key: string, data: any) => {
+    try {
+        localStorage.setItem(key, JSON.stringify(data));
+        localStorage.setItem(CACHE_KEYS.TIMESTAMP, Date.now().toString());
+    } catch (error) {
+        console.error(`Error al guardar ${key} en caché:`, error);
+    }
+};
+
+onMounted(() => {
+    if (!dataLoaded.value) {
+        loadMatrixData();
+        dataLoaded.value = true;
+    }
 });
+
+// Asegurarse de limpiar cualquier listener cuando el componente se desmonta
+onUnmounted(() => {
+    clearListeners();
+});
+
+// Función principal para cargar todos los datos
+const loadMatrixData = async () => {
+    loading.value = true;
+    
+    // Verificar si todos los datos están en caché
+    const cachedPeriods = getFromCache(CACHE_KEYS.PERIODS);
+    const cachedDistricts = getFromCache(CACHE_KEYS.DISTRICTS);
+    const cachedConfirmations = getFromCache(CACHE_KEYS.CONFIRMATIONS);
+    
+    if (cachedPeriods && cachedDistricts && cachedConfirmations) {
+        // Usar datos en caché
+        periods.value = cachedPeriods;
+        matrixData.value = cachedDistricts;
+        
+        // Aplicar confirmaciones a los distritos
+        matrixData.value.forEach(district => {
+            district.reports = cachedConfirmations[district.id] || {};
+        });
+        
+        loading.value = false;
+        return;
+    }
+    
+    try {
+        // Cargar datos en paralelo para mejorar rendimiento
+        await Promise.all([
+            loadPeriods(),
+            loadDistricts()
+        ]);
+        
+        // Cargar confirmaciones después de tener distritos y períodos
+        await loadConfirmations();
+    } catch (error) {
+        console.error("Error al cargar la matriz de reportes:", error);
+        alert("Error al cargar los datos de la matriz");
+    } finally {
+        loading.value = false;
+    }
+};
 
 const loadPeriods = async () => {
     try {
-        const periodsSnapshot = await getDocs(collection(db, "report_periods"));
-        periods.value = periodsSnapshot.docs.map(doc => ({
+        // Limitar la cantidad de documentos si hay muchos períodos
+        const periodsQuery = query(collection(db, "report_periods"), limit(20));
+        const periodsSnapshot = await getDocs(periodsQuery);
+        
+        const periodsData = periodsSnapshot.docs.map(doc => ({
             id: doc.id,
             name: doc.data().name
         }));
+        
+        periods.value = periodsData;
+        
+        // Guardar en caché
+        setInCache(CACHE_KEYS.PERIODS, periodsData);
     } catch (error) {
         console.error("Error al cargar períodos:", error);
-        alert("Error al cargar los períodos");
     }
 };
 
 const loadDistricts = async () => {
-    loading.value = true;
     try {
-        const districtsRef = collection(db, "districts");
-        const districtsSnapshot = await getDocs(districtsRef);
+        const districtsQuery = query(collection(db, "districts"), limit(100));
+        const districtsSnapshot = await getDocs(districtsQuery);
         
         // Obtener los distritos y ordenarlos alfabéticamente por ubicación
-        matrixData.value = districtsSnapshot.docs
+        const districtsData = districtsSnapshot.docs
             .map(doc => ({
                 id: doc.id,
                 location: doc.data().location,
@@ -87,41 +201,62 @@ const loadDistricts = async () => {
                 reports: {}
             }))
             .sort((a, b) => a.location.localeCompare(b.location));
-            
-        // Cargar los datos de la matriz después de ordenar los distritos
-        await loadMatrixData();
+        
+        matrixData.value = districtsData;
+        
+        // Guardar en caché
+        setInCache(CACHE_KEYS.DISTRICTS, districtsData);
     } catch (error) {
         console.error("Error al cargar distritos:", error);
-        alert("Error al cargar los datos de los distritos");
-    } finally {
-        loading.value = false;
     }
 };
 
-const loadMatrixData = async () => {
+const loadConfirmations = async () => {
     if (!periods.value.length || !matrixData.value.length) return;
 
-    loading.value = true;
     try {
         // Obtener todas las confirmaciones de distrito
-        const confirmationsRef = collection(db, "district_confirmations");
-        const confirmationsSnapshot = await getDocs(confirmationsRef);
+        const confirmationsQuery = query(collection(db, "district_confirmations"), limit(500));
+        const confirmationsSnapshot = await getDocs(confirmationsQuery);
 
         // Crear mapa de reportes por distrito
+        const confirmationsMap: Record<string, Record<string, boolean>> = {};
+        
         confirmationsSnapshot.docs.forEach(doc => {
             const data = doc.data();
-            const district = matrixData.value.find(d => d.id === data.districtId);
-            if (district) {
-                district.reports[data.periodId] = true;
+            const districtId = data.districtId;
+            
+            if (!confirmationsMap[districtId]) {
+                confirmationsMap[districtId] = {};
             }
+            
+            confirmationsMap[districtId][data.periodId] = true;
         });
-
+        
+        // Aplicar confirmaciones a los distritos
+        matrixData.value.forEach(district => {
+            district.reports = confirmationsMap[district.id] || {};
+        });
+        
+        // Guardar en caché
+        setInCache(CACHE_KEYS.CONFIRMATIONS, confirmationsMap);
     } catch (error) {
-        console.error("Error al cargar datos de la matriz:", error);
-        alert("Error al cargar los datos de la matriz");
-    } finally {
-        loading.value = false;
+        console.error("Error al cargar confirmaciones:", error);
     }
+};
+
+// Función para forzar la recarga de datos
+const refreshData = async () => {
+    // Limpiar caché
+    localStorage.removeItem(CACHE_KEYS.PERIODS);
+    localStorage.removeItem(CACHE_KEYS.DISTRICTS);
+    localStorage.removeItem(CACHE_KEYS.CONFIRMATIONS);
+    localStorage.removeItem(CACHE_KEYS.TIMESTAMP);
+    
+    // Recargar datos
+    dataLoaded.value = false;
+    await loadMatrixData();
+    dataLoaded.value = true;
 };
 </script>
 
@@ -132,37 +267,36 @@ const loadMatrixData = async () => {
 }
 
 .matrix-table {
-    width: 100%;
     border-collapse: collapse;
+    width: 100%;
 }
 
-.matrix-table th,
-.matrix-table td {
-    padding: 12px;
-    text-align: center;
+.matrix-table th, .matrix-table td {
     border: 1px solid #ddd;
+    padding: 8px;
+    text-align: center;
 }
 
 .matrix-table th {
-    background-color: #f5f5f5;
-    font-weight: bold;
+    background-color: #f2f2f2;
+    position: sticky;
+    top: 0;
+    z-index: 1;
 }
 
 .fixed-column {
     position: sticky;
     left: 0;
     background-color: white;
-    z-index: 1;
-    text-align: left !important;
-    min-width: 200px;
-}
-
-th.fixed-column {
-    background-color: #f5f5f5;
     z-index: 2;
 }
 
+th.fixed-column {
+    background-color: #f2f2f2;
+    z-index: 3;
+}
+
 .reported {
-    background-color: #f8fff8;
+    background-color: rgba(76, 175, 80, 0.1);
 }
 </style>

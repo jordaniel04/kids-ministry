@@ -1,7 +1,7 @@
 <template>
     <div>
         <VOverlay v-model="loading" class="align-center justify-center">
-            <VProgressCircular indeterminate size="64"/>
+            <VProgressCircular indeterminate size="64" />
         </VOverlay>
 
         <NavigationBar />
@@ -10,12 +10,7 @@
 
             <VCard class="mb-4">
                 <VCardText>
-                    <VSelect
-                        v-model="selectedMonth"
-                        :items="months"
-                        label="Filtrar por mes"
-                        clearable
-                    ></VSelect>
+                    <VSelect v-model="selectedMonth" :items="months" label="Filtrar por mes" clearable></VSelect>
                 </VCardText>
             </VCard>
 
@@ -48,10 +43,11 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue';
-import { collection, getDocs, query, where } from 'firebase/firestore';
+import { ref, computed, onMounted, onUnmounted } from 'vue';
+import { collection, getDocs, query, where, limit } from 'firebase/firestore';
 import { db } from '../../firebase/config';
 import NavigationBar from '../../components/NavigationBar.vue';
+import { useFirestoreListeners } from '../../composables/useFirestoreListeners';
 
 interface Leader {
     id: string;
@@ -62,28 +58,52 @@ interface Leader {
 
 const loading = ref(true);
 const leaders = ref<Leader[]>([]);
+const componentId = 'BirthdayListView';
+const { clearListeners } = useFirestoreListeners(componentId);
 
+// Función para cargar líderes usando getDocs en lugar de onSnapshot
 const loadLeaders = async () => {
     try {
-        const leadersSnapshot = await getDocs(collection(db, 'leaders'));
+        loading.value = true;
+        
+        // Verificar si hay datos en caché y si son recientes (menos de 24 horas)
+        const cachedData = localStorage.getItem('birthdayListCache');
+        const cacheTimestamp = localStorage.getItem('birthdayListCacheTimestamp');
+        const cacheValid = cachedData && cacheTimestamp && 
+                          (Date.now() - Number(cacheTimestamp)) < 24 * 60 * 60 * 1000;
+        
+        if (cacheValid) {
+            // Usar datos en caché
+            const parsedData = JSON.parse(cachedData);
+            leaders.value = parsedData.map((leader: any) => ({
+                ...leader,
+                birthDate: new Date(leader.birthDate)
+            }));
+            loading.value = false;
+            return;
+        }
+        
+        // Si no hay caché válido, cargar desde Firestore
+        // Obtener district_leaders una sola vez
+        const districtLeadersSnapshot = await getDocs(
+            query(collection(db, 'district_leaders'), where('isActive', '==', true), limit(100))
+        );
+        
+        const districtMap = new Map();
+        districtLeadersSnapshot.docs.forEach(doc => {
+            const data = doc.data();
+            districtMap.set(data.userId, data.location);
+        });
+        
+        // Usar getDocs en lugar de onSnapshot para leaders
+        const leadersSnapshot = await getDocs(query(collection(db, 'leaders'), limit(100)));
         const leadersData: Leader[] = [];
-
+        
         for (const doc of leadersSnapshot.docs) {
             const data = doc.data();
             if (data.personalData?.birthDate) {
-                const districtLeaderQuery = query(
-                    collection(db, 'district_leaders'),
-                    where('userId', '==', doc.id),
-                    where('isActive', '==', true)
-                );
-                const districtLeaderDocs = await getDocs(districtLeaderQuery);
+                const districtLocation = districtMap.get(doc.id) || 'No asignado';
                 
-                let districtLocation = 'No asignado';
-                if (!districtLeaderDocs.empty) {
-                    const districtLeader = districtLeaderDocs.docs[0].data();
-                    districtLocation = districtLeader.location;
-                }
-
                 leadersData.push({
                     id: doc.id,
                     fullName: `${data.personalData.firstName} ${data.personalData.lastName}`,
@@ -92,7 +112,17 @@ const loadLeaders = async () => {
                 });
             }
         }
+        
         leaders.value = leadersData;
+        
+        // Guardar en caché local
+        const cacheableData = leaders.value.map(leader => ({
+            ...leader,
+            birthDate: leader.birthDate.toISOString() // Convertir Date a string para almacenamiento
+        }));
+        localStorage.setItem('birthdayListCache', JSON.stringify(cacheableData));
+        localStorage.setItem('birthdayListCacheTimestamp', Date.now().toString());
+        
     } catch (error) {
         console.error('Error al cargar líderes:', error);
     } finally {
@@ -127,15 +157,15 @@ const calculateAge = (birthDate: Date) => {
 
 const calculateDaysUntilBirthday = (birthDate: Date) => {
     const today = new Date();
-    const nextBirthday = new Date(today.getFullYear(), 
-        birthDate.getMonth(), 
+    const nextBirthday = new Date(today.getFullYear(),
+        birthDate.getMonth(),
         birthDate.getDate()
     );
-    
+
     if (nextBirthday < today) {
         nextBirthday.setFullYear(today.getFullYear() + 1);
     }
-    
+
     const diffTime = nextBirthday.getTime() - today.getTime();
     return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 };
@@ -161,10 +191,26 @@ const filteredLeaders = computed(() => {
     if (selectedMonth.value === null) {
         return sortedLeaders.value;
     }
-    return sortedLeaders.value.filter(leader => 
+    return sortedLeaders.value.filter(leader =>
         leader.birthDate.getMonth() === selectedMonth.value
     );
 });
 
-onMounted(loadLeaders);
-</script> 
+// Función para forzar la recarga de datos
+const refreshData = () => {
+    // Limpiar caché
+    localStorage.removeItem('birthdayListCache');
+    localStorage.removeItem('birthdayListCacheTimestamp');
+    // Recargar datos
+    loadLeaders();
+};
+
+onMounted(() => {
+    loadLeaders();
+});
+
+// Asegurarse de limpiar cualquier listener cuando el componente se desmonta
+onUnmounted(() => {
+    clearListeners();
+});
+</script>

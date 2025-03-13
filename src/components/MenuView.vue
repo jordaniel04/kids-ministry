@@ -228,10 +228,10 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, onMounted } from "vue";
+import { computed, ref, onMounted, onUnmounted } from "vue";
 import { useAuthStore } from "../stores/auth";
 import { useRouter } from "vue-router";
-import { doc, getDoc, getDocs, query, collection, where } from 'firebase/firestore';
+import { doc, getDoc, getDocs, query, collection, where, limit } from 'firebase/firestore';
 import { db } from '../firebase/config';
 
 const authStore = useAuthStore();
@@ -239,6 +239,11 @@ const router = useRouter();
 const personalDataComplete = ref(false);
 const loading = ref(true);
 const hasPendingReport = ref(false);
+
+// Variable para controlar si el componente está montado
+const isMounted = ref(true);
+// Variable para controlar si ya se han cargado los datos
+const dataLoaded = ref(false);
 
 const isAdmin = computed(() => authStore.user?.role === "admin");
 const isLeader = computed(() => authStore.user?.role === "lider");
@@ -248,105 +253,161 @@ const cardColor = computed(() => {
 });
 
 onMounted(async () => {
+  isMounted.value = true;
+  
+  // Evitar cargar datos si ya se han cargado previamente
+  if (dataLoaded.value) {
+    loading.value = false;
+    return;
+  }
+  
   try {
-    await Promise.all([
-      checkPersonalDataCompletion(),
-      checkPendingReports()
-    ]);
+    if (isLeader.value) {
+      await loadLeaderData();
+    } else {
+      // Si es admin, no necesitamos cargar datos de líder
+      loading.value = false;
+    }
+    
+    // Marcar que los datos ya se han cargado
+    dataLoaded.value = true;
   } catch (error) {
     console.error("Error en la carga inicial:", error);
   } finally {
-    loading.value = false;
+    if (isMounted.value) {
+      loading.value = false;
+    }
   }
 });
 
-const checkPersonalDataCompletion = async () => {
-  try {
-    const leaderDoc = await getDoc(doc(db, "leaders", authStore.user!.id));
-    if (leaderDoc.exists()) {
-      const data = leaderDoc.data();
-      const personalData = data.personalData || {};
-      const ministerialData = data.ministerialData || {};
-      
-      // Verificar campos personales
-      const requiredPersonalFields = [
-        'firstName',
-        'lastName',
-        'birthDate',
-        'maritalStatus',
-        'phoneNumber'
-      ];
-      
-      const hasAllPersonalFields = requiredPersonalFields.every(field => 
-        personalData[field] && 
-        (field === 'birthDate' ? true : personalData[field].toString().trim() !== '')
-      );
+onUnmounted(() => {
+  // Marcar el componente como desmontado para evitar actualizaciones de estado
+  isMounted.value = false;
+});
 
-      // Verificar campos ministeriales
-      const requiredMinisterialFields = [
-        'baptized',
-        'appointmentDate'
-      ];
-
-      const hasAllMinisterialFields = requiredMinisterialFields.every(field => 
-        ministerialData[field] && 
-        (field === 'appointmentDate' ? true : ministerialData[field].toString().trim() !== '')
-      );
-
-      // Verificar cursos
-      const hasCourses = ministerialData.courses?.length > 0;
-
-      // Actualizar estado
-      personalDataComplete.value = hasAllPersonalFields && hasAllMinisterialFields && hasCourses;
-      
-      console.log('Estado de completitud:', {
-        hasAllPersonalFields,
-        hasAllMinisterialFields,
-        hasCourses,
-        personalDataComplete: personalDataComplete.value
-      });
-    }
-  } catch (error) {
-    console.error("Error al verificar datos personales:", error);
-    personalDataComplete.value = false;
-  }
-};
-
-const checkPendingReports = async () => {
+// Función unificada para cargar datos de líder
+const loadLeaderData = async () => {
   if (!authStore.user?.id) return;
   
   try {
-    // 1. Obtener el período activo
-    const periodSnapshot = await getDocs(query(
-      collection(db, "report_periods"),
-      where("isActive", "==", true)
-    ));
+    // 1. Cargar datos del líder (una sola consulta)
+    const leaderDoc = await getDoc(doc(db, "leaders", authStore.user.id));
+    
+    if (leaderDoc.exists()) {
+      const data = leaderDoc.data();
+      processLeaderData(data);
+      
+      // 2. Cargar datos de período activo y distrito en una sola operación
+      await checkPendingReportsOptimized();
+    }
+  } catch (error) {
+    console.error("Error al cargar datos del líder:", error);
+  }
+};
 
-    if (!periodSnapshot.empty) {
-      // 2. Obtener el distrito del líder
-      const districtLeaderSnapshot = await getDocs(query(
+// Procesar datos del líder (sin hacer consultas adicionales)
+const processLeaderData = (data: { 
+  personalData?: {
+    firstName?: string;
+    lastName?: string;
+    birthDate?: Date;
+    maritalStatus?: string;
+    phoneNumber?: string;
+    [key: string]: any;
+  };
+  ministerialData?: {
+    baptized?: boolean;
+    appointmentDate?: Date;
+    courses?: any[];
+    [key: string]: any;
+  };
+}) => {
+  const personalData = data.personalData || {};
+  const ministerialData = data.ministerialData || {};
+  
+  // Verificar campos personales
+  const requiredPersonalFields = [
+    'firstName',
+    'lastName',
+    'birthDate',
+    'maritalStatus',
+    'phoneNumber'
+  ];
+  
+  const hasAllPersonalFields = requiredPersonalFields.every(field => 
+    personalData[field] && 
+    (field === 'birthDate' ? true : personalData[field].toString().trim() !== '')
+  );
+
+  // Verificar campos ministeriales
+  const requiredMinisterialFields = [
+    'baptized',
+    'appointmentDate'
+  ];
+
+  const hasAllMinisterialFields = requiredMinisterialFields.every(field => 
+    ministerialData[field] && 
+    (field === 'appointmentDate' ? true : ministerialData[field].toString().trim() !== '')
+  );
+
+  // Verificar cursos
+  const hasCourses = Array.isArray(ministerialData.courses) && ministerialData.courses.length > 0;
+
+  // Actualizar estado
+  personalDataComplete.value = hasAllPersonalFields && hasAllMinisterialFields && hasCourses;
+};
+
+// Versión optimizada de checkPendingReports
+const checkPendingReportsOptimized = async () => {
+  if (!authStore.user?.id) return;
+  
+  try {
+    // Consulta combinada: obtener período activo y distrito del líder en paralelo
+    const [periodSnapshot, districtLeaderSnapshot] = await Promise.all([
+      getDocs(query(
+        collection(db, "report_periods"),
+        where("isActive", "==", true),
+        // Añadir límite explícito
+        limit(1)
+      )),
+      getDocs(query(
         collection(db, "district_leaders"),
         where("userId", "==", authStore.user.id),
-        where("isActive", "==", true)
+        where("isActive", "==", true),
+        // Añadir límite explícito
+        limit(1)
+      ))
+    ]);
+
+    if (!periodSnapshot.empty && !districtLeaderSnapshot.empty) {
+      const districtLeader = districtLeaderSnapshot.docs[0].data();
+      const activePeriod = periodSnapshot.docs[0];
+
+      // Verificar si existe confirmación
+      const confirmationSnapshot = await getDocs(query(
+        collection(db, "district_confirmations"),
+        where("districtId", "==", districtLeader.districtId),
+        where("periodId", "==", activePeriod.id),
+        // Añadir límite explícito
+        limit(1)
       ));
 
-      if (!districtLeaderSnapshot.empty) {
-        const districtLeader = districtLeaderSnapshot.docs[0].data();
-        const activePeriod = periodSnapshot.docs[0];
-
-        // 3. Verificar si existe confirmación
-        const confirmationSnapshot = await getDocs(query(
-          collection(db, "district_confirmations"),
-          where("districtId", "==", districtLeader.districtId),
-          where("periodId", "==", activePeriod.id)
-        ));
-
-        hasPendingReport.value = confirmationSnapshot.empty;
-      }
+      hasPendingReport.value = confirmationSnapshot.empty;
     }
   } catch (error) {
     console.error("Error al verificar reportes pendientes:", error);
   }
+};
+
+// Mantener estos métodos como referencia pero ya no se usan
+const checkPersonalDataCompletion = async () => {
+  // Esta función ya no se usa directamente
+  console.warn("Esta función está obsoleta, usar loadLeaderData en su lugar");
+};
+
+const checkPendingReports = async () => {
+  // Esta función ya no se usa directamente
+  console.warn("Esta función está obsoleta, usar checkPendingReportsOptimized en su lugar");
 };
 
 const goToUserManagement = () => {

@@ -590,9 +590,15 @@ watch(selectedDistrict, async (newDistrict) => {
     }
 });
 
+// Implementar control de carga única
+const dataLoaded = ref(false);
+
 onMounted(async () => {
+    if (dataLoaded.value) return;
+    
     await loadDistricts();
     await getUsers();
+    dataLoaded.value = true;
 });
 </script>
 
