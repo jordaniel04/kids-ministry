@@ -684,9 +684,15 @@ const loadData = async () => {
         const districtLeaderSnapshot = await getDocs(districtLeaderQuery);
         
         if (!districtLeaderSnapshot.empty) {
-            districtName.value = districtLeaderSnapshot.docs[0].data().districtId;
+            const districtId = districtLeaderSnapshot.docs[0].data().districtId;
             
-            // 2. Obtener período activo
+            // Obtener los datos del distrito
+            const districtDoc = await getDoc(doc(db, 'districts', districtId));
+            if (districtDoc.exists()) {
+                districtName.value = districtDoc.data().location;
+            }
+            
+            // 2. Obtener período activo (pero no bloqueamos la carga de datos si no hay período activo)
             const periodsQuery = query(
                 collection(db, 'report_periods'),
                 where('isActive', '==', true),
@@ -705,33 +711,43 @@ const loadData = async () => {
                     isActive: periodData.isActive,
                     allowEditing: periodData.allowEditing ?? false
                 };
+            }
+            
+            // 3. Obtener datos de las iglesias
+            const churchesQuery = query(
+                collection(db, 'churches'),
+                where('districtId', '==', districtId),
+                where('isActive', '==', true),
+                limit(100)
+            );
+            const churchesSnapshot = await getDocs(churchesQuery);
+            
+            churches.value = churchesSnapshot.docs.map(doc => {
+                const data = doc.data();
+                // Ordenar ministerialData por fecha de actualización descendente
+                const sortedMinisterialData = (data.ministerialData || [])
+                    .sort((a: any, b: any) => b.updatedAt.seconds - a.updatedAt.seconds);
                 
-                // 3. Obtener datos de las iglesias
-                const churchesQuery = query(
-                    collection(db, 'churches'),
-                    where('districtId', '==', districtName.value),
-                    where('isActive', '==', true),
-                    limit(100)
-                );
-                const churchesSnapshot = await getDocs(churchesQuery);
-                
-                churches.value = churchesSnapshot.docs.map(doc => ({
+                return {
                     id: doc.id,
-                    name: doc.data().name,
-                    leaderName: doc.data().leaderName,
-                    districtId: doc.data().districtId,
-                    createdAt: doc.data().createdAt,
-                    updatedAt: doc.data().updatedAt,
-                    createdBy: doc.data().createdBy,
-                    updatedBy: doc.data().updatedBy,
-                    isActive: doc.data().isActive,
-                    ministerialData: doc.data().ministerialData || []
-                }));
-                
-                // 4. Verificar si el reporte está confirmado
+                    name: data.name,
+                    leaderName: data.leaderName,
+                    districtId: data.districtId,
+                    createdAt: data.createdAt,
+                    updatedAt: data.updatedAt,
+                    createdBy: data.createdBy,
+                    updatedBy: data.updatedBy,
+                    isActive: data.isActive,
+                    // Tomar los datos ministeriales más recientes
+                    ministerialData: sortedMinisterialData
+                };
+            });
+            
+            // 4. Verificar si el reporte está confirmado (solo si hay período activo)
+            if (activePeriod.value) {
                 const confirmationQuery = query(
                     collection(db, 'district_confirmations'),
-                    where('districtId', '==', districtName.value),
+                    where('districtId', '==', districtId),
                     where('periodId', '==', activePeriod.value.id),
                     limit(1)
                 );

@@ -250,7 +250,27 @@ const loadData = async () => {
   try {
     // Verificar datos personales
     const userDoc = await getDoc(doc(db, 'users', authStore.user.id));
-    personalDataComplete.value = userDoc.exists() && userDoc.data()?.personalDataComplete === true;
+    
+    // Verificar si el usuario tiene datos personales completos
+    if (userDoc.exists() && userDoc.data()?.personalDataComplete === true) {
+      personalDataComplete.value = true;
+    } else {
+      // Si no existe el documento de usuario o no tiene la bandera, verificar en la colección leaders
+      const leaderDoc = await getDoc(doc(db, 'leaders', authStore.user.id));
+      if (leaderDoc.exists()) {
+        const leaderData = leaderDoc.data();
+        // Verificar si todos los campos requeridos están completos
+        personalDataComplete.value = Boolean(
+          leaderData.personalData?.firstName &&
+          leaderData.personalData?.lastName &&
+          leaderData.personalData?.birthDate &&
+          leaderData.personalData?.maritalStatus &&
+          leaderData.personalData?.phoneNumber
+        );
+      } else {
+        personalDataComplete.value = false;
+      }
+    }
 
     // Verificar reportes pendientes solo si es líder
     if (isLeader.value) {
