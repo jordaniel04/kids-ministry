@@ -122,50 +122,53 @@
                             <VCol cols="12" sm="6">
                                 <VSelect
                                     v-model="editedItem.role"
-                                    :items="['admin', 'lider']"
+                                    :items="['admin', 'lider', 'secretaria']"
                                     label="Rol"
                                     required
                                 ></VSelect>
                             </VCol>
-                            <VCol cols="12" sm="6" v-if="editedItem.role === 'lider'">
-                                <VSelect
-                                    v-model="editedItem.areaNumber"
-                                    :items="areaNumbers"
-                                    label="Área"
-                                    required
-                                ></VSelect>
-                            </VCol>
-                            <VCol cols="12" sm="6" v-if="editedItem.role === 'lider'">
-                                <VSelect
-                                    v-model="editedItem.districtNumber"
-                                    :items="districtNumbers"
-                                    label="Distrito"
-                                    required
-                                ></VSelect>
-                            </VCol>
-                            <VCol cols="12" v-if="editedItem.role === 'lider'">
-                                <VSelect
-                                    v-model="selectedDistrict"
-                                    :items="filteredDistricts"
-                                    item-title="location"
-                                    item-value="id"
-                                    label="Lugar"
-                                    :loading="loadingDistricts"
-                                    return-object
-                                    required
-                                ></VSelect>
-                            </VCol>
-                            <VCol cols="12" v-if="editedItem.role === 'lider'">
-                                <VSelect
-                                    v-model="leaderRole"
-                                    :items="[
-                                        { title: 'Líder Principal', value: 'primary' },
-                                        { title: 'Líder Secundario', value: 'secondary' }
-                                    ]"
-                                    label="Rol en el Distrito"
-                                    required
-                                ></VSelect>
-                            </VCol>
+                            <!-- Campos específicos para líderes -->
+                            <template v-if="editedItem.role === 'lider'">
+                                <VCol cols="12" sm="6">
+                                    <VSelect
+                                        v-model="editedItem.areaNumber"
+                                        :items="areaNumbers"
+                                        label="Área"
+                                        required
+                                    ></VSelect>
+                                </VCol>
+                                <VCol cols="12" sm="6">
+                                    <VSelect
+                                        v-model="editedItem.districtNumber"
+                                        :items="districtNumbers"
+                                        label="Distrito"
+                                        required
+                                    ></VSelect>
+                                </VCol>
+                                <VCol cols="12">
+                                    <VSelect
+                                        v-model="selectedDistrict"
+                                        :items="filteredDistricts"
+                                        item-title="location"
+                                        item-value="id"
+                                        label="Lugar"
+                                        :loading="loadingDistricts"
+                                        return-object
+                                        required
+                                    ></VSelect>
+                                </VCol>
+                                <VCol cols="12">
+                                    <VSelect
+                                        v-model="leaderRole"
+                                        :items="[
+                                            { title: 'Líder Principal', value: 'primary' },
+                                            { title: 'Líder Secundario', value: 'secondary' }
+                                        ]"
+                                        label="Rol en el Distrito"
+                                        required
+                                    ></VSelect>
+                                </VCol>
+                            </template>
                         </VRow>
                     </VContainer>
                 </VCardText>
@@ -419,69 +422,87 @@ const saveUser = async () => {
                 await batch.commit();
             }
         } else {
-            // 1. Crear usuario en Authentication
-            const userCredential = await createUserWithEmailAndPassword(
-                getAuth(),
-                editedItem.value.email,
-                editedItem.value.password
-            );
+            try {
+                // 1. Crear usuario en Authentication
+                const userCredential = await createUserWithEmailAndPassword(
+                    getAuth(),
+                    editedItem.value.email,
+                    editedItem.value.password
+                );
 
-            // 2. Obtener datos del distrito seleccionado
-            const districtDoc = await getDoc(doc(db, "districts", selectedDistrict.value.id));
-            if (!districtDoc.exists()) {
-                throw new Error("Distrito no encontrado");
-            }
-            const districtData = districtDoc.data();
-
-            // 3. Crear documento en la colección users
-            const userRef = doc(db, "users", userCredential.user.uid);
-            await setDoc(userRef, {
-                id: userCredential.user.uid,
-                email: editedItem.value.email,
-                role: editedItem.value.role,
-                createdAt: now,
-                updatedAt: now,
-                isActive: true,
-                createdBy: authStore.user?.id,
-                updatedBy: authStore.user?.id
-            });
-
-            // 4. Crear documento en la colección leaders
-            await setDoc(doc(db, "leaders", userCredential.user.uid), {
-                email: editedItem.value.email,
-                role: editedItem.value.role,
-                createdAt: now,
-                updatedAt: now,
-                createdBy: authStore.user?.id,
-                updatedBy: authStore.user?.id
-            });
-
-            // 5. Si es líder, crear relación distrito-líder
-            if (editedItem.value.role === 'lider') {
-                const districtLeaderRef = doc(collection(db, "district_leaders"));
-                await setDoc(districtLeaderRef, {
-                    id: districtLeaderRef.id,
-                    districtId: selectedDistrict.value.id,
-                    userId: userCredential.user.uid,
-                    role: leaderRole.value,
-                    areaNumber: districtData.areaNumber,
-                    districtNumber: districtData.districtNumber,
-                    location: districtData.location,
-                    startDate: now,
-                    isActive: true,
+                // 2. Crear documento en la colección users
+                const userRef = doc(db, "users", userCredential.user.uid);
+                await setDoc(userRef, {
+                    id: userCredential.user.uid,
+                    email: editedItem.value.email,
+                    role: editedItem.value.role,
                     createdAt: now,
                     updatedAt: now,
+                    isActive: true,
                     createdBy: authStore.user?.id,
                     updatedBy: authStore.user?.id
                 });
+
+                // 3. Si es líder, procesar la información del distrito
+                if (editedItem.value.role === 'lider') {
+                    // Verificar que se haya seleccionado un distrito
+                    if (!selectedDistrict.value) {
+                        throw new Error("Debe seleccionar un distrito para un líder");
+                    }
+
+                    const districtDoc = await getDoc(doc(db, "districts", selectedDistrict.value.id));
+                    if (!districtDoc.exists()) {
+                        throw new Error("Distrito no encontrado");
+                    }
+                    const districtData = districtDoc.data();
+
+                    // Crear relación distrito-líder
+                    const districtLeaderRef = doc(collection(db, "district_leaders"));
+                    await setDoc(districtLeaderRef, {
+                        id: districtLeaderRef.id,
+                        districtId: selectedDistrict.value.id,
+                        userId: userCredential.user.uid,
+                        role: leaderRole.value,
+                        areaNumber: districtData.areaNumber,
+                        districtNumber: districtData.districtNumber,
+                        location: districtData.location,
+                        startDate: now,
+                        isActive: true,
+                        createdAt: now,
+                        updatedAt: now,
+                        createdBy: authStore.user?.id,
+                        updatedBy: authStore.user?.id
+                    });
+                }
+
+                await getUsers();
+                closeDialog();
+            } catch (error: any) {
+                if (error.code === 'auth/email-already-in-use') {
+                    alert('Este correo electrónico ya está registrado. Por favor, utiliza otro correo electrónico.');
+                } else if (error.message) {
+                    alert(error.message);
+                } else {
+                    throw error;
+                }
             }
         }
-
-        await getUsers();
-        closeDialog();
-    } catch (error) {
+    } catch (error: any) {
         console.error("Error al guardar usuario:", error);
-        alert("Error al guardar usuario: " + (error as Error).message);
+        let errorMessage = "Error al guardar usuario";
+        
+        switch(error.code) {
+            case 'auth/invalid-email':
+                errorMessage = "El correo electrónico no es válido";
+                break;
+            case 'auth/weak-password':
+                errorMessage = "La contraseña debe tener al menos 6 caracteres";
+                break;
+            default:
+                errorMessage = error.message || "Error desconocido al guardar usuario";
+        }
+        
+        alert(errorMessage);
     } finally {
         saving.value = false;
     }
@@ -547,6 +568,8 @@ const getRoleColor = (role: string) => {
       return "green";
     case "lider":
       return "blue";
+    case "secretaria":
+      return "purple";
     default:
       return "red";
   }

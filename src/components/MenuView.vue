@@ -125,7 +125,7 @@
           </VCard>
         </VCol>
 
-        <VCol v-if="isAdmin" cols="12" sm="12" md="4">
+        <VCol v-if="isAdmin || isSecretary" cols="12" sm="12" md="4">
           <VCard
             class="mx-auto mb-4"
             color="surface-variant"
@@ -242,6 +242,7 @@ const hasPendingReport = ref(false);
 
 const isAdmin = computed(() => authStore.user?.role === "admin");
 const isLeader = computed(() => authStore.user?.role === "lider");
+const isSecretary = computed(() => authStore.user?.role === "secretaria");
 
 // Función para cargar los datos una sola vez
 const loadData = async () => {

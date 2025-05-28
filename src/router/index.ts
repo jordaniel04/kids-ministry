@@ -2,6 +2,7 @@ import { createRouter, createWebHistory, type RouteRecordRaw } from 'vue-router'
 import { auth } from '../firebase/config';
 import DistrictReportsView from '../views/admin/DistrictReportsView.vue'
 import { clearAllFirestoreListeners } from '../composables/useFirestoreListeners';
+import { useAuthStore } from '../stores/auth';
 
 const routes: Array<RouteRecordRaw> = [
   {
@@ -83,15 +84,34 @@ router.beforeEach((to, from, next) => {
   clearAllFirestoreListeners();
   
   const requiresAuth = to.matched.some(record => record.meta.requiresAuth);
+  const requiresAdmin = to.matched.some(record => record.meta.requiresAdmin);
+
   const isAuthenticated = auth.currentUser;
 
   if (requiresAuth && !isAuthenticated) {
+    // Redirigir a login si la ruta requiere autenticación
     next('/login');
-  } else if (!requiresAuth && isAuthenticated) {
-    next('/');
-  } else {
-    next();
+    return;
   }
+
+  if (!requiresAuth && isAuthenticated) {
+    // Si ya está autenticado, evitar ir a login
+    next('/');
+    return;
+  }
+
+  if (requiresAdmin) {
+    // Verificar rol usando Pinia
+    const authStore = useAuthStore();
+    const role = authStore.user?.role;
+    if (role !== 'admin' && role !== 'secretaria') {
+      // Si no tiene permisos, redirigir al dashboard
+      next('/');
+      return;
+    }
+  }
+
+  next();
 });
 
 export default router; 

@@ -556,8 +556,10 @@ import type {
 import type { Church } from "../../types/Church";
 import ChurchFormDialog from "../../components/ChurchFormDialog.vue";
 import ChurchHistoryDialog from '../../components/ChurchHistoryDialog.vue';
+import { useDistrictStore } from '../../stores/district';
 
 const authStore = useAuthStore();
+const districtStore = useDistrictStore();
 const districtName = ref("");
 const currentDistrict = ref<{ id: string; }>({ id: "" });
 const churches = ref<Church[]>([]);
@@ -907,8 +909,9 @@ const closeHistory = () => {
     showHistory.value = false;
 };
 
-onMounted(() => {
-    loadData();
+onMounted(async () => {
+    await loadData();
+    await districtStore.loadDistrictData();
 });
 
 const headers = [
