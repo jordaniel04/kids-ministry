@@ -66,6 +66,12 @@ const routes: Array<RouteRecordRaw> = [
     meta: { requiresAuth: true, requiresAdmin: true }
   },
   {
+    path: '/leaders-list',
+    name: 'LeadersList',
+    component: () => import('../views/dashboard/LeadersListView.vue'),
+    meta: { requiresAuth: true, requiresAdmin: true }
+  },
+  {
     path: '/admin/report-matrix',
     name: 'report-matrix',
     component: () => import('../views/admin/ReportMatrixView.vue'),

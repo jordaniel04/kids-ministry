@@ -145,6 +145,26 @@
           </VCard>
         </VCol>
 
+        <VCol v-if="isAdmin || isSecretary" cols="12" sm="12" md="4">
+          <VCard
+            class="mx-auto mb-4"
+            color="surface-variant"
+            max-width="100%"
+            @click="goToLeadersList"
+          >
+            <VCardTitle class="d-flex align-center">
+              <VIcon class="me-2">mdi-account-supervisor</VIcon>
+              Directorio de Líderes
+            </VCardTitle>
+            <VCardSubtitle>Ver información completa de todos los líderes</VCardSubtitle>
+            <template v-slot:actions>
+              <VBtn variant="text" @click="goToLeadersList">
+                Ver Líderes
+              </VBtn>
+            </template>
+          </VCard>
+        </VCol>
+
         <VCol v-if="isLeader" cols="12" sm="12" md="4">
           <VCard
             class="mx-auto mb-4"
@@ -330,6 +350,10 @@ const goToReportMatrix = () => {
 
 const goToBirthdayList = () => {
   router.push("/birthday-list");
+};
+
+const goToLeadersList = () => {
+  router.push("/leaders-list");
 };
 
 const handleLogout = async () => {
