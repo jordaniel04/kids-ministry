@@ -687,6 +687,7 @@ const loadData = async () => {
         
         if (!districtLeaderSnapshot.empty) {
             const districtId = districtLeaderSnapshot.docs[0].data().districtId;
+            currentDistrict.value.id = districtId; // Asignar el districtId
             
             // Obtener los datos del distrito
             const districtDoc = await getDoc(doc(db, 'districts', districtId));

@@ -299,7 +299,7 @@ const formatDate = (date: any) => {
     }
 };
 
-const getMaritalStatusColor = (status: string) => {
+const getMaritalStatusColor = (status: string | undefined) => {
     switch (status) {
         case 'Soltero':
         case 'Soltera':
