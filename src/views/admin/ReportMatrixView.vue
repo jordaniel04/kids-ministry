@@ -359,7 +359,7 @@ const generatePDF = () => {
             styles: { fontSize: 8, cellPadding: 2 },
             headStyles: { fillColor: [63, 81, 181] }, // Indigo (Primary de Vuetify por defecto)
             alternateRowStyles: { fillColor: [245, 245, 245] },
-            didParseCell: function(data) {
+            didParseCell: function(data: any) {
                 // Colorear Celdas de SI/NO
                  if (data.section === 'body' && data.column.index > 0) {
                     const cellValue = data.cell.raw;
