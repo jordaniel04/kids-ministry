@@ -8,12 +8,12 @@
                 <VCardTitle class="d-flex justify-space-between align-center">
                     <span>Información de Líderes</span>
                     <VBtn
-                        color="primary"
-                        prepend-icon="mdi-download"
-                        @click="exportToExcel"
+                        color="success"
+                        prepend-icon="mdi-file-pdf-box"
+                        @click="exportToPDF"
                         :loading="exporting"
                     >
-                        Exportar Excel
+                        Exportar PDF
                     </VBtn>
                 </VCardTitle>
                 
@@ -167,6 +167,8 @@ import { db } from "../../firebase/config";
 import { collection, getDocs, query, where, doc, getDoc } from "firebase/firestore";
 import NavigationBar from '../../components/NavigationBar.vue';
 import { useAuthStore } from '../../stores/auth';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 
 const authStore = useAuthStore();
 
@@ -269,7 +271,16 @@ const loadLeaders = async () => {
             };
         }));
 
-        leaders.value = leadersData as Leader[];
+        // Filtrar líderes sin distrito y ordenar alfabéticamente por ubicación
+        const validLeaders = (leadersData as Leader[])
+            .filter(leader => leader.district !== null && leader.district !== undefined)
+            .sort((a, b) => {
+                const locA = a.district?.location || '';
+                const locB = b.district?.location || '';
+                return locA.localeCompare(locB);
+            });
+
+        leaders.value = validLeaders;
     } catch (error) {
         console.error("Error al obtener líderes:", error);
     } finally {
@@ -323,15 +334,50 @@ const viewLeaderDetails = (leader: Leader) => {
     detailsDialog.value = true;
 };
 
-const exportToExcel = async () => {
+const exportToPDF = () => {
     exporting.value = true;
     try {
-        // Aquí puedes implementar la lógica de exportación a Excel
-        // Por ahora, mostraremos un mensaje
-        alert('Función de exportación a Excel en desarrollo');
+        const doc = new jsPDF();
+        const currentDate = new Date().toLocaleDateString();
+
+        // Título del documento
+        doc.setFontSize(18);
+        doc.text("Listado de Líderes", 14, 15);
+        doc.setFontSize(10);
+        doc.text(`Fecha de generación: ${currentDate}`, 14, 22);
+
+        // Definir columnas
+        const bodyColumns = [
+            { header: 'Distrito', dataKey: 'district' },
+            { header: 'Nombre', dataKey: 'firstName' },
+            { header: 'Apellido', dataKey: 'lastName' },
+            { header: 'Teléfono', dataKey: 'phone' },
+            { header: 'Fecha Nacimiento', dataKey: 'birthDate' }
+        ];
+
+        // Preparar filas
+        const rows = filteredLeaders.value.map(leader => ({
+            district: leader.district?.location || 'Sin asignar',
+            firstName: leader.personalData?.firstName || '',
+            lastName: leader.personalData?.lastName || '',
+            phone: leader.personalData?.phoneNumber || 'No especificado',
+            birthDate: formatDate(leader.personalData?.birthDate)
+        }));
+
+        // Generar tabla PDF
+        autoTable(doc, {
+            head: [bodyColumns.map(c => c.header)],
+            body: rows.map(r => bodyColumns.map(c => (r as any)[c.dataKey])),
+            startY: 28,
+            styles: { fontSize: 10, cellPadding: 3 },
+            headStyles: { fillColor: [63, 81, 181] }, // Indigo primario
+            alternateRowStyles: { fillColor: [245, 245, 245] }
+        });
+
+        doc.save('listado_lideres.pdf');
     } catch (error) {
-        console.error('Error al exportar:', error);
-        alert('Error al exportar los datos');
+        console.error('Error al exportar PDF:', error);
+        alert('Error al generar el PDF de líderes');
     } finally {
         exporting.value = false;
     }

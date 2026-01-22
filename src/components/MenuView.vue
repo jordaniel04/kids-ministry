@@ -81,7 +81,7 @@
           </VCard>
         </VCol>
 
-        <VCol v-if="isAdmin" cols="12" sm="12" md="4">
+        <VCol v-if="isAdmin || isSecretary" cols="12" sm="12" md="4">
           <VCard
             class="mx-auto mb-4"
             color="surface-variant"
@@ -103,7 +103,7 @@
           </VCard>
         </VCol>
 
-        <VCol v-if="isAdmin" cols="12" sm="12" md="4">
+        <VCol v-if="isAdmin || isSecretary" cols="12" sm="12" md="4">
           <VCard
             class="mx-auto mb-4"
             color="surface-variant"
