@@ -558,6 +558,7 @@ import ChurchFormDialog from "@/components/ChurchFormDialog.vue";
 import ChurchHistoryDialog from '@/components/ChurchHistoryDialog.vue';
 import { useDistrictStore } from '@/stores/district';
 import { COLLECTIONS } from '@/constants';
+import { useUserDistrict } from '@/composables/useUserDistrict';
 
 const authStore = useAuthStore();
 const districtStore = useDistrictStore();
@@ -799,19 +800,13 @@ const saveChurch = async (churchData: any) => {
     loadingSave.value = true;
     try {
         // 1. Obtener el distrito activo del líder
-        const districtLeadersRef = collection(db, COLLECTIONS.DISTRICT_LEADERS);
-        const q = query(
-            districtLeadersRef,
-            where("userId", "==", authStore.user?.id),
-            where("isActive", "==", true)
-        );
-        const districtLeaderDocs = await getDocs(q);
+        const { getActiveDistrictLeader } = useUserDistrict();
+        const districtLeader = await getActiveDistrictLeader();
 
-        if (districtLeaderDocs.empty) {
+        if (!districtLeader) {
             throw new Error("No se encontró un distrito activo para el líder");
         }
 
-        const districtLeader = districtLeaderDocs.docs[0].data();
         const now = Timestamp.now();
 
         // 2. Preparar datos de la iglesia

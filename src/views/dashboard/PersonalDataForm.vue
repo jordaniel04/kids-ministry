@@ -81,10 +81,12 @@
 // Importaciones
 import { ref, computed, onMounted, watch, onUnmounted } from "vue";
 import { doc, setDoc, collection, getDocs, Timestamp, getDoc, query, where } from "firebase/firestore";
-import { db } from "../../firebase/config";
-import { useAuthStore } from "../../stores/auth";
+import { db } from "@/firebase/config";
+import { useAuthStore } from "@/stores/auth";
 import { useRouter } from 'vue-router';
-import NavigationBar from '../../components/NavigationBar.vue';
+import NavigationBar from '@/components/NavigationBar.vue';
+import { COLLECTIONS } from '@/constants';
+import { useUserDistrict } from '@/composables/useUserDistrict';
 
 interface PersonalData {
     [key: string]: string | Date | null;
@@ -259,29 +261,19 @@ const loadUserData = async () => {
         const leaderData = await authStore.getUserData();
 
         if (leaderData) {
-            // 2. Obtener información del distrito en una sola consulta
-            const districtLeadersRef = collection(db, "district_leaders");
-            const q = query(
-                districtLeadersRef,
-                where("userId", "==", authStore.user!.id),
-                where("isActive", "==", true)
-            );
-            const districtLeaderDocs = await getDocs(q);
+            // 2. Obtener información del distrito usando el composable
+            const { getActiveDistrict } = useUserDistrict();
+            const { district } = await getActiveDistrict();
 
-            if (!districtLeaderDocs.empty) {
-                const districtLeader = districtLeaderDocs.docs[0].data();
-
-                // Cargar datos del distrito solo si tenemos el ID
-                if (districtLeader.districtId) {
-                    const districtDoc = await getDoc(doc(db, "districts", districtLeader.districtId));
-                    if (districtDoc.exists()) {
-                        const districtData = districtDoc.data();
-                        userData.value = {
-                            areaNumber: districtData.areaNumber,
-                            districtNumber: districtData.districtNumber,
-                            location: districtData.location
-                        };
-                    }
+            if (district) {
+                const districtDoc = await getDoc(doc(db, COLLECTIONS.DISTRICTS, district.id));
+                if (districtDoc.exists()) {
+                    const districtData = districtDoc.data();
+                    userData.value = {
+                        areaNumber: districtData.areaNumber,
+                        districtNumber: districtData.districtNumber,
+                        location: districtData.location
+                    };
                 }
             }
 

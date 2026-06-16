@@ -198,6 +198,7 @@ import type { District } from "@/types/District";
 import { useAuthStore } from '@/stores/auth';
 import NavigationBar from '@/components/NavigationBar.vue';
 import { COLLECTIONS } from '@/constants';
+import { useUserDistrict } from '@/composables/useUserDistrict';
 
 const authStore = useAuthStore();
 
