@@ -98,36 +98,18 @@
                             </tr>
                         </thead>
                         <tbody>
-                            <tr v-for="(church, index) in churches" :key="church.name">
+                            <tr v-for="(church, index) in churchesWithLatestData" :key="church.name">
                                 <td>{{ church.name }}</td>
                                 <td>{{ church.leaderName }}</td>
-                                <td class="text-center">
-                                    {{ getLatestMinisterialData(church).totalTeachers }}
-                                </td>
-                                <td class="text-center">
-                                    {{ getLatestMinisterialData(church).totalChildren }}
-                                </td>
-                                <td class="text-center">
-                                    {{ getLatestMinisterialData(church).convertedChildren }}
-                                </td>
-                                <td class="text-center">
-                                    {{ getLatestMinisterialData(church).memberChildren }}
-                                </td>
-                                <td class="text-center">
-                                    {{ getLatestMinisterialData(church).nonRepentantChildren }}
-                                </td>
-                                <td class="text-center">
-                                    {{ getLatestMinisterialData(church).baptizedChildren }}
-                                </td>
-                                <td class="text-center">
-                                    {{ getLatestMinisterialData(church).consolidatedGraduates }}
-                                </td>
-                                <td class="text-center">
-                                    {{ getLatestMinisterialData(church).sacramentsGraduates }}
-                                </td>
-                                <td class="text-center">
-                                    {{ getLatestMinisterialData(church).discipleshipGraduates }}
-                                </td>
+                                <td class="text-center">{{ church.latestData.totalTeachers }}</td>
+                                <td class="text-center">{{ church.latestData.totalChildren }}</td>
+                                <td class="text-center">{{ church.latestData.convertedChildren }}</td>
+                                <td class="text-center">{{ church.latestData.memberChildren }}</td>
+                                <td class="text-center">{{ church.latestData.nonRepentantChildren }}</td>
+                                <td class="text-center">{{ church.latestData.baptizedChildren }}</td>
+                                <td class="text-center">{{ church.latestData.consolidatedGraduates }}</td>
+                                <td class="text-center">{{ church.latestData.sacramentsGraduates }}</td>
+                                <td class="text-center">{{ church.latestData.discipleshipGraduates }}</td>
                                 <td class="text-center">
                                     <VIcon 
                                         v-if="activePeriod?.allowEditing && !isConfirmed"
@@ -266,7 +248,7 @@
 
                 <!-- Cards de Iglesias -->
                 <VRow>
-                    <VCol v-for="church in churches" :key="church.name" cols="12">
+                    <VCol v-for="(church, index) in churchesWithLatestData" :key="church.name" cols="12">
                         <VCard>
                             <VCardTitle>{{ church.name }}</VCardTitle>
                             <VCardSubtitle>{{ church.leaderName }}</VCardSubtitle>
@@ -276,15 +258,11 @@
                                 <div class="d-flex justify-space-between align-center mb-2">
                                     <div>
                                         <div class="text-caption">Total Maestras</div>
-                                        <div class="text-h6">
-                                            {{ getLatestMinisterialData(church).totalTeachers }}
-                                        </div>
+                                        <div class="text-h6">{{ church.latestData.totalTeachers }}</div>
                                     </div>
                                     <div>
                                         <div class="text-caption">Total Niños</div>
-                                        <div class="text-h6">
-                                            {{ getLatestMinisterialData(church).totalChildren }}
-                                        </div>
+                                        <div class="text-h6">{{ church.latestData.totalChildren }}</div>
                                     </div>
                                 </div>
 
@@ -303,52 +281,27 @@
                                         <div class="mt-2">
                                             <div class="d-flex justify-space-between mb-2">
                                                 <div class="text-caption">Niños Convertidos</div>
-                                                <div>
-                                                    {{
-                                                        getLatestMinisterialData(church).convertedChildren
-                                                    }}
-                                                </div>
+                                                <div>{{ church.latestData.convertedChildren }}</div>
                                             </div>
                                             <div class="d-flex justify-space-between mb-2">
                                                 <div class="text-caption">Niños Miembros</div>
-                                                <div>
-                                                    {{ getLatestMinisterialData(church).memberChildren }}
-                                                </div>
+                                                <div>{{ church.latestData.memberChildren }}</div>
                                             </div>
                                             <div class="d-flex justify-space-between mb-2">
                                                 <div class="text-caption">Bautizados E.S.</div>
-                                                <div>
-                                                    {{
-                                                        getLatestMinisterialData(church)
-                                                            .baptizedChildren
-                                                    }}
-                                                </div>
+                                                <div>{{ church.latestData.baptizedChildren }}</div>
                                             </div>
                                             <div class="d-flex justify-space-between mb-2">
                                                 <div class="text-caption">Graduados Consolidado</div>
-                                                <div>
-                                                    {{
-                                                        getLatestMinisterialData(church)
-                                                            .consolidatedGraduates
-                                                    }}
-                                                </div>
+                                                <div>{{ church.latestData.consolidatedGraduates }}</div>
                                             </div>
                                             <div class="d-flex justify-space-between mb-2">
                                                 <div class="text-caption">Graduados Sacramentos</div>
-                                                <div>
-                                                    {{
-                                                        getLatestMinisterialData(church).sacramentsGraduates
-                                                    }}
-                                                </div>
+                                                <div>{{ church.latestData.sacramentsGraduates }}</div>
                                             </div>
                                             <div class="d-flex justify-space-between mb-2">
                                                 <div class="text-caption">Graduados Discipulado</div>
-                                                <div>
-                                                    {{
-                                                        getLatestMinisterialData(church)
-                                                            .discipleshipGraduates
-                                                    }}
-                                                </div>
+                                                <div>{{ church.latestData.discipleshipGraduates }}</div>
                                             </div>
                                         </div>
                                     </div>
@@ -363,14 +316,14 @@
                                     icon="mdi-pencil" 
                                     size="small" 
                                     class="me-2"
-                                    @click="editItem(church, churches.indexOf(church))" 
+                                    @click="editItem(church, index)"
                                 />
                                 <VIcon 
                                     v-if="activePeriod?.allowEditing && !isConfirmed"
                                     color="error" 
                                     icon="mdi-delete" 
                                     size="small"
-                                    @click="deleteItem(church, churches.indexOf(church))" 
+                                    @click="deleteItem(church, index)"
                                     :loading="loadingDelete"
                                     :disabled="loadingDelete || !activePeriod?.allowEditing"
                                 />
@@ -611,26 +564,35 @@ const toggleDetails = (churchName: string) => {
         showDetailsFor.value === churchName ? null : churchName;
 };
 
+const EMPTY_MINISTERIAL_DATA = {
+    totalTeachers: 0,
+    totalChildren: 0,
+    convertedChildren: 0,
+    memberChildren: 0,
+    nonRepentantChildren: 0,
+    baptizedChildren: 0,
+    consolidatedGraduates: 0,
+    sacramentsGraduates: 0,
+    rescueClubChildren: 0,
+    discipleshipGraduates: 0,
+};
+
 const getLatestMinisterialData = (church: Church) => {
     if (!church.ministerialData || church.ministerialData.length === 0) {
-        return {
-            totalTeachers: 0,
-            totalChildren: 0,
-            convertedChildren: 0,
-            memberChildren: 0,
-            nonRepentantChildren: 0,
-            baptizedChildren: 0,
-            consolidatedGraduates: 0,
-            sacramentsGraduates: 0,
-            rescueClubChildren: 0,
-            discipleshipGraduates: 0,
-        };
+        return EMPTY_MINISTERIAL_DATA;
     }
-
     return church.ministerialData.sort(
         (a, b) => b.updatedAt.seconds - a.updatedAt.seconds
     )[0];
 };
+
+// Pre-calcula latestData una vez por iglesia en lugar de llamar getLatestMinisterialData en cada celda del template
+const churchesWithLatestData = computed(() =>
+    churches.value.map(church => ({
+        ...church,
+        latestData: getLatestMinisterialData(church)
+    }))
+);
 
 // Totales computados en un solo loop
 const totals = computed(() => {
