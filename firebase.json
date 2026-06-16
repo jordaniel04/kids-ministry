@@ -3,6 +3,7 @@
     "indexes": "firestore.indexes.json"
   },
   "hosting": {
+    "site": "kids-ministry-peru",
     "public": "dist",
     "ignore": [
       "firebase.json",
