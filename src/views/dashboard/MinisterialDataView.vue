@@ -530,7 +530,7 @@
 </template>
 <script setup lang="ts">
 import { ref, computed, onMounted } from "vue";
-import { useAuthStore } from "../../stores/auth";
+import { useAuthStore } from "@/stores/auth";
 import {
     doc,
     getDoc,
@@ -547,16 +547,17 @@ import {
     writeBatch,
     limit
 } from "firebase/firestore";
-import { db } from "../../firebase/config";
-import NavigationBar from "../../components/NavigationBar.vue";
+import { db } from "@/firebase/config";
+import NavigationBar from "@/components/NavigationBar.vue";
 import type {
     ReportPeriod,
     MinisterialReport,
-} from "../../types/MinisterialReport";
-import type { Church } from "../../types/Church";
-import ChurchFormDialog from "../../components/ChurchFormDialog.vue";
-import ChurchHistoryDialog from '../../components/ChurchHistoryDialog.vue';
-import { useDistrictStore } from '../../stores/district';
+} from "@/types/MinisterialReport";
+import type { Church } from "@/types/Church";
+import ChurchFormDialog from "@/components/ChurchFormDialog.vue";
+import ChurchHistoryDialog from '@/components/ChurchHistoryDialog.vue';
+import { useDistrictStore } from '@/stores/district';
+import { COLLECTIONS } from '@/constants';
 
 const authStore = useAuthStore();
 const districtStore = useDistrictStore();
@@ -653,7 +654,7 @@ const totals = computed(() => ({
 }));
 
 const loadActivePeriod = async () => {
-    const periodsRef = collection(db, "report_periods");
+    const periodsRef = collection(db, COLLECTIONS.REPORT_PERIODS);
     const q = query(periodsRef, where("isActive", "==", true));
     const snapshot = await getDocs(q);
 
@@ -798,7 +799,7 @@ const saveChurch = async (churchData: any) => {
     loadingSave.value = true;
     try {
         // 1. Obtener el distrito activo del líder
-        const districtLeadersRef = collection(db, "district_leaders");
+        const districtLeadersRef = collection(db, COLLECTIONS.DISTRICT_LEADERS);
         const q = query(
             districtLeadersRef,
             where("userId", "==", authStore.user?.id),
@@ -829,15 +830,15 @@ const saveChurch = async (churchData: any) => {
         };
 
         // 3. Guardar en Firestore
-        const churchesRef = collection(db, "churches");
+        const churchesRef = collection(db, COLLECTIONS.CHURCHES);
         if (editedIndex.value > -1 && editedItem.value.id) {
             // Actualizar iglesia existente
             const existingChurch = await getDoc(
-                doc(db, "churches", editedItem.value.id)
+                doc(db, COLLECTIONS.CHURCHES, editedItem.value.id)
             );
             if (existingChurch.exists()) {
                 const existingData = existingChurch.data();
-                await updateDoc(doc(db, "churches", editedItem.value.id), {
+                await updateDoc(doc(db, COLLECTIONS.CHURCHES, editedItem.value.id), {
                     name: church.name,
                     leaderName: church.leaderName,
                     ministerialData: [
@@ -955,7 +956,7 @@ const calculateCompletionPercentage = () => {
 const loadConfirmations = async () => {
     if (!activePeriod.value) return;
 
-    const confirmationsRef = collection(db, "church_confirmations");
+    const confirmationsRef = collection(db, COLLECTIONS.CHURCH_CONFIRMATIONS);
     const q = query(
         confirmationsRef,
         where("periodId", "==", activePeriod.value.id),
@@ -1028,7 +1029,7 @@ const processDistrictConfirmation = async () => {
         }
 
         // Crear confirmación del distrito
-        await addDoc(collection(db, "district_confirmations"), {
+        await addDoc(collection(db, COLLECTIONS.DISTRICT_CONFIRMATIONS), {
             districtId: currentDistrict.value.id,
             periodId: activePeriod.value.id,
             confirmedAt: Timestamp.now(),
@@ -1057,7 +1058,7 @@ const processDistrictConfirmation = async () => {
         // Guardar las confirmaciones de iglesias en una sola operación
         const batch = writeBatch(db);
         churches.value.forEach((church) => {
-            const confirmationRef = doc(collection(db, "church_confirmations"));
+            const confirmationRef = doc(collection(db, COLLECTIONS.CHURCH_CONFIRMATIONS));
             batch.set(confirmationRef, {
                 churchId: church.id,
                 periodId: activePeriod.value!.id,

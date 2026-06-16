@@ -190,13 +190,14 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from "vue";
-import { db } from "../../firebase/config";
+import { db } from "@/firebase/config";
 import { collection, getDocs, doc, setDoc, deleteDoc, Timestamp, query, where, getDoc, updateDoc, writeBatch } from "firebase/firestore";
 import { getAuth, createUserWithEmailAndPassword } from "firebase/auth";
-import type { User } from "../../types/User";
-import type { District } from "../../types/District";
-import { useAuthStore } from '../../stores/auth';
-import NavigationBar from '../../components/NavigationBar.vue';
+import type { User } from "@/types/User";
+import type { District } from "@/types/District";
+import { useAuthStore } from '@/stores/auth';
+import NavigationBar from '@/components/NavigationBar.vue';
+import { COLLECTIONS } from '@/constants';
 
 const authStore = useAuthStore();
 
@@ -272,7 +273,7 @@ const editUser = async (user: User) => {
         isEditing.value = true;
         
         // 1. Obtener información del distrito activo del líder
-        const districtLeadersRef = collection(db, "district_leaders");
+        const districtLeadersRef = collection(db, COLLECTIONS.DISTRICT_LEADERS);
         const q = query(
             districtLeadersRef, 
             where("userId", "==", user.id),
@@ -282,7 +283,7 @@ const editUser = async (user: User) => {
         
         if (!districtLeaderDocs.empty) {
             const districtLeader = districtLeaderDocs.docs[0].data();
-            const districtDoc = await getDoc(doc(db, "districts", districtLeader.districtId));
+            const districtDoc = await getDoc(doc(db, COLLECTIONS.DISTRICTS, districtLeader.districtId));
             
             if (districtDoc.exists()) {
                 const districtData = districtDoc.data();
@@ -328,7 +329,7 @@ const deleteUser = async (user: User) => {
     if (confirm('¿Estás seguro de eliminar este usuario?')) {
         try {
             // 1. Eliminar relaciones de distrito-líder si existen
-            const districtLeadersRef = collection(db, "district_leaders");
+            const districtLeadersRef = collection(db, COLLECTIONS.DISTRICT_LEADERS);
             const q = query(districtLeadersRef, where("userId", "==", user.id));
             const districtLeaderDocs = await getDocs(q);
             
@@ -337,10 +338,10 @@ const deleteUser = async (user: User) => {
             }
 
             // 2. Eliminar datos del líder si existen
-            await deleteDoc(doc(db, "leaders", user.id));
+            await deleteDoc(doc(db, COLLECTIONS.LEADERS, user.id));
 
             // 3. Eliminar el usuario de Firestore
-            await deleteDoc(doc(db, "users", user.id));
+            await deleteDoc(doc(db, COLLECTIONS.USERS, user.id));
 
             // 4. Actualizar la lista de usuarios
             await getUsers();
@@ -365,7 +366,7 @@ const saveUser = async () => {
 
         if (editedItem.value.id) {
             // 1. Actualizar usuario en users collection
-            const userRef = doc(db, "users", editedItem.value.id);
+            const userRef = doc(db, COLLECTIONS.USERS, editedItem.value.id);
             await updateDoc(userRef, {
                 email: editedItem.value.email,
                 role: editedItem.value.role,
@@ -377,7 +378,7 @@ const saveUser = async () => {
             if (editedItem.value.role === 'lider') {
                 // Desactivar distrito anterior si existe
                 const oldDistrictLeadersQuery = query(
-                    collection(db, "district_leaders"),
+                    collection(db, COLLECTIONS.DISTRICT_LEADERS),
                     where("userId", "==", editedItem.value.id),
                     where("isActive", "==", true)
                 );
@@ -395,14 +396,14 @@ const saveUser = async () => {
                 });
 
                 // Obtener datos del nuevo distrito
-                const districtDoc = await getDoc(doc(db, "districts", selectedDistrict.value.id));
+                const districtDoc = await getDoc(doc(db, COLLECTIONS.DISTRICTS, selectedDistrict.value.id));
                 if (!districtDoc.exists()) {
                     throw new Error("Distrito no encontrado");
                 }
                 const districtData = districtDoc.data();
 
                 // Crear nueva relación distrito-líder
-                const newDistrictLeaderRef = doc(collection(db, "district_leaders"));
+                const newDistrictLeaderRef = doc(collection(db, COLLECTIONS.DISTRICT_LEADERS));
                 batch.set(newDistrictLeaderRef, {
                     id: newDistrictLeaderRef.id,
                     districtId: selectedDistrict.value.id,
@@ -431,7 +432,7 @@ const saveUser = async () => {
                 );
 
                 // 2. Crear documento en la colección users
-                const userRef = doc(db, "users", userCredential.user.uid);
+                const userRef = doc(db, COLLECTIONS.USERS, userCredential.user.uid);
                 await setDoc(userRef, {
                     id: userCredential.user.uid,
                     email: editedItem.value.email,
@@ -450,14 +451,14 @@ const saveUser = async () => {
                         throw new Error("Debe seleccionar un distrito para un líder");
                     }
 
-                    const districtDoc = await getDoc(doc(db, "districts", selectedDistrict.value.id));
+                    const districtDoc = await getDoc(doc(db, COLLECTIONS.DISTRICTS, selectedDistrict.value.id));
                     if (!districtDoc.exists()) {
                         throw new Error("Distrito no encontrado");
                     }
                     const districtData = districtDoc.data();
 
                     // Crear relación distrito-líder
-                    const districtLeaderRef = doc(collection(db, "district_leaders"));
+                    const districtLeaderRef = doc(collection(db, COLLECTIONS.DISTRICT_LEADERS));
                     await setDoc(districtLeaderRef, {
                         id: districtLeaderRef.id,
                         districtId: selectedDistrict.value.id,
@@ -523,21 +524,21 @@ const closeDialog = () => {
 
 const getUsers = async () => {
     try {
-        const usersCollection = collection(db, "users");
+        const usersCollection = collection(db, COLLECTIONS.USERS);
         const userDocs = await getDocs(usersCollection);
         
         const usersData = await Promise.all(userDocs.docs.map(async (userDoc) => {
             const userData = userDoc.data();
             
             // Obtener información del distrito del líder
-            const districtLeadersRef = collection(db, "district_leaders");
+            const districtLeadersRef = collection(db, COLLECTIONS.DISTRICT_LEADERS);
             const q = query(districtLeadersRef, where("userId", "==", userDoc.id), where("isActive", "==", true));
             const districtLeaderDocs = await getDocs(q);
             
             let districtInfo = { location: 'No asignado' };
             if (!districtLeaderDocs.empty) {
                 const districtLeader = districtLeaderDocs.docs[0].data();
-                const districtDoc = await getDoc(doc(db, "districts", districtLeader.districtId));
+                const districtDoc = await getDoc(doc(db, COLLECTIONS.DISTRICTS, districtLeader.districtId));
                 if (districtDoc.exists()) {
                     districtInfo = districtDoc.data() as { location: string };
                 }
@@ -592,7 +593,7 @@ const filteredDistricts = computed(() => {
 const loadDistricts = async () => {
     loadingDistricts.value = true;
     try {
-        const querySnapshot = await getDocs(collection(db, "districts"));
+        const querySnapshot = await getDocs(collection(db, COLLECTIONS.DISTRICTS));
         districts.value = querySnapshot.docs.map(doc => ({
             id: doc.id,
             ...doc.data()

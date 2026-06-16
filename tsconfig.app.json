@@ -4,6 +4,10 @@
   "compilerOptions": {
     "composite": true,
     "moduleResolution": "node",
-    "types": ["vite/client", "vue-router", "vuetify", "pinia"]
+    "types": ["vite/client", "vue-router", "vuetify", "pinia"],
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["./src/*"]
+    }
   }
 }

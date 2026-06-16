@@ -3,6 +3,7 @@ import { auth, db } from '../firebase/config';
 import { signInWithEmailAndPassword, signOut } from 'firebase/auth';
 import { doc, getDoc, setDoc, Timestamp } from "firebase/firestore";
 import type { User } from '../types/User';
+import { COLLECTIONS, CACHE_TTL } from '@/constants';
 
 interface AuthState {
   user: User | null;
@@ -25,7 +26,7 @@ export const useAuthStore = defineStore('auth', {
       this.error = null;
       try {
         const userCredential = await signInWithEmailAndPassword(auth, email, password);
-        const userRef = doc(db, "users", userCredential.user.uid);
+        const userRef = doc(db, COLLECTIONS.USERS, userCredential.user.uid);
         const userDoc = await getDoc(userRef);
 
         if (userDoc.exists()) {
@@ -88,14 +89,14 @@ export const useAuthStore = defineStore('auth', {
       
       // Si ya tenemos los datos y no han pasado más de 5 minutos, devolver los datos en caché
       if (this.userData && this.userData._lastFetched) {
-        const fiveMinutesAgo = new Date().getTime() - 5 * 60 * 1000;
-        if (this.userData._lastFetched > fiveMinutesAgo) {
+        const cacheExpiration = new Date().getTime() - CACHE_TTL;
+        if (this.userData._lastFetched > cacheExpiration) {
           return this.userData;
         }
       }
-      
+
       try {
-        const leaderRef = doc(db, "leaders", this.user.id);
+        const leaderRef = doc(db, COLLECTIONS.LEADERS, this.user.id);
         const leaderDoc = await getDoc(leaderRef);
         
         if (leaderDoc.exists()) {
@@ -115,9 +116,9 @@ export const useAuthStore = defineStore('auth', {
 
     async updateUserData(data: any) {
       if (!this.user?.id) throw new Error("Usuario no autenticado");
-      
+
       try {
-        const leaderRef = doc(db, "leaders", this.user.id);
+        const leaderRef = doc(db, COLLECTIONS.LEADERS, this.user.id);
         await setDoc(leaderRef, data, { merge: true });
         
         // Actualizar caché local inmediatamente
