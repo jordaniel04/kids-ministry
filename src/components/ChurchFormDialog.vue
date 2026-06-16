@@ -170,7 +170,7 @@ export default defineComponent({
                     }
                 };
             }
-        }, { deep: true, immediate: true });
+        }, { immediate: true });
 
         const formTitle = computed(() => {
             return props.church?.id ? 'Editar Iglesia' : 'Nueva Iglesia';

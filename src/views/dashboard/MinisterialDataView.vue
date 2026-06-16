@@ -632,27 +632,34 @@ const getLatestMinisterialData = (church: Church) => {
     )[0];
 };
 
-// Totales computados
-const totals = computed(() => ({
-  totalTeachers: churches.value.reduce((sum, church) => 
-    sum + (church.ministerialData?.[0]?.totalTeachers || 0), 0),
-  totalChildren: churches.value.reduce((sum, church) => 
-    sum + (church.ministerialData?.[0]?.totalChildren || 0), 0),
-  convertedChildren: churches.value.reduce((sum, church) => 
-    sum + (church.ministerialData?.[0]?.convertedChildren || 0), 0),
-  memberChildren: churches.value.reduce((sum, church) => 
-    sum + (church.ministerialData?.[0]?.memberChildren || 0), 0),
-  nonRepentantChildren: churches.value.reduce((sum, church) => 
-    sum + (church.ministerialData?.[0]?.nonRepentantChildren || 0), 0),
-  baptizedChildren: churches.value.reduce((sum, church) => 
-    sum + (church.ministerialData?.[0]?.baptizedChildren || 0), 0),
-  consolidatedGraduates: churches.value.reduce((sum, church) => 
-    sum + (church.ministerialData?.[0]?.consolidatedGraduates || 0), 0),
-  sacramentsGraduates: churches.value.reduce((sum, church) => 
-    sum + (church.ministerialData?.[0]?.sacramentsGraduates || 0), 0),
-  discipleshipGraduates: churches.value.reduce((sum, church) => 
-    sum + (church.ministerialData?.[0]?.discipleshipGraduates || 0), 0)
-}));
+// Totales computados en un solo loop
+const totals = computed(() => {
+  const acc = {
+    totalTeachers: 0,
+    totalChildren: 0,
+    convertedChildren: 0,
+    memberChildren: 0,
+    nonRepentantChildren: 0,
+    baptizedChildren: 0,
+    consolidatedGraduates: 0,
+    sacramentsGraduates: 0,
+    discipleshipGraduates: 0,
+  };
+  for (const church of churches.value) {
+    const d = church.ministerialData?.[0];
+    if (!d) continue;
+    acc.totalTeachers += d.totalTeachers || 0;
+    acc.totalChildren += d.totalChildren || 0;
+    acc.convertedChildren += d.convertedChildren || 0;
+    acc.memberChildren += d.memberChildren || 0;
+    acc.nonRepentantChildren += d.nonRepentantChildren || 0;
+    acc.baptizedChildren += d.baptizedChildren || 0;
+    acc.consolidatedGraduates += d.consolidatedGraduates || 0;
+    acc.sacramentsGraduates += d.sacramentsGraduates || 0;
+    acc.discipleshipGraduates += d.discipleshipGraduates || 0;
+  }
+  return acc;
+});
 
 const loadActivePeriod = async () => {
     const periodsRef = collection(db, COLLECTIONS.REPORT_PERIODS);

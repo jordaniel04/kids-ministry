@@ -167,8 +167,6 @@ import { db } from "../../firebase/config";
 import { collection, getDocs, query, where, doc, getDoc } from "firebase/firestore";
 import NavigationBar from '../../components/NavigationBar.vue';
 import { useAuthStore } from '../../stores/auth';
-import jsPDF from 'jspdf';
-import autoTable from 'jspdf-autotable';
 
 const authStore = useAuthStore();
 
@@ -230,46 +228,46 @@ const loadLeaders = async () => {
         );
         const usersSnapshot = await getDocs(usersQuery);
         
-        const leadersData = await Promise.all(usersSnapshot.docs.map(async (userDoc) => {
-            const userData = userDoc.data();
-            
-            // 2. Obtener datos personales del líder
-            const leaderDoc = await getDoc(doc(db, "leaders", userDoc.id));
-            let personalData = {};
-            if (leaderDoc.exists()) {
-                personalData = leaderDoc.data().personalData || {};
-            }
-            
-            // 3. Obtener información del distrito activo
-            const districtLeadersQuery = query(
+        const userIds = usersSnapshot.docs.map(d => d.id);
+
+        // 2. Cargar leaders, district_leaders activos y todos los distritos en paralelo
+        const [leadersSnap, districtLeadersSnap, districtsSnap] = await Promise.all([
+            Promise.all(userIds.map(id => getDoc(doc(db, "leaders", id)))),
+            getDocs(query(
                 collection(db, "district_leaders"),
-                where("userId", "==", userDoc.id),
                 where("isActive", "==", true)
-            );
-            const districtLeaderSnapshot = await getDocs(districtLeadersQuery);
-            
-            let districtInfo = null;
-            if (!districtLeaderSnapshot.empty) {
-                const districtLeaderData = districtLeaderSnapshot.docs[0].data();
-                const districtDoc = await getDoc(doc(db, "districts", districtLeaderData.districtId));
-                if (districtDoc.exists()) {
-                    const districtData = districtDoc.data();
-                    districtInfo = {
-                        location: districtData.location,
-                        areaNumber: districtData.areaNumber,
-                        districtNumber: districtData.districtNumber
-                    };
-                }
-            }
-            
+            )),
+            getDocs(collection(db, "districts"))
+        ]);
+
+        // Indexar en Maps para O(1) lookup
+        const personalDataMap = new Map(
+            leadersSnap.filter(d => d.exists()).map(d => [d.id, d.data().personalData || {}])
+        );
+        const districtMap = new Map(
+            districtsSnap.docs.map(d => [d.id, d.data()])
+        );
+        // userId -> districtId
+        const userDistrictMap = new Map(
+            districtLeadersSnap.docs.map(d => [d.data().userId, d.data().districtId])
+        );
+
+        const leadersData = usersSnapshot.docs.map(userDoc => {
+            const userData = userDoc.data();
+            const districtId = userDistrictMap.get(userDoc.id);
+            const districtData = districtId ? districtMap.get(districtId) : null;
             return {
                 id: userDoc.id,
                 email: userData.email,
                 role: userData.role,
-                personalData,
-                district: districtInfo
+                personalData: personalDataMap.get(userDoc.id) ?? {},
+                district: districtData ? {
+                    location: districtData.location,
+                    areaNumber: districtData.areaNumber,
+                    districtNumber: districtData.districtNumber
+                } : null
             };
-        }));
+        });
 
         // Filtrar líderes sin distrito y ordenar alfabéticamente por ubicación
         const validLeaders = (leadersData as Leader[])
@@ -334,9 +332,13 @@ const viewLeaderDetails = (leader: Leader) => {
     detailsDialog.value = true;
 };
 
-const exportToPDF = () => {
+const exportToPDF = async () => {
     exporting.value = true;
     try {
+        const [{ default: jsPDF }, { default: autoTable }] = await Promise.all([
+            import('jspdf'),
+            import('jspdf-autotable')
+        ]);
         const doc = new jsPDF();
         const currentDate = new Date().toLocaleDateString();
 

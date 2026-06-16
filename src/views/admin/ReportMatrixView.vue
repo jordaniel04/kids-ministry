@@ -104,8 +104,6 @@ import { collection, getDocs, query, limit } from 'firebase/firestore';
 import { db } from '../../firebase/config';
 import NavigationBar from '../../components/NavigationBar.vue';
 import { useFirestoreListeners } from '../../composables/useFirestoreListeners';
-import jsPDF from 'jspdf';
-import autoTable from 'jspdf-autotable';
 
 interface MatrixDistrict {
     id: string;
@@ -319,9 +317,13 @@ const openExportDialog = () => {
     exportDialog.value = true;
 };
 
-const generatePDF = () => {
+const generatePDF = async () => {
     exporting.value = true;
     try {
+        const [{ default: jsPDF }, { default: autoTable }] = await Promise.all([
+            import('jspdf'),
+            import('jspdf-autotable')
+        ]);
         const doc = new jsPDF();
         
         // Obtener la fecha actual para el reporte

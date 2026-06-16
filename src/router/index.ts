@@ -1,6 +1,5 @@
 import { createRouter, createWebHistory, type RouteRecordRaw } from 'vue-router';
 import { auth } from '../firebase/config';
-import DistrictReportsView from '../views/admin/DistrictReportsView.vue'
 import { clearAllFirestoreListeners } from '../composables/useFirestoreListeners';
 import { useAuthStore } from '../stores/auth';
 
@@ -50,7 +49,7 @@ const routes: Array<RouteRecordRaw> = [
   {
     path: '/admin/district-reports',
     name: 'district-reports',
-    component: DistrictReportsView,
+    component: () => import('../views/admin/DistrictReportsView.vue'),
     meta: { requiresAuth: true, requiresAdmin: true }
   },
   {
