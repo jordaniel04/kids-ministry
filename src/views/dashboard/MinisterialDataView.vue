@@ -581,9 +581,9 @@ const getLatestMinisterialData = (church: Church) => {
     if (!church.ministerialData || church.ministerialData.length === 0) {
         return EMPTY_MINISTERIAL_DATA;
     }
-    return church.ministerialData.sort(
-        (a, b) => b.updatedAt.seconds - a.updatedAt.seconds
-    )[0];
+    return church.ministerialData.reduce((latest, d) =>
+        d.updatedAt.seconds > latest.updatedAt.seconds ? d : latest
+    );
 };
 
 // Pre-calcula latestData una vez por iglesia en lugar de llamar getLatestMinisterialData en cada celda del template

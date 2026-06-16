@@ -233,6 +233,7 @@ import NavigationBar from '../../components/NavigationBar.vue';
 import type { District } from '../../types/District';
 import type { ReportPeriod } from '../../types/MinisterialReport';
 import type { MinisterialData } from '../../types/MinisterialData';
+import { useFirestoreCache } from '../../composables/useFirestoreCache';
 
 interface ChurchSummary {
     id: string;
@@ -241,6 +242,7 @@ interface ChurchSummary {
     ministerialData: MinisterialData[];
 }
 
+const { getFromCache, setInCache } = useFirestoreCache();
 const loading = ref(false);
 const districts = ref<District[]>([]);
 const periods = ref<ReportPeriod[]>([]);
@@ -343,29 +345,41 @@ const nationalHeaders = [
 // Cargar períodos y distritos al montar el componente
 onMounted(async () => {
     try {
-        // Cargar períodos
-        const periodsSnapshot = await getDocs(collection(db, "report_periods"));
-        periods.value = periodsSnapshot.docs.map(doc => ({
-            id: doc.id,
-            name: doc.data().name,
-            startDate: doc.data().startDate,
-            endDate: doc.data().endDate,
-            isActive: doc.data().isActive,
-            allowEditing: doc.data().allowEditing
-        }));
+        // Cargar períodos con cache de 5 minutos
+        const cachedPeriods = getFromCache('report_periods');
+        if (cachedPeriods) {
+            periods.value = cachedPeriods;
+        } else {
+            const periodsSnapshot = await getDocs(collection(db, "report_periods"));
+            periods.value = periodsSnapshot.docs.map(doc => ({
+                id: doc.id,
+                name: doc.data().name,
+                startDate: doc.data().startDate,
+                endDate: doc.data().endDate,
+                isActive: doc.data().isActive,
+                allowEditing: doc.data().allowEditing
+            }));
+            setInCache('report_periods', periods.value);
+        }
 
-        // Cargar distritos y ordenarlos alfabéticamente
-        const districtsSnapshot = await getDocs(collection(db, "districts"));
-        districts.value = districtsSnapshot.docs
-            .map(doc => ({
-            id: doc.id,
-            areaNumber: doc.data().areaNumber,
-            districtNumber: doc.data().districtNumber,
-            location: doc.data().location,
-            createdAt: doc.data().createdAt,
-            updatedAt: doc.data().updatedAt
-            } as District))
-            .sort((a, b) => a.location.localeCompare(b.location));
+        // Cargar distritos con cache de 5 minutos
+        const cachedDistricts = getFromCache('districts');
+        if (cachedDistricts) {
+            districts.value = cachedDistricts;
+        } else {
+            const districtsSnapshot = await getDocs(collection(db, "districts"));
+            districts.value = districtsSnapshot.docs
+                .map(doc => ({
+                id: doc.id,
+                areaNumber: doc.data().areaNumber,
+                districtNumber: doc.data().districtNumber,
+                location: doc.data().location,
+                createdAt: doc.data().createdAt,
+                updatedAt: doc.data().updatedAt
+                } as District))
+                .sort((a, b) => a.location.localeCompare(b.location));
+            setInCache('districts', districts.value);
+        }
     } catch (error) {
         console.error("Error al cargar datos iniciales:", error);
         alert("Error al cargar los datos");
