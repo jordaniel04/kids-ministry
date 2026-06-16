@@ -65,6 +65,19 @@
                                 :rules="[rules.nonNegative, rules.graduateRules.discipleship]"
                                 @focus="clearDefaultValue('discipleshipGraduates')" required></VTextField>
                         </VCol>
+                        <VCol cols="12">
+                            <VDivider class="mb-3" />
+                            <VSwitch
+                                v-model="localItem.ministerialData.isInactiveForPeriod"
+                                label="Iglesia inactiva para este período"
+                                color="warning"
+                                hide-details
+                                inset
+                            />
+                            <p class="text-caption text-medium-emphasis mt-1">
+                                Marcar si la iglesia no tuvo actividad este período. No se incluirá en los totales del distrito.
+                            </p>
+                        </VCol>
                     </VRow>
                 </VContainer>
             </VCardText>
@@ -147,6 +160,7 @@ export default defineComponent({
                         consolidatedGraduates: ministerialData.consolidatedGraduates || 0,
                         sacramentsGraduates: ministerialData.sacramentsGraduates || 0,
                         discipleshipGraduates: ministerialData.discipleshipGraduates || 0,
+                        isInactiveForPeriod: ministerialData.isInactiveForPeriod ?? false,
                         updatedAt: Timestamp.now(),
                         reportPeriodId: ministerialData.reportPeriodId || null
                     }
@@ -165,6 +179,7 @@ export default defineComponent({
                         consolidatedGraduates: 0,
                         sacramentsGraduates: 0,
                         discipleshipGraduates: 0,
+                        isInactiveForPeriod: false,
                         updatedAt: Timestamp.now(),
                         reportPeriodId: props.activePeriod?.id || null
                     }
@@ -286,9 +301,12 @@ export default defineComponent({
             return true;
         };
 
+        const isEditing = computed(() => !!props.church?.id);
+
         return {
             localItem,
             formTitle,
+            isEditing,
             rules,
             clearDefaultValue,
             handleInput,

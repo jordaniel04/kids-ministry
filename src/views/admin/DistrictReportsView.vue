@@ -42,8 +42,23 @@
                                 :items-per-page="100"
                                 hover
                     >
+                        <template #[`item.isInactive`]="{ item }">
+                            <VChip
+                                v-if="item.isInactive"
+                                color="warning"
+                                size="small"
+                                variant="tonal"
+                            >Inactiva</VChip>
+                            <VIcon v-else color="success" size="small">mdi-check-circle</VIcon>
+                        </template>
+                        <template #[`item.name`]="{ item }">
+                            <span :class="{ 'text-disabled font-italic': item.isInactive }">{{ item.name }}</span>
+                        </template>
                         <template #bottom>
-                            <div class="d-flex justify-end pt-4">
+                            <div class="d-flex justify-end align-center gap-4 pt-4 px-2">
+                                <div v-if="churchesData.filter(c => c.isInactive).length > 0" class="text-subtitle-1 text-warning">
+                                    Iglesias Inactivas: {{ churchesData.filter(c => c.isInactive).length }}
+                                </div>
                                 <div class="text-subtitle-1 font-weight-bold">
                                     Total Iglesias: {{ churchesData.length }}
                                 </div>
@@ -214,6 +229,16 @@
                                                 </div>
                                             </div>
                                         </VCol>
+
+                                        <VCol cols="12" sm="6" md="3">
+                                            <div class="d-flex align-center mb-2">
+                                                <VIcon color="warning" class="me-2">mdi-domain-off</VIcon>
+                                                <div>
+                                                    <div class="text-caption">Iglesias Inactivas</div>
+                                                    <div class="text-h6 text-warning">{{ nationalTotals.inactiveChurchesCount || 0 }}</div>
+                                                </div>
+                                            </div>
+                                        </VCol>
                                     </VRow>
                                 </VCardText>
                             </VCard>
@@ -239,6 +264,7 @@ interface ChurchSummary {
     id: string;
     name: string;
     leaderName: string;
+    isInactive: boolean;
     ministerialData: MinisterialData[];
 }
 
@@ -258,6 +284,7 @@ const nationalData = ref<any[]>([]);
 const headers = [
     { title: 'Iglesia', key: 'name', sortable: true },
     { title: 'Líder', key: 'leaderName', sortable: true },
+    { title: 'Estado', key: 'isInactive', sortable: true, align: 'center' as const },
     {
         title: 'Total Maestras',
         key: 'ministerialData[0].totalTeachers',
@@ -325,7 +352,8 @@ const historicalHeaders = [
     { title: 'Graduados Consolidados', key: 'consolidatedGraduates', sortable: true, align: 'end' as const },
     { title: 'Graduados Sacramentos', key: 'sacramentsGraduates', sortable: true, align: 'end' as const },
     { title: 'Graduados Discipulado', key: 'discipleshipGraduates', sortable: true, align: 'end' as const },
-    { title: 'Total Iglesias', key: 'churchesCount', sortable: true, align: 'end' as const }
+    { title: 'Total Iglesias', key: 'churchesCount', sortable: true, align: 'end' as const },
+    { title: 'Iglesias Inactivas', key: 'inactiveChurchesCount', sortable: true, align: 'end' as const }
 ];
 
 const nationalHeaders = [
@@ -339,7 +367,8 @@ const nationalHeaders = [
     { title: 'Graduados Consolidados', key: 'consolidatedGraduates', sortable: true, align: 'end' as const },
     { title: 'Graduados Sacramentos', key: 'sacramentsGraduates', sortable: true, align: 'end' as const },
     { title: 'Graduados Discipulado', key: 'discipleshipGraduates', sortable: true, align: 'end' as const },
-    { title: 'Total Iglesias', key: 'churchesCount', sortable: true, align: 'end' as const }
+    { title: 'Total Iglesias', key: 'churchesCount', sortable: true, align: 'end' as const },
+    { title: 'Iglesias Inactivas', key: 'inactiveChurchesCount', sortable: true, align: 'end' as const }
 ];
 
 // Cargar períodos y distritos al montar el componente
@@ -405,6 +434,7 @@ const loadDistrictData = async () => {
                     id: doc.id,
                 name: data.churchName as string,
                 leaderName: data.leaderName as string,
+                isInactive: (data.isInactive as boolean) ?? false,
                 ministerialData: [{
                     totalTeachers: Number(data.ministerialData.totalTeachers) || 0,
                     totalChildren: Number(data.ministerialData.totalChildren) || 0,
@@ -459,7 +489,8 @@ const loadHistoricalData = async () => {
             consolidatedGraduates: conf.consolidatedGraduates || 0,
             sacramentsGraduates: conf.sacramentsGraduates || 0,
             discipleshipGraduates: conf.discipleshipGraduates || 0,
-            churchesCount: conf.churchesCount || 0
+            churchesCount: conf.churchesCount || 0,
+            inactiveChurchesCount: conf.inactiveChurchesCount || 0
         }));
 
     } catch (error) {
@@ -501,7 +532,8 @@ const loadNationalData = async () => {
                     consolidatedGraduates: conf.consolidatedGraduates || 0,
                     sacramentsGraduates: conf.sacramentsGraduates || 0,
                     discipleshipGraduates: conf.discipleshipGraduates || 0,
-                    churchesCount: conf.churchesCount || 0
+                    churchesCount: conf.churchesCount || 0,
+                    inactiveChurchesCount: conf.inactiveChurchesCount || 0
                 });
             }
         }
@@ -516,7 +548,7 @@ const loadNationalData = async () => {
                 }
             });
             return acc;
-        }, { 
+        }, {
             districtName: 'TOTAL NACIONAL',
             totalTeachers: 0,
             totalChildren: 0,
@@ -527,7 +559,8 @@ const loadNationalData = async () => {
             consolidatedGraduates: 0,
             sacramentsGraduates: 0,
             discipleshipGraduates: 0,
-            churchesCount: 0
+            churchesCount: 0,
+            inactiveChurchesCount: 0
         });
 
         // Agregar los totales al final del array pero no se mostrarán en la tabla
@@ -562,24 +595,26 @@ const formatTotalLabel = (key: TotalKeys): string => {
 };
 
 const districtTotals = computed(() => {
-    return churchesData.value.reduce((acc: Record<TotalKeys, number>, church) => {
-        const md = church.ministerialData[0] || {};
-        Object.keys(labels).forEach(key => {
-            const totalKey = key as TotalKeys;
-            acc[totalKey] = (acc[totalKey] || 0) + (md[totalKey] || 0);
+    return churchesData.value
+        .filter(church => !church.isInactive)
+        .reduce((acc: Record<TotalKeys, number>, church) => {
+            const md = church.ministerialData[0] || {};
+            Object.keys(labels).forEach(key => {
+                const totalKey = key as TotalKeys;
+                acc[totalKey] = (acc[totalKey] || 0) + (md[totalKey] || 0);
+            });
+            return acc;
+        }, {
+            totalTeachers: 0,
+            totalChildren: 0,
+            convertedChildren: 0,
+            memberChildren: 0,
+            nonRepentantChildren: 0,
+            baptizedChildren: 0,
+            consolidatedGraduates: 0,
+            sacramentsGraduates: 0,
+            discipleshipGraduates: 0
         });
-        return acc;
-    }, {
-        totalTeachers: 0,
-        totalChildren: 0,
-        convertedChildren: 0,
-        memberChildren: 0,
-        nonRepentantChildren: 0,
-        baptizedChildren: 0,
-        consolidatedGraduates: 0,
-        sacramentsGraduates: 0,
-        discipleshipGraduates: 0
-    });
 });
 
 const nationalTotals = computed(() => {

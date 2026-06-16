@@ -10,11 +10,12 @@ export interface MinisterialData {
     consolidatedGraduates: number;
     sacramentsGraduates: number;
     discipleshipGraduates: number;
+    isInactiveForPeriod?: boolean;
     updatedAt: Timestamp;
     reportPeriodId?: string | null;
 }
 
-export type NumericFields = Exclude<keyof MinisterialData, 'updatedAt' | 'reportPeriodId' | 'totalChildren'>;
+export type NumericFields = Exclude<keyof MinisterialData, 'updatedAt' | 'reportPeriodId' | 'totalChildren' | 'isInactiveForPeriod'>;
 
 export interface LocalItem {
     id?: string;

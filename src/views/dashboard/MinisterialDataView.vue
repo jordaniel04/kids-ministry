@@ -85,6 +85,7 @@
                             <tr>
                                 <th scope="col" class="text-left">Nombre de la Iglesia</th>
                                 <th scope="col" class="text-left">Nombre del Líder</th>
+                                <th scope="col" class="text-center">Estado</th>
                                 <th scope="col" class="text-center">Total Maestras</th>
                                 <th scope="col" class="text-center">Total Niños</th>
                                 <th scope="col" class="text-center">Niños Convertidos</th>
@@ -98,9 +99,27 @@
                             </tr>
                         </thead>
                         <tbody>
-                            <tr v-for="(church, index) in churchesWithLatestData" :key="church.name">
+                            <tr
+                                v-for="(church, index) in churchesWithLatestData"
+                                :key="church.name"
+                                :class="{ 'church-inactive-row': church.latestData.isInactiveForPeriod }"
+                            >
                                 <td>{{ church.name }}</td>
                                 <td>{{ church.leaderName }}</td>
+                                <td class="text-center">
+                                    <VChip
+                                        v-if="church.latestData.isInactiveForPeriod"
+                                        color="warning"
+                                        size="small"
+                                        variant="tonal"
+                                    >Inactiva</VChip>
+                                    <VChip
+                                        v-else
+                                        color="success"
+                                        size="small"
+                                        variant="tonal"
+                                    >Activa</VChip>
+                                </td>
                                 <td class="text-center">{{ church.latestData.totalTeachers }}</td>
                                 <td class="text-center">{{ church.latestData.totalChildren }}</td>
                                 <td class="text-center">{{ church.latestData.convertedChildren }}</td>
@@ -241,6 +260,15 @@
                                         </div>
                                     </div>
                                 </div>
+
+                                <!-- Iglesias Inactivas -->
+                                <div v-if="inactiveChurchesCount > 0" class="d-flex align-center mb-4">
+                                    <VIcon color="warning" class="me-2">mdi-domain-off</VIcon>
+                                    <div>
+                                        <div class="text-caption">Iglesias Inactivas</div>
+                                        <div class="text-h6 text-warning">{{ inactiveChurchesCount }}</div>
+                                    </div>
+                                </div>
                             </VCol>
                         </VRow>
                     </VCardText>
@@ -249,9 +277,23 @@
                 <!-- Cards de Iglesias -->
                 <VRow>
                     <VCol v-for="(church, index) in churchesWithLatestData" :key="church.name" cols="12">
-                        <VCard>
+                        <VCard :class="{ 'church-inactive-card': church.latestData.isInactiveForPeriod }">
                             <VCardTitle>{{ church.name }}</VCardTitle>
                             <VCardSubtitle>{{ church.leaderName }}</VCardSubtitle>
+                            <div class="px-4 pb-1">
+                                <VChip
+                                    v-if="church.latestData.isInactiveForPeriod"
+                                    color="warning"
+                                    size="small"
+                                    variant="tonal"
+                                >Inactiva</VChip>
+                                <VChip
+                                    v-else
+                                    color="success"
+                                    size="small"
+                                    variant="tonal"
+                                >Activa</VChip>
+                            </div>
 
                             <!-- Resumen -->
                             <VCardText>
@@ -426,6 +468,15 @@
                                 </div>
                             </div>
                         </VCol>
+                        <VCol v-if="inactiveChurchesCount > 0" cols="12" sm="6" md="3">
+                            <div class="d-flex align-center mb-2">
+                                <VIcon color="warning" class="me-2">mdi-domain-off</VIcon>
+                                <div>
+                                    <div class="text-caption">Iglesias Inactivas</div>
+                                    <div class="text-h6 text-warning">{{ inactiveChurchesCount }}</div>
+                                </div>
+                            </div>
+                        </VCol>
                     </VRow>
                 </VCardText>
             </VCard>
@@ -575,6 +626,7 @@ const EMPTY_MINISTERIAL_DATA = {
     sacramentsGraduates: 0,
     rescueClubChildren: 0,
     discipleshipGraduates: 0,
+    isInactiveForPeriod: false,
 };
 
 const getLatestMinisterialData = (church: Church) => {
@@ -594,7 +646,7 @@ const churchesWithLatestData = computed(() =>
     }))
 );
 
-// Totales computados en un solo loop
+// Totales computados en un solo loop (se excluyen iglesias inactivas)
 const totals = computed(() => {
   const acc = {
     totalTeachers: 0,
@@ -609,7 +661,7 @@ const totals = computed(() => {
   };
   for (const church of churches.value) {
     const d = church.ministerialData?.[0];
-    if (!d) continue;
+    if (!d || d.isInactiveForPeriod) continue;
     acc.totalTeachers += d.totalTeachers || 0;
     acc.totalChildren += d.totalChildren || 0;
     acc.convertedChildren += d.convertedChildren || 0;
@@ -622,6 +674,10 @@ const totals = computed(() => {
   }
   return acc;
 });
+
+const inactiveChurchesCount = computed(() =>
+    churches.value.filter(c => c.ministerialData?.[0]?.isInactiveForPeriod).length
+);
 
 const loadActivePeriod = async () => {
     const periodsRef = collection(db, COLLECTIONS.REPORT_PERIODS);
@@ -982,15 +1038,19 @@ const processDistrictConfirmation = async () => {
     
     confirming.value = true;
     try {
-        // Verificar que todas las iglesias tengan datos ministeriales
+        // Verificar que todas las iglesias activas tengan datos ministeriales
         const churchesWithoutData = churches.value.filter(
-            church => !church.ministerialData || !church.ministerialData.length
+            church => !church.ministerialData?.[0]?.isInactiveForPeriod &&
+                      (!church.ministerialData || !church.ministerialData.length)
         );
 
         if (churchesWithoutData.length > 0) {
-            alert('Todas las iglesias deben tener datos ministeriales antes de confirmar');
+            alert('Todas las iglesias activas deben tener datos ministeriales antes de confirmar');
             return;
         }
+
+        const activeChurches = churches.value.filter(c => !c.ministerialData?.[0]?.isInactiveForPeriod);
+        const inactiveCount = churches.value.length - activeChurches.length;
 
         // Crear confirmación del distrito
         await addDoc(collection(db, COLLECTIONS.DISTRICT_CONFIRMATIONS), {
@@ -999,23 +1059,24 @@ const processDistrictConfirmation = async () => {
             confirmedAt: Timestamp.now(),
             confirmedBy: authStore.user.id,
             churchesCount: churches.value.length,
-            totalTeachers: churches.value.reduce((sum: number, church) => 
+            inactiveChurchesCount: inactiveCount,
+            totalTeachers: activeChurches.reduce((sum: number, church) =>
                 sum + (church.ministerialData?.[0]?.totalTeachers || 0), 0),
-            totalChildren: churches.value.reduce((sum: number, church) => 
+            totalChildren: activeChurches.reduce((sum: number, church) =>
                 sum + (church.ministerialData?.[0]?.totalChildren || 0), 0),
-            convertedChildren: churches.value.reduce((sum: number, church) => 
+            convertedChildren: activeChurches.reduce((sum: number, church) =>
                 sum + (church.ministerialData?.[0]?.convertedChildren || 0), 0),
-            memberChildren: churches.value.reduce((sum: number, church) => 
+            memberChildren: activeChurches.reduce((sum: number, church) =>
                 sum + (church.ministerialData?.[0]?.memberChildren || 0), 0),
-            nonRepentantChildren: churches.value.reduce((sum: number, church) => 
+            nonRepentantChildren: activeChurches.reduce((sum: number, church) =>
                 sum + (church.ministerialData?.[0]?.nonRepentantChildren || 0), 0),
-            baptizedChildren: churches.value.reduce((sum: number, church) => 
+            baptizedChildren: activeChurches.reduce((sum: number, church) =>
                 sum + (church.ministerialData?.[0]?.baptizedChildren || 0), 0),
-            consolidatedGraduates: churches.value.reduce((sum: number, church) => 
+            consolidatedGraduates: activeChurches.reduce((sum: number, church) =>
                 sum + (church.ministerialData?.[0]?.consolidatedGraduates || 0), 0),
-            sacramentsGraduates: churches.value.reduce((sum: number, church) => 
+            sacramentsGraduates: activeChurches.reduce((sum: number, church) =>
                 sum + (church.ministerialData?.[0]?.sacramentsGraduates || 0), 0),
-            discipleshipGraduates: churches.value.reduce((sum: number, church) => 
+            discipleshipGraduates: activeChurches.reduce((sum: number, church) =>
                 sum + (church.ministerialData?.[0]?.discipleshipGraduates || 0), 0)
         });
 
@@ -1031,6 +1092,7 @@ const processDistrictConfirmation = async () => {
                 confirmedBy: authStore.user!.id,
                 churchName: church.name,
                 leaderName: church.leaderName,
+                isInactive: church.ministerialData[0]?.isInactiveForPeriod ?? false,
                 ministerialData: church.ministerialData[0]
             });
         });
@@ -1074,6 +1136,16 @@ const processDistrictConfirmation = async () => {
 
 .cursor-pointer {
     cursor: pointer;
+}
+
+.church-inactive-row td {
+    opacity: 0.55;
+    font-style: italic;
+}
+
+.church-inactive-card {
+    opacity: 0.65;
+    border-left: 3px solid rgb(var(--v-theme-warning)) !important;
 }
 
 .district-name {
