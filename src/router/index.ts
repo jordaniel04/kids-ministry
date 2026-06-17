@@ -75,6 +75,24 @@ const routes: Array<RouteRecordRaw> = [
     name: 'report-matrix',
     component: () => import('../views/admin/ReportMatrixView.vue'),
     meta: { requiresAuth: true, requiresAdmin: true }
+  },
+  {
+    path: '/admin/training-modules',
+    name: 'training-modules',
+    component: () => import('../views/admin/TrainingModulesView.vue'),
+    meta: { requiresAuth: true, requiresAdmin: true }
+  },
+  {
+    path: '/admin/training-enrollments',
+    name: 'training-enrollments',
+    component: () => import('../views/admin/TrainingEnrollmentsView.vue'),
+    meta: { requiresAuth: true, requiresAdmin: true }
+  },
+  {
+    path: '/training-progress',
+    name: 'training-progress',
+    component: () => import('../views/dashboard/TrainingProgressView.vue'),
+    meta: { requiresAuth: true }
   }
 ];
 

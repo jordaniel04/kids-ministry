@@ -165,6 +165,66 @@
           </VCard>
         </VCol>
 
+        <VCol v-if="isAdmin || isSecretary" cols="12" sm="12" md="4">
+          <VCard
+            class="mx-auto mb-4"
+            color="surface-variant"
+            max-width="100%"
+            @click="goToTrainingModules"
+          >
+            <VCardTitle class="d-flex align-center">
+              <VIcon class="me-2">mdi-book-education</VIcon>
+              Módulos de Formación
+            </VCardTitle>
+            <VCardSubtitle>Gestiona la ruta de formación y sus módulos</VCardSubtitle>
+            <template v-slot:actions>
+              <VBtn variant="text" @click="goToTrainingModules">
+                Ver Módulos
+              </VBtn>
+            </template>
+          </VCard>
+        </VCol>
+
+        <VCol v-if="isAdmin || isSecretary" cols="12" sm="12" md="4">
+          <VCard
+            class="mx-auto mb-4"
+            color="surface-variant"
+            max-width="100%"
+            @click="goToTrainingEnrollments"
+          >
+            <VCardTitle class="d-flex align-center">
+              <VIcon class="me-2">mdi-certificate</VIcon>
+              Inscripciones y Certificados
+            </VCardTitle>
+            <VCardSubtitle>Registra notas, estadísticas y genera certificados</VCardSubtitle>
+            <template v-slot:actions>
+              <VBtn variant="text" @click="goToTrainingEnrollments">
+                Ver Inscripciones
+              </VBtn>
+            </template>
+          </VCard>
+        </VCol>
+
+        <VCol v-if="isLeader" cols="12" sm="12" md="4">
+          <VCard
+            class="mx-auto mb-4"
+            color="surface-variant"
+            max-width="100%"
+            @click="goToTrainingProgress"
+          >
+            <VCardTitle class="d-flex align-center">
+              <VIcon class="me-2">mdi-school</VIcon>
+              Ruta de Formación
+            </VCardTitle>
+            <VCardSubtitle>Ver módulos, notas y certificados de tu distrito</VCardSubtitle>
+            <template v-slot:actions>
+              <VBtn variant="text" @click="goToTrainingProgress">
+                Ver Progreso
+              </VBtn>
+            </template>
+          </VCard>
+        </VCol>
+
         <VCol v-if="isLeader" cols="12" sm="12" md="4">
           <VCard
             class="mx-auto mb-4"
@@ -354,6 +414,18 @@ const goToBirthdayList = () => {
 
 const goToLeadersList = () => {
   router.push("/leaders-list");
+};
+
+const goToTrainingModules = () => {
+  router.push("/admin/training-modules");
+};
+
+const goToTrainingEnrollments = () => {
+  router.push("/admin/training-enrollments");
+};
+
+const goToTrainingProgress = () => {
+  router.push("/training-progress");
 };
 
 const handleLogout = async () => {
