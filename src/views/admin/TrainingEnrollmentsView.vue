@@ -2,83 +2,66 @@
     <div class="d-flex flex-column" style="min-height: 100vh;">
         <NavigationBar class="z-10" />
         <VContainer class="flex-grow-1">
-            <div class="d-flex justify-space-between align-center mb-4">
-                <div>
-                    <h1>Graduaciones</h1>
-                    <p class="text-body-2 text-medium-emphasis">
-                        Cada graduación asocia un módulo a una fecha y registra los participantes con sus notas.
-                    </p>
+
+            <!-- Vista: lista de módulos -->
+            <template v-if="!selectedModule">
+                <div class="d-flex justify-space-between align-center mb-4">
+                    <div>
+                        <h1>Inscripciones y Certificados</h1>
+                        <p class="text-body-2 text-medium-emphasis">Selecciona un módulo para gestionar sus grupos y participantes.</p>
+                    </div>
                 </div>
-                <VBtn color="primary" prepend-icon="mdi-plus" @click="openCreateGradDialog">
-                    Nueva Graduación
-                </VBtn>
-            </div>
+                <VProgressLinear v-if="loading" indeterminate color="primary" class="mb-4" />
+                <VAlert v-if="!loading && modules.length === 0" type="info" variant="tonal">
+                    No hay módulos de formación creados aún.
+                </VAlert>
+                <VRow>
+                    <VCol cols="12" sm="6" md="4" v-for="mod in modules" :key="mod.id">
+                        <VCard hover @click="selectModule(mod)">
+                            <VCardText>
+                                <div class="d-flex align-center gap-2 mb-2">
+                                    <VChip color="primary" size="small" variant="tonal">{{ mod.order }}</VChip>
+                                    <span class="text-h6 font-weight-bold">{{ mod.name }}</span>
+                                </div>
+                                <div class="text-caption text-medium-emphasis">
+                                    <VIcon size="13" class="me-1">mdi-account-group</VIcon>
+                                    {{ enrollmentCountsByModule[mod.id] ?? 0 }} participantes registrados
+                                </div>
+                            </VCardText>
+                            <VCardActions class="pt-0">
+                                <VBtn variant="tonal" color="primary" size="small" append-icon="mdi-arrow-right">
+                                    Ver participantes
+                                </VBtn>
+                            </VCardActions>
+                        </VCard>
+                    </VCol>
+                </VRow>
+            </template>
 
-            <!-- Lista de graduaciones -->
-            <VRow v-if="!selectedGraduation">
-                <VCol cols="12" v-if="loading">
-                    <VProgressLinear indeterminate color="primary" />
-                </VCol>
-
-                <VCol cols="12" v-if="!loading && graduations.length === 0">
-                    <VCard class="text-center pa-8">
-                        <VIcon size="64" color="grey-lighten-2">mdi-school-outline</VIcon>
-                        <p class="text-h6 text-grey mt-3">No hay graduaciones registradas</p>
-                        <p class="text-body-2 text-grey-darken-1">Crea una nueva para registrar participantes</p>
-                    </VCard>
-                </VCol>
-
-                <VCol cols="12" sm="6" md="4" v-for="grad in graduations" :key="grad.id">
-                    <VCard hover @click="selectGraduation(grad)">
-                        <VCardTitle class="text-body-1 font-weight-bold">{{ grad.moduleName }}</VCardTitle>
-                        <VCardSubtitle>
-                            <VIcon size="14" class="me-1">mdi-calendar</VIcon>
-                            {{ formatDate(grad.graduationDate) }}
-                        </VCardSubtitle>
-                        <VCardText v-if="grad.description" class="text-caption text-medium-emphasis pt-0">
-                            {{ grad.description }}
-                        </VCardText>
-                        <VCardActions>
-                            <VChip size="small" color="primary" variant="tonal">
-                                {{ enrollmentCounts[grad.id] ?? '...' }} participantes
-                            </VChip>
-                            <VSpacer />
-                            <VBtn icon size="small" variant="text" color="primary" @click.stop="openEditGradDialog(grad)">
-                                <VIcon>mdi-pencil</VIcon>
-                            </VBtn>
-                            <VBtn icon size="small" variant="text" color="error" @click.stop="confirmDeleteGrad(grad)">
-                                <VIcon>mdi-delete</VIcon>
-                            </VBtn>
-                        </VCardActions>
-                    </VCard>
-                </VCol>
-            </VRow>
-
-            <!-- Vista de detalle de graduación -->
-            <template v-if="selectedGraduation">
+            <!-- Vista: detalle del módulo -->
+            <template v-if="selectedModule">
                 <div class="d-flex align-center gap-2 mb-4">
-                    <VBtn variant="text" prepend-icon="mdi-arrow-left" @click="selectedGraduation = null">
-                        Volver
+                    <VBtn variant="text" icon @click="selectedModule = null; groupsMeta = []">
+                        <VIcon>mdi-arrow-left</VIcon>
+                        <VTooltip activator="parent">Volver a módulos</VTooltip>
                     </VBtn>
                     <VDivider vertical class="mx-1" />
                     <div>
-                        <h2 class="text-h6">{{ selectedGraduation.moduleName }}</h2>
-                        <p class="text-caption text-medium-emphasis">
-                            Graduación: {{ formatDate(selectedGraduation.graduationDate) }}
-                        </p>
+                        <h2 class="text-h6">{{ selectedModule.name }}</h2>
+                        <p class="text-caption text-medium-emphasis">Módulo {{ selectedModule.order }}</p>
                     </div>
                     <VSpacer />
-                    <VBtn color="primary" prepend-icon="mdi-plus" size="small" @click="openCreateEnrollDialog">
-                        Agregar Participante
+                    <VBtn color="primary" prepend-icon="mdi-plus" size="small" @click="openGroupDialog()">
+                        Nuevo Grupo
                     </VBtn>
-                    <VBtn color="error" prepend-icon="mdi-file-pdf-box" size="small" variant="tonal" @click="exportPdf">
+                    <VBtn color="secondary" prepend-icon="mdi-file-pdf-box" size="small" variant="tonal" @click="exportPdf">
                         Exportar PDF
                     </VBtn>
                 </div>
 
                 <!-- Resumen rápido -->
                 <VRow class="mb-4">
-                    <VCol cols="6" sm="3" v-for="stat in generalStats" :key="stat.label">
+                    <VCol cols="6" sm="2" v-for="stat in generalStats" :key="stat.label">
                         <VCard variant="tonal" :color="stat.color">
                             <VCardText class="text-center pa-3">
                                 <VIcon :icon="stat.icon" size="24" class="mb-1" />
@@ -89,7 +72,7 @@
                     </VCol>
                 </VRow>
 
-                <!-- Buscador y tabla -->
+                <!-- Tabs -->
                 <VCard>
                     <VCardText>
                         <VTabs v-model="activeTab" class="mb-4">
@@ -109,71 +92,124 @@
                                     v-model="searchEnrollments"
                                     prepend-inner-icon="mdi-magnify"
                                     label="Buscar participante"
-                                    single-line
-                                    hide-details
-                                    density="compact"
-                                    class="mb-3"
-                                    style="max-width: 300px;"
+                                    single-line hide-details density="compact"
+                                    class="mb-4" style="max-width: 300px;"
                                 />
-                                <VDataTable
-                                    :headers="enrollmentHeaders"
-                                    :items="enrollments"
-                                    :loading="loadingEnrollments"
-                                    :search="searchEnrollments"
-                                >
-                                    <template #[`item.grade`]="{ item }">
-                                        <span :class="item.passed ? 'text-success font-weight-bold' : 'text-error'">
-                                            {{ item.grade }}
-                                        </span>
-                                    </template>
-                                    <template #[`item.passed`]="{ item }">
-                                        <VChip :color="item.passed ? 'success' : 'error'" size="small" variant="tonal">
-                                            {{ item.passed ? 'Aprobado' : 'Reprobado' }}
+
+                                <div v-if="loadingEnrollments" class="text-center py-8">
+                                    <VProgressCircular indeterminate color="primary" />
+                                </div>
+
+                                <div v-else-if="groups.length === 0" class="text-center text-medium-emphasis py-8">
+                                    No hay grupos registrados en este módulo. Crea un nuevo grupo.
+                                </div>
+
+                                <!-- Grupos -->
+                                <div v-for="group in groups" :key="group.key" class="mb-6">
+                                    <div class="d-flex align-center gap-2 mb-2">
+                                        <VIcon size="16" color="primary">mdi-calendar-check</VIcon>
+                                        <span class="text-subtitle-1 font-weight-bold">{{ group.groupName }}</span>
+                                        <span class="text-caption text-medium-emphasis">— {{ formatDate(group.graduationDate) }}</span>
+                                        <VChip :color="group.level === 'nacional' ? 'purple' : 'teal'" size="x-small" variant="tonal">
+                                            {{ group.level === 'nacional' ? 'Nacional' : 'Distrital' }}
                                         </VChip>
-                                    </template>
-                                    <template #[`item.actions`]="{ item }">
-                                        <div class="d-flex gap-1">
-                                            <VBtn icon color="primary" size="x-small" variant="tonal" @click="openEditEnrollDialog(item)">
-                                                <VIcon>mdi-pencil</VIcon>
-                                            </VBtn>
-                                            <VBtn
-                                                icon
-                                                :color="item.passed ? 'success' : 'grey'"
-                                                size="x-small"
-                                                variant="tonal"
-                                                :disabled="!item.passed || generatingCert === item.id"
-                                                :loading="generatingCert === item.id"
-                                                @click="downloadCertificate(item)"
-                                            >
-                                                <VIcon>mdi-certificate</VIcon>
-                                                <VTooltip activator="parent" location="top">
-                                                    {{ item.passed ? 'Descargar certificado' : 'Solo aprobados' }}
-                                                </VTooltip>
-                                            </VBtn>
-                                            <VBtn icon color="error" size="x-small" variant="tonal" @click="confirmDeleteEnroll(item)">
-                                                <VIcon>mdi-delete</VIcon>
-                                            </VBtn>
-                                        </div>
-                                    </template>
-                                </VDataTable>
+                                        <VSpacer />
+                                        <VChip size="x-small" color="primary" variant="tonal">{{ group.enrollments.length }} personas</VChip>
+                                        <VBtn size="x-small" color="primary" variant="tonal" prepend-icon="mdi-account-plus"
+                                            @click="openEnrollDialog(group)">
+                                            Agregar
+                                        </VBtn>
+                                        <VBtn icon size="x-small" color="primary" variant="text" @click="openGroupDialog(group)">
+                                            <VIcon size="16">mdi-pencil</VIcon>
+                                            <VTooltip activator="parent">Editar grupo</VTooltip>
+                                        </VBtn>
+                                        <VBtn icon size="x-small" color="error" variant="text" @click="confirmDeleteGroup(group)">
+                                            <VIcon size="16">mdi-delete</VIcon>
+                                            <VTooltip activator="parent">Eliminar grupo y participantes</VTooltip>
+                                        </VBtn>
+                                    </div>
+
+                                    <div v-if="group.enrollments.length === 0" class="text-caption text-medium-emphasis ms-6 mb-2">
+                                        Sin participantes en este grupo aún.
+                                    </div>
+
+                                    <VTable v-else density="compact">
+                                        <thead>
+                                            <tr>
+                                                <th>Nombre</th>
+                                                <th>Rol</th>
+                                                <th>Distrito</th>
+                                                <th class="text-center">Nota</th>
+                                                <th class="text-center">Estado</th>
+                                                <th class="text-center">Acciones</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr v-for="item in group.enrollments" :key="item.id">
+                                                <td>{{ item.participantName }}</td>
+                                                <td>{{ item.participantRole }}</td>
+                                                <td>{{ item.districtName }}</td>
+                                                <td class="text-center">
+                                                    <span :class="gradeClass(item.gradeStatus)">{{ item.grade }}</span>
+                                                    <VBtn
+                                                        v-if="item.attempts?.length"
+                                                        icon
+                                                        size="x-small"
+                                                        variant="text"
+                                                        color="grey"
+                                                        class="ms-1"
+                                                    >
+                                                        <VIcon size="14">mdi-history</VIcon>
+                                                        <VTooltip activator="parent" location="top" max-width="280">
+                                                            <div class="text-caption font-weight-bold mb-1">Intentos anteriores</div>
+                                                            <div
+                                                                v-for="(a, i) in item.attempts"
+                                                                :key="i"
+                                                                class="text-caption"
+                                                            >
+                                                                {{ a.groupName }} — {{ formatDate(a.graduationDate) }}: <strong>{{ a.grade }}</strong> ({{ statusLabel(a.gradeStatus) }})
+                                                            </div>
+                                                        </VTooltip>
+                                                    </VBtn>
+                                                </td>
+                                                <td class="text-center">
+                                                    <VChip :color="statusColor(item.gradeStatus)" size="x-small" variant="tonal">
+                                                        {{ statusLabel(item.gradeStatus) }}
+                                                    </VChip>
+                                                </td>
+                                                <td class="text-center">
+                                                    <div class="d-flex gap-1 justify-center">
+                                                        <VBtn icon color="primary" size="x-small" variant="tonal"
+                                                            @click="openEditEnrollDialog(item, group)">
+                                                            <VIcon>mdi-pencil</VIcon>
+                                                        </VBtn>
+                                                        <VBtn icon :color="item.passed ? 'success' : 'grey'" size="x-small"
+                                                            variant="tonal" :disabled="!item.passed || generatingCert === item.id"
+                                                            :loading="generatingCert === item.id"
+                                                            @click="downloadCertificate(item)">
+                                                            <VIcon>mdi-certificate</VIcon>
+                                                            <VTooltip activator="parent" location="top">
+                                                                {{ item.passed ? 'Descargar certificado' : 'Solo aprobados' }}
+                                                            </VTooltip>
+                                                        </VBtn>
+                                                        <VBtn icon color="error" size="x-small" variant="tonal"
+                                                            @click="confirmDeleteEnroll(item)">
+                                                            <VIcon>mdi-delete</VIcon>
+                                                        </VBtn>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        </tbody>
+                                    </VTable>
+                                </div>
                             </VWindowItem>
 
                             <VWindowItem value="estadisticas">
-                                <VDataTable
-                                    :headers="districtStatsHeaders"
-                                    :items="districtStats"
-                                    density="compact"
-                                    hide-default-footer
-                                    :items-per-page="-1"
-                                >
+                                <VDataTable :headers="districtStatsHeaders" :items="districtStats"
+                                    density="compact" hide-default-footer :items-per-page="-1">
                                     <template #[`item.passRate`]="{ item }">
-                                        <VProgressLinear
-                                            :model-value="item.passRate"
-                                            color="success"
-                                            bg-color="error-lighten-4"
-                                            height="16"
-                                            rounded
-                                        >
+                                        <VProgressLinear :model-value="item.passRate" color="success"
+                                            bg-color="error-lighten-4" height="16" rounded>
                                             <template #default="{ value }">
                                                 <span class="text-caption font-weight-bold">{{ Math.round(value) }}%</span>
                                             </template>
@@ -186,61 +222,48 @@
                 </VCard>
             </template>
 
-            <!-- Dialog crear/editar Graduación -->
-            <VDialog v-model="gradDialog" max-width="500px" persistent>
+            <!-- Dialog crear/editar Grupo -->
+            <VDialog v-model="groupDialog" max-width="480px" persistent>
                 <VCard>
-                    <VCardTitle>{{ gradDialogTitle }}</VCardTitle>
+                    <VCardTitle>{{ editingGroup ? 'Editar Grupo' : 'Nuevo Grupo' }}</VCardTitle>
                     <VCardText>
                         <VContainer>
                             <VRow>
                                 <VCol cols="12">
-                                    <VSelect
-                                        v-model="editedGrad.moduleId"
-                                        :items="moduleOptions"
-                                        item-title="label"
-                                        item-value="value"
-                                        label="Módulo"
-                                        required
-                                        @update:model-value="onModuleSelect"
-                                    />
+                                    <VTextField v-model="editedGroup.groupName" label="Nombre del grupo"
+                                        placeholder="Ej: Primera Promoción Lima" required />
                                 </VCol>
-                                <VCol cols="12">
-                                    <VTextField
-                                        v-model="editedGrad.graduationDate"
-                                        label="Fecha de Graduación"
-                                        type="date"
-                                        required
-                                    />
+                                <VCol cols="12" sm="6">
+                                    <VTextField v-model="editedGroup.graduationDateStr" label="Fecha de graduación"
+                                        type="date" required />
                                 </VCol>
-                                <VCol cols="12">
-                                    <VTextField
-                                        v-model="editedGrad.description"
-                                        label="Descripción (opcional)"
-                                        placeholder="Ej: Primera promoción distrital"
-                                    />
+                                <VCol cols="12" sm="6">
+                                    <VSelect v-model="editedGroup.level" :items="levelOptions"
+                                        item-title="title" item-value="value"
+                                        label="Nivel de capacitación" required />
                                 </VCol>
                             </VRow>
                         </VContainer>
                     </VCardText>
                     <VCardActions>
                         <VSpacer />
-                        <VBtn color="error" variant="text" @click="gradDialog = false">Cancelar</VBtn>
-                        <VBtn
-                            color="success"
-                            variant="text"
-                            @click="saveGraduation"
-                            :disabled="!editedGrad.moduleId || !editedGrad.graduationDate"
-                        >
+                        <VBtn color="error" variant="text" @click="groupDialog = false">Cancelar</VBtn>
+                        <VBtn color="success" variant="text" @click="saveGroup"
+                            :disabled="!editedGroup.groupName || !editedGroup.graduationDateStr">
                             Guardar
                         </VBtn>
                     </VCardActions>
                 </VCard>
             </VDialog>
 
-            <!-- Dialog crear/editar Participante -->
-            <VDialog v-model="enrollDialog" max-width="600px" persistent>
+            <!-- Dialog agregar/editar Participante -->
+            <VDialog v-model="enrollDialog" max-width="580px" persistent>
                 <VCard>
-                    <VCardTitle>{{ enrollDialogTitle }}</VCardTitle>
+                    <VCardTitle>{{ editingEnrollId ? 'Editar Participante' : 'Agregar Participante' }}</VCardTitle>
+                    <VCardSubtitle v-if="currentGroup" class="pb-0">
+                        <VIcon size="14" class="me-1">mdi-calendar-check</VIcon>
+                        {{ currentGroup.groupName }} — {{ formatDate(currentGroup.graduationDate) }}
+                    </VCardSubtitle>
                     <VCardText>
                         <VContainer>
                             <VRow>
@@ -248,85 +271,58 @@
                                     <VTextField
                                         v-model="editedEnroll.participantName"
                                         label="Nombre Completo"
-                                        :rules="[v => !!v || 'Requerido']"
+                                        :loading="loadingLeaderName"
+                                        :hint="loadingLeaderName ? 'Buscando líder distrital...' : (editedEnroll.participantRole === 'Líder Distrital' && editedEnroll.districtId ? 'Autocompletado desde el registro del líder' : '')"
+                                        persistent-hint
                                         required
                                     />
                                 </VCol>
                                 <VCol cols="12" sm="6">
-                                    <VSelect
-                                        v-model="editedEnroll.participantRole"
-                                        :items="roleOptions"
-                                        label="Rol"
-                                        required
-                                    />
+                                    <VSelect v-model="editedEnroll.participantRole" :items="roleOptions" label="Rol" required />
+                                </VCol>
+                                <VCol cols="12">
+                                    <VSelect v-model="editedEnroll.districtId" :items="districtOptions"
+                                        item-title="label" item-value="value" label="Distrito" required
+                                        @update:model-value="onDistrictChange" />
                                 </VCol>
                                 <VCol cols="12" sm="6">
-                                    <VSelect
-                                        v-model="editedEnroll.level"
-                                        :items="levelOptions"
-                                        label="Nivel"
-                                        required
-                                    />
+                                    <VTextField v-model.number="editedEnroll.grade" label="Nota (0–20)"
+                                        type="number" required />
                                 </VCol>
-                                <VCol cols="12" sm="6">
-                                    <VSelect
-                                        v-model="editedEnroll.districtId"
-                                        :items="districtOptions"
-                                        item-title="label"
-                                        item-value="value"
-                                        label="Distrito"
-                                        required
-                                        @update:model-value="onDistrictChange"
-                                    />
-                                </VCol>
-                                <VCol cols="12" sm="6" v-if="editedEnroll.level === 'local'">
-                                    <VTextField
-                                        v-model="editedEnroll.churchName"
-                                        label="Iglesia"
-                                        placeholder="Nombre de la iglesia"
-                                    />
-                                </VCol>
-                                <VCol cols="12" sm="4">
-                                    <VTextField
-                                        v-model.number="editedEnroll.grade"
-                                        label="Nota (0–20)"
-                                        type="number"
-                                        :rules="[v => (v >= 0 && v <= 20) || 'Debe ser 0–20']"
-                                        required
-                                    />
-                                </VCol>
-                                <VCol cols="12" sm="4" class="d-flex align-center">
-                                    <VChip
-                                        :color="editedEnroll.grade >= 14 ? 'success' : 'error'"
-                                        variant="tonal"
-                                    >
-                                        {{ editedEnroll.grade >= 14 ? 'Aprobado' : 'Reprobado' }}
+                                <VCol cols="12" sm="6" class="d-flex align-center">
+                                    <VChip :color="statusColor(previewStatus)" variant="tonal">
+                                        {{ statusLabel(previewStatus) }}
                                     </VChip>
                                 </VCol>
                             </VRow>
                         </VContainer>
                     </VCardText>
+                    <VCardText v-if="enrollError" class="pt-0">
+                        <VAlert type="error" variant="tonal" density="compact">{{ enrollError }}</VAlert>
+                    </VCardText>
                     <VCardActions>
                         <VSpacer />
                         <VBtn color="error" variant="text" @click="enrollDialog = false">Cancelar</VBtn>
-                        <VBtn color="success" variant="text" @click="saveEnrollment">Guardar</VBtn>
+                        <VBtn color="success" variant="text" @click="saveEnrollment"
+                            :loading="saving" :disabled="!isEnrollValid || saving">
+                            Guardar
+                        </VBtn>
                     </VCardActions>
                 </VCard>
             </VDialog>
 
-            <!-- Dialog eliminar graduación -->
-            <VDialog v-model="deleteGradDialog" max-width="400px">
+            <!-- Dialog eliminar grupo -->
+            <VDialog v-model="deleteGroupDialog" max-width="420px">
                 <VCard>
                     <VCardTitle>Confirmar eliminación</VCardTitle>
                     <VCardText>
-                        ¿Eliminar la graduación <strong>{{ gradToDelete?.moduleName }}</strong>
-                        del {{ formatDate(gradToDelete?.graduationDate) }}?
-                        Se eliminarán también todos los participantes registrados.
+                        ¿Eliminar el grupo <strong>{{ groupToDelete?.groupName }}</strong>?
+                        Se eliminarán también todos sus participantes.
                     </VCardText>
                     <VCardActions>
                         <VSpacer />
-                        <VBtn color="grey" variant="text" @click="deleteGradDialog = false">Cancelar</VBtn>
-                        <VBtn color="error" variant="text" @click="deleteGraduation">Eliminar</VBtn>
+                        <VBtn color="grey" variant="text" @click="deleteGroupDialog = false">Cancelar</VBtn>
+                        <VBtn color="error" variant="text" @click="deleteGroup" :loading="saving">Eliminar</VBtn>
                     </VCardActions>
                 </VCard>
             </VDialog>
@@ -348,166 +344,224 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed, watch, onMounted } from 'vue';
 import {
-    collection, doc, getDocs, addDoc, updateDoc, deleteDoc,
+    collection, doc, getDocs, getDoc, addDoc, updateDoc, deleteDoc,
     Timestamp, query, where, orderBy, writeBatch
 } from 'firebase/firestore';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { db } from '../../firebase/config';
 import type { TrainingModule } from '../../types/TrainingModule';
-import type { TrainingGraduation } from '../../types/TrainingGraduation';
-import type { TrainingEnrollment, ParticipantRole, ParticipantLevel } from '../../types/TrainingEnrollment';
+import type { TrainingEnrollment, ParticipantRole, GradeStatus, EnrollmentAttempt } from '../../types/TrainingEnrollment';
+import { getGradeStatus } from '../../types/TrainingEnrollment';
+import type { TrainingGroup, GroupLevel } from '../../types/TrainingGroup';
 import type { District } from '../../types/District';
 import { useCertificateGenerator } from '../../composables/useCertificateGenerator';
 import NavigationBar from '../../components/NavigationBar.vue';
 
 const { generateCertificate } = useCertificateGenerator();
 
-// State
+// ── State ──────────────────────────────────────────────────────────────────
 const modules = ref<TrainingModule[]>([]);
-const graduations = ref<TrainingGraduation[]>([]);
 const enrollments = ref<TrainingEnrollment[]>([]);
 const districts = ref<District[]>([]);
-const selectedGraduation = ref<TrainingGraduation | null>(null);
-const enrollmentCounts = ref<Record<string, number>>({});
+const selectedModule = ref<TrainingModule | null>(null);
+const enrollmentCountsByModule = ref<Record<string, number>>({});
 
 const loading = ref(true);
 const loadingEnrollments = ref(false);
+const saving = ref(false);
 const activeTab = ref('lista');
 const searchEnrollments = ref('');
 const generatingCert = ref<string | null>(null);
 
-// Graduation dialog
-const gradDialog = ref(false);
-const deleteGradDialog = ref(false);
-const editingGradId = ref<string | null>(null);
-const gradToDelete = ref<TrainingGraduation | null>(null);
-
-interface EditedGrad {
-    moduleId: string;
-    moduleName: string;
-    graduationDate: string;
-    description: string;
-}
-const editedGrad = ref<EditedGrad>({ moduleId: '', moduleName: '', graduationDate: '', description: '' });
+// Group dialog
+const groupDialog = ref(false);
+const editingGroup = ref<GroupRow | null>(null);
+interface EditedGroup { groupName: string; graduationDateStr: string; level: GroupLevel }
+const editedGroup = ref<EditedGroup>({ groupName: '', graduationDateStr: '', level: 'distrital' });
 
 // Enrollment dialog
 const enrollDialog = ref(false);
-const deleteEnrollDialog = ref(false);
+const enrollError = ref('');
 const editingEnrollId = ref<string | null>(null);
-const enrollToDelete = ref<TrainingEnrollment | null>(null);
+const currentGroup = ref<GroupRow | null>(null);
 
 interface EditedEnroll {
     participantName: string;
     participantRole: ParticipantRole;
-    level: ParticipantLevel;
     districtId: string;
     districtName: string;
-    churchName: string;
     grade: number;
 }
 const defaultEnroll: EditedEnroll = {
-    participantName: '', participantRole: 'Líder Distrital', level: 'distrital',
-    districtId: '', districtName: '', churchName: '', grade: 0,
+    participantName: '', participantRole: 'Líder Distrital',
+    districtId: '', districtName: '', grade: 0,
 };
 const editedEnroll = ref<EditedEnroll>({ ...defaultEnroll });
 
-// Computed
-const moduleOptions = computed(() =>
-    modules.value.map(m => ({ label: `#${m.order} – ${m.name}`, value: m.id }))
-);
+// Autofill state
+const loadingLeaderName = ref(false);
+
+// Delete dialogs
+const deleteGroupDialog = ref(false);
+const groupToDelete = ref<GroupRow | null>(null);
+const deleteEnrollDialog = ref(false);
+const enrollToDelete = ref<TrainingEnrollment | null>(null);
+
+// ── Types ──────────────────────────────────────────────────────────────────
+interface GroupRow {
+    key: string;
+    groupName: string;
+    graduationDate: Timestamp;
+    level: GroupLevel;
+    firestoreId?: string;
+    enrollments: TrainingEnrollment[];
+}
+
+// ── Options ────────────────────────────────────────────────────────────────
+const roleOptions: ParticipantRole[] = ['Pastor', 'Líder Distrital', 'Equipo Distrital', 'Líder Local', 'Equipo Local'];
+const levelOptions = [
+    { title: 'Nacional', value: 'nacional' as GroupLevel },
+    { title: 'Distrital', value: 'distrital' as GroupLevel },
+];
 
 const districtOptions = computed(() =>
     districts.value.map(d => ({
-        label: `Distrito ${d.districtNumber} – ${d.location}`,
+        label: `Área ${d.areaNumber} · Distrito ${d.districtNumber} – ${d.location}`,
         value: d.id,
     }))
 );
 
-const roleOptions: ParticipantRole[] = ['Líder Distrital', 'Equipo Distrital', 'Líder Local', 'Equipo Local'];
-const levelOptions = [
-    { title: 'Distrital', value: 'distrital' },
-    { title: 'Local', value: 'local' },
-];
+// ── Computed ───────────────────────────────────────────────────────────────
+const previewStatus = computed(() => getGradeStatus(editedEnroll.value.grade));
 
-const gradDialogTitle = computed(() => editingGradId.value ? 'Editar Graduación' : 'Nueva Graduación');
-const enrollDialogTitle = computed(() => editingEnrollId.value ? 'Editar Participante' : 'Agregar Participante');
+const isEnrollValid = computed(() =>
+    !!editedEnroll.value.participantName && !!editedEnroll.value.districtId
+);
+
+const filteredEnrollments = computed(() => {
+    if (!searchEnrollments.value) return enrollments.value;
+    const q = searchEnrollments.value.toLowerCase();
+    return enrollments.value.filter(e =>
+        e.participantName.toLowerCase().includes(q) ||
+        e.districtName.toLowerCase().includes(q) ||
+        e.groupName.toLowerCase().includes(q)
+    );
+});
+
+const groups = computed((): GroupRow[] => {
+    const map = new Map<string, GroupRow>();
+    for (const e of filteredEnrollments.value) {
+        const key = `${e.groupName}__${e.graduationDate?.toMillis?.() ?? 0}`;
+        if (!map.has(key)) {
+            const meta = groupsMeta.value.find(g => g.key === key);
+            map.set(key, { key, groupName: e.groupName, graduationDate: e.graduationDate, level: meta?.level ?? 'distrital', enrollments: [] });
+        }
+        map.get(key)!.enrollments.push(e);
+    }
+    // Also include groups that exist but have 0 visible enrollments after search
+    // (we track them separately via groupsMeta)
+    for (const g of groupsMeta.value) {
+        if (!map.has(g.key)) {
+            map.set(g.key, { ...g, enrollments: [] });
+        }
+    }
+    return [...map.values()].sort((a, b) => {
+        const ta = a.graduationDate?.toMillis?.() ?? 0;
+        const tb = b.graduationDate?.toMillis?.() ?? 0;
+        return tb - ta;
+    });
+});
+
+// Groups persisted in Firestore
+const groupsMeta = ref<GroupRow[]>([]);
 
 const generalStats = computed(() => {
     const total = enrollments.value.length;
     const passed = enrollments.value.filter(e => e.passed).length;
+    const observed = enrollments.value.filter(e => e.gradeStatus === 'observado').length;
+    const nationalGroupKeys = new Set(groupsMeta.value.filter(g => g.level === 'nacional').map(g => g.key));
+    const nacional = enrollments.value.filter(e => nationalGroupKeys.has(`${e.groupName}__${e.graduationDate?.toMillis?.() ?? 0}`)).length;
+    const distrital = total - nacional;
     const avg = total > 0
         ? (enrollments.value.reduce((s, e) => s + e.grade, 0) / total).toFixed(1)
         : '0';
     return [
         { label: 'Total', value: total, color: 'primary', icon: 'mdi-account-group' },
         { label: 'Aprobados', value: passed, color: 'success', icon: 'mdi-check-circle' },
-        { label: 'Reprobados', value: total - passed, color: 'error', icon: 'mdi-close-circle' },
+        { label: 'Observados', value: observed, color: 'warning', icon: 'mdi-eye-circle' },
+        { label: 'Nacional', value: nacional, color: 'purple', icon: 'mdi-earth' },
+        { label: 'Distrital', value: distrital, color: 'teal', icon: 'mdi-map-marker' },
         { label: 'Promedio', value: avg, color: 'info', icon: 'mdi-calculator' },
     ];
 });
 
 const districtStats = computed(() => {
-    const map = new Map<string, { name: string; total: number; passed: number; grades: number[] }>();
+    const map = new Map<string, { name: string; total: number; passed: number; observed: number; grades: number[] }>();
     for (const e of enrollments.value) {
-        if (!map.has(e.districtId)) map.set(e.districtId, { name: e.districtName, total: 0, passed: 0, grades: [] });
+        if (!map.has(e.districtId)) map.set(e.districtId, { name: e.districtName, total: 0, passed: 0, observed: 0, grades: [] });
         const d = map.get(e.districtId)!;
         d.total++;
         if (e.passed) d.passed++;
+        if (e.gradeStatus === 'observado') d.observed++;
         d.grades.push(e.grade);
     }
     return [...map.entries()].map(([, v]) => ({
         districtName: v.name,
         total: v.total,
         passed: v.passed,
-        failed: v.total - v.passed,
+        observed: v.observed,
+        failed: v.total - v.passed - v.observed,
         average: v.grades.length > 0 ? (v.grades.reduce((a, b) => a + b, 0) / v.grades.length).toFixed(1) : '0',
         passRate: v.total > 0 ? (v.passed / v.total) * 100 : 0,
     })).sort((a, b) => a.districtName.localeCompare(b.districtName));
 });
 
-// Headers
-const enrollmentHeaders = [
-    { title: 'Nombre', key: 'participantName', align: 'start' as const },
-    { title: 'Rol', key: 'participantRole', align: 'start' as const },
-    { title: 'Nivel', key: 'level', align: 'center' as const },
-    { title: 'Distrito', key: 'districtName', align: 'start' as const },
-    { title: 'Iglesia', key: 'churchName', align: 'start' as const },
-    { title: 'Nota', key: 'grade', align: 'center' as const },
-    { title: 'Estado', key: 'passed', align: 'center' as const },
-    { title: 'Acciones', key: 'actions', align: 'center' as const, sortable: false },
-];
-
 const districtStatsHeaders = [
     { title: 'Distrito', key: 'districtName', align: 'start' as const },
     { title: 'Total', key: 'total', align: 'center' as const },
     { title: 'Aprobados', key: 'passed', align: 'center' as const },
+    { title: 'Observados', key: 'observed', align: 'center' as const },
     { title: 'Reprobados', key: 'failed', align: 'center' as const },
     { title: 'Promedio', key: 'average', align: 'center' as const },
     { title: '% Aprobación', key: 'passRate', align: 'center' as const, width: '180px' },
 ];
 
-// Functions
+// ── Helpers ────────────────────────────────────────────────────────────────
+function statusColor(status: GradeStatus | undefined): string {
+    if (status === 'aprobado') return 'success';
+    if (status === 'observado') return 'warning';
+    return 'error';
+}
+function statusLabel(status: GradeStatus | undefined): string {
+    if (status === 'aprobado') return 'Aprobado';
+    if (status === 'observado') return 'Observado';
+    return 'Reprobado';
+}
+function gradeClass(status: GradeStatus | undefined): string {
+    if (status === 'aprobado') return 'text-success font-weight-bold';
+    if (status === 'observado') return 'text-warning font-weight-bold';
+    return 'text-error';
+}
 function formatDate(ts: Timestamp | null | undefined): string {
     if (!ts) return '';
     return ts.toDate().toLocaleDateString('es-PE', { day: '2-digit', month: '2-digit', year: 'numeric' });
 }
 
+// ── Data loading ───────────────────────────────────────────────────────────
 async function loadData() {
     loading.value = true;
     try {
-        const [modSnap, gradSnap, distSnap] = await Promise.all([
+        const [modSnap, distSnap] = await Promise.all([
             getDocs(query(collection(db, 'training_modules'), orderBy('order'))),
-            getDocs(query(collection(db, 'training_graduations'), orderBy('graduationDate', 'desc'))),
-            getDocs(query(collection(db, 'districts'), orderBy('districtNumber'))),
+            getDocs(collection(db, 'districts')),
         ]);
         modules.value = modSnap.docs.map(d => ({ id: d.id, ...d.data() } as TrainingModule));
-        graduations.value = gradSnap.docs.map(d => ({ id: d.id, ...d.data() } as TrainingGraduation));
-        districts.value = distSnap.docs.map(d => ({ id: d.id, ...d.data() } as District));
-
-        // Cargar conteos de participantes
+        districts.value = distSnap.docs
+            .map(d => ({ id: d.id, ...d.data() } as District))
+            .sort((a, b) => a.areaNumber - b.areaNumber || a.districtNumber - b.districtNumber);
         await loadEnrollmentCounts();
     } catch (e) {
         console.error(e);
@@ -518,34 +572,120 @@ async function loadData() {
 
 async function loadEnrollmentCounts() {
     const counts: Record<string, number> = {};
-    for (const grad of graduations.value) {
-        const snap = await getDocs(query(
-            collection(db, 'training_enrollments'),
-            where('graduationId', '==', grad.id)
-        ));
-        counts[grad.id] = snap.size;
+    for (const mod of modules.value) {
+        const snap = await getDocs(query(collection(db, 'training_enrollments'), where('moduleId', '==', mod.id)));
+        counts[mod.id] = snap.size;
     }
-    enrollmentCounts.value = counts;
+    enrollmentCountsByModule.value = counts;
 }
 
-async function selectGraduation(grad: TrainingGraduation) {
-    selectedGraduation.value = grad;
+async function selectModule(mod: TrainingModule) {
+    selectedModule.value = mod;
     activeTab.value = 'lista';
     searchEnrollments.value = '';
-    await loadEnrollments(grad.id);
+    groupsMeta.value = [];
+    await Promise.all([loadGroups(mod.id), loadEnrollments(mod.id)]);
 }
 
-async function loadEnrollments(gradId: string) {
+async function loadGroups(moduleId: string) {
+    const snap = await getDocs(query(
+        collection(db, 'training_groups'),
+        where('moduleId', '==', moduleId)
+    ));
+    const fsGroups = snap.docs.map(d => ({ id: d.id, ...d.data() } as TrainingGroup));
+    groupsMeta.value = fsGroups.map(g => ({
+        key: `${g.groupName}__${g.graduationDate?.toMillis?.() ?? 0}`,
+        groupName: g.groupName,
+        graduationDate: g.graduationDate,
+        level: g.level ?? 'distrital',
+        firestoreId: g.id,
+        enrollments: [],
+    } as GroupRow));
+}
+
+async function loadEnrollments(moduleId: string) {
     loadingEnrollments.value = true;
     try {
-        const q = query(
-            collection(db, 'training_enrollments'),
-            where('graduationId', '==', gradId)
-        );
-        const snap = await getDocs(q);
-        enrollments.value = snap.docs
+        const snap = await getDocs(query(collection(db, 'training_enrollments'), where('moduleId', '==', moduleId)));
+        const loaded = snap.docs
             .map(d => ({ id: d.id, ...d.data() } as TrainingEnrollment))
-            .sort((a, b) => a.districtName.localeCompare(b.districtName) || a.participantName.localeCompare(b.participantName));
+            .map(e => ({ ...e, gradeStatus: e.gradeStatus ?? getGradeStatus(e.grade) }));
+
+        const repairs: Promise<void>[] = [];
+        const toRemoveIds = new Set<string>();
+
+        // Paso 1: consolidar documentos duplicados (misma persona + distrito, docs separados)
+        // Agrupa por clave nombre+distrito para encontrar duplicados
+        const byPerson = new Map<string, TrainingEnrollment[]>();
+        for (const e of loaded) {
+            const key = `${e.participantName.trim().toLowerCase()}__${e.districtId}`;
+            if (!byPerson.has(key)) byPerson.set(key, []);
+            byPerson.get(key)!.push(e);
+        }
+        for (const group of byPerson.values()) {
+            if (group.length < 2) continue;
+            // Ordenar por fecha de graduación: el más reciente es el principal
+            group.sort((a, b) => (b.graduationDate?.toMillis() ?? 0) - (a.graduationDate?.toMillis() ?? 0));
+            const [primary, ...duplicates] = group;
+            // Construir historial completo: attempts existentes del principal + los duplicados como attempts
+            const mergedAttempts: EnrollmentAttempt[] = [...(primary.attempts ?? [])];
+            for (const dup of duplicates) {
+                mergedAttempts.push({
+                    groupName: dup.groupName,
+                    graduationDate: dup.graduationDate,
+                    grade: dup.grade,
+                    gradeStatus: dup.gradeStatus,
+                });
+                // Agregar también los attempts que el duplicado ya tuviera
+                for (const a of dup.attempts ?? []) mergedAttempts.push(a);
+                toRemoveIds.add(dup.id);
+            }
+            // Ordenar historial del más antiguo al más reciente
+            mergedAttempts.sort((a, b) => (a.graduationDate?.toMillis() ?? 0) - (b.graduationDate?.toMillis() ?? 0));
+            primary.attempts = mergedAttempts;
+            repairs.push(updateDoc(doc(db, 'training_enrollments', primary.id), {
+                attempts: mergedAttempts, updatedAt: Timestamp.now(),
+            }));
+            for (const dup of duplicates) {
+                repairs.push(deleteDoc(doc(db, 'training_enrollments', dup.id)));
+            }
+        }
+
+        // Paso 2: reparar attempts invertidos (attempt más reciente que el principal)
+        const surviving = loaded.filter(e => !toRemoveIds.has(e.id));
+        for (const e of surviving) {
+            if (!e.attempts?.length) continue;
+            const latestAttempt = e.attempts.reduce((best, a) =>
+                (a.graduationDate?.toMillis() ?? 0) > (best.graduationDate?.toMillis() ?? 0) ? a : best
+            );
+            if ((latestAttempt.graduationDate?.toMillis() ?? 0) > (e.graduationDate?.toMillis() ?? 0)) {
+                const currentAsAttempt: EnrollmentAttempt = {
+                    groupName: e.groupName,
+                    graduationDate: e.graduationDate,
+                    grade: e.grade,
+                    gradeStatus: e.gradeStatus,
+                };
+                const remainingAttempts = e.attempts
+                    .filter(a => a !== latestAttempt)
+                    .concat(currentAsAttempt)
+                    .sort((a, b) => (a.graduationDate?.toMillis() ?? 0) - (b.graduationDate?.toMillis() ?? 0));
+                const fixedData = {
+                    groupName: latestAttempt.groupName,
+                    graduationDate: latestAttempt.graduationDate,
+                    grade: latestAttempt.grade,
+                    passed: latestAttempt.gradeStatus === 'aprobado',
+                    gradeStatus: latestAttempt.gradeStatus,
+                    attempts: remainingAttempts,
+                    updatedAt: Timestamp.now(),
+                };
+                Object.assign(e, fixedData);
+                repairs.push(updateDoc(doc(db, 'training_enrollments', e.id), fixedData));
+            }
+        }
+
+        if (repairs.length > 0) await Promise.all(repairs);
+
+        enrollments.value = surviving.sort((a, b) => a.participantName.localeCompare(b.participantName));
     } catch (e) {
         console.error(e);
         alert('Error al cargar participantes');
@@ -554,134 +694,260 @@ async function loadEnrollments(gradId: string) {
     }
 }
 
-// Graduation CRUD
-function openCreateGradDialog() {
-    editingGradId.value = null;
-    editedGrad.value = { moduleId: '', moduleName: '', graduationDate: '', description: '' };
-    gradDialog.value = true;
+// ── Group CRUD ─────────────────────────────────────────────────────────────
+function openGroupDialog(group?: GroupRow) {
+    editingGroup.value = group ?? null;
+    editedGroup.value = group
+        ? { groupName: group.groupName, graduationDateStr: group.graduationDate.toDate().toISOString().split('T')[0], level: group.level ?? 'distrital' }
+        : { groupName: '', graduationDateStr: new Date().toISOString().split('T')[0], level: 'distrital' };
+    groupDialog.value = true;
 }
 
-function openEditGradDialog(grad: TrainingGraduation) {
-    editingGradId.value = grad.id;
-    editedGrad.value = {
-        moduleId: grad.moduleId,
-        moduleName: grad.moduleName,
-        graduationDate: grad.graduationDate.toDate().toISOString().split('T')[0],
-        description: grad.description || '',
-    };
-    gradDialog.value = true;
-}
-
-function onModuleSelect(moduleId: string) {
-    const mod = modules.value.find(m => m.id === moduleId);
-    editedGrad.value.moduleName = mod?.name ?? '';
-}
-
-async function saveGraduation() {
+async function saveGroup() {
+    if (!editedGroup.value.groupName || !editedGroup.value.graduationDateStr || !selectedModule.value) return;
+    const newDate = Timestamp.fromDate(new Date(editedGroup.value.graduationDateStr));
+    const newName = editedGroup.value.groupName;
+    saving.value = true;
     try {
-        const data = {
-            moduleId: editedGrad.value.moduleId,
-            moduleName: editedGrad.value.moduleName,
-            graduationDate: Timestamp.fromDate(new Date(editedGrad.value.graduationDate)),
-            description: editedGrad.value.description || null,
-        };
-        if (editingGradId.value) {
-            await updateDoc(doc(db, 'training_graduations', editingGradId.value), data);
+        if (editingGroup.value) {
+            // Update Firestore group doc
+            if (editingGroup.value.firestoreId) {
+                await updateDoc(doc(db, 'training_groups', editingGroup.value.firestoreId), {
+                    groupName: newName, graduationDate: newDate, level: editedGroup.value.level,
+                });
+            }
+            // Update all enrollments in batch (incluyendo attempts que referencien el grupo renombrado)
+            const oldName = editingGroup.value!.groupName;
+            const oldMillis = editingGroup.value!.graduationDate?.toMillis();
+            const toUpdate = enrollments.value.filter(e =>
+                e.groupName === oldName &&
+                e.graduationDate?.toMillis() === oldMillis
+            );
+            // También actualizar enrollments cuyo historial (attempts) referencia al grupo renombrado
+            const withOldAttempt = enrollments.value.filter(e =>
+                !toUpdate.includes(e) &&
+                e.attempts?.some(a => a.groupName === oldName && a.graduationDate?.toMillis() === oldMillis)
+            );
+            if (toUpdate.length > 0 || withOldAttempt.length > 0) {
+                const batch = writeBatch(db);
+                toUpdate.forEach(e => batch.update(doc(db, 'training_enrollments', e.id), {
+                    groupName: newName, graduationDate: newDate, updatedAt: Timestamp.now(),
+                }));
+                withOldAttempt.forEach(e => {
+                    const updatedAttempts = (e.attempts ?? []).map(a =>
+                        a.groupName === oldName && a.graduationDate?.toMillis() === oldMillis
+                            ? { ...a, groupName: newName, graduationDate: newDate }
+                            : a
+                    );
+                    batch.update(doc(db, 'training_enrollments', e.id), {
+                        attempts: updatedAttempts, updatedAt: Timestamp.now(),
+                    });
+                });
+                await batch.commit();
+            }
+            await Promise.all([loadGroups(selectedModule.value.id), loadEnrollments(selectedModule.value.id)]);
         } else {
-            await addDoc(collection(db, 'training_graduations'), { ...data, createdAt: Timestamp.now() });
+            // Create new group in Firestore
+            const key = `${newName}__${newDate.toMillis()}`;
+            if (!groupsMeta.value.find(g => g.key === key)) {
+                const ref = await addDoc(collection(db, 'training_groups'), {
+                    moduleId: selectedModule.value.id,
+                    groupName: newName,
+                    graduationDate: newDate,
+                    level: editedGroup.value.level,
+                    createdAt: Timestamp.now(),
+                });
+                groupsMeta.value.push({ key, groupName: newName, graduationDate: newDate, level: editedGroup.value.level, firestoreId: ref.id, enrollments: [] });
+            }
         }
-        gradDialog.value = false;
-        await loadData();
-    } catch (e) {
-        console.error(e);
-        alert('Error al guardar la graduación');
-    }
-}
-
-function confirmDeleteGrad(grad: TrainingGraduation) {
-    gradToDelete.value = grad;
-    deleteGradDialog.value = true;
-}
-
-async function deleteGraduation() {
-    if (!gradToDelete.value) return;
-    try {
-        // Eliminar participantes en batch
-        const enrollSnap = await getDocs(query(
-            collection(db, 'training_enrollments'),
-            where('graduationId', '==', gradToDelete.value.id)
-        ));
-        const batch = writeBatch(db);
-        enrollSnap.docs.forEach(d => batch.delete(d.ref));
-        batch.delete(doc(db, 'training_graduations', gradToDelete.value.id));
-        await batch.commit();
-        await loadData();
-    } catch (e) {
-        console.error(e);
-        alert('Error al eliminar la graduación');
     } finally {
-        deleteGradDialog.value = false;
-        gradToDelete.value = null;
+        saving.value = false;
+    }
+    groupDialog.value = false;
+}
+
+function confirmDeleteGroup(group: GroupRow) {
+    groupToDelete.value = group;
+    deleteGroupDialog.value = true;
+}
+
+async function deleteGroup() {
+    if (!groupToDelete.value || !selectedModule.value) return;
+    saving.value = true;
+    try {
+        const toDelete = enrollments.value.filter(e =>
+            e.groupName === groupToDelete.value!.groupName &&
+            e.graduationDate?.toMillis() === groupToDelete.value!.graduationDate?.toMillis()
+        );
+        const batch = writeBatch(db);
+        toDelete.forEach(e => batch.delete(doc(db, 'training_enrollments', e.id)));
+        if (groupToDelete.value.firestoreId) {
+            batch.delete(doc(db, 'training_groups', groupToDelete.value.firestoreId));
+        }
+        await batch.commit();
+        groupsMeta.value = groupsMeta.value.filter(g => g.key !== groupToDelete.value!.key);
+        await loadEnrollments(selectedModule.value.id);
+        enrollmentCountsByModule.value[selectedModule.value.id] = enrollments.value.length;
+    } catch (e) {
+        console.error(e);
+        alert('Error al eliminar el grupo');
+    } finally {
+        saving.value = false;
+        deleteGroupDialog.value = false;
+        groupToDelete.value = null;
     }
 }
 
-// Enrollment CRUD
-function openCreateEnrollDialog() {
+// ── Enrollment CRUD ────────────────────────────────────────────────────────
+function openEnrollDialog(group: GroupRow) {
     editingEnrollId.value = null;
+    currentGroup.value = group;
     editedEnroll.value = { ...defaultEnroll };
+    enrollError.value = '';
     enrollDialog.value = true;
 }
 
-function openEditEnrollDialog(item: TrainingEnrollment) {
+function openEditEnrollDialog(item: TrainingEnrollment, group: GroupRow) {
     editingEnrollId.value = item.id;
+    currentGroup.value = group;
     editedEnroll.value = {
         participantName: item.participantName,
         participantRole: item.participantRole,
-        level: item.level,
         districtId: item.districtId,
         districtName: item.districtName,
-        churchName: item.churchName || '',
         grade: item.grade,
     };
+    enrollError.value = '';
     enrollDialog.value = true;
 }
 
-function onDistrictChange(id: string) {
+watch(() => editedEnroll.value.participantRole, (newRole) => {
+    if (newRole === 'Líder Distrital' && editedEnroll.value.districtId && !editingEnrollId.value) {
+        onDistrictChange(editedEnroll.value.districtId);
+    }
+});
+
+async function onDistrictChange(id: string) {
     const d = districts.value.find(d => d.id === id);
-    editedEnroll.value.districtName = d ? `Distrito ${d.districtNumber} – ${d.location}` : '';
+    editedEnroll.value.districtName = d
+        ? `Área ${d.areaNumber} · Distrito ${d.districtNumber} – ${d.location}`
+        : '';
+
+    if (editedEnroll.value.participantRole === 'Líder Distrital' && id) {
+        loadingLeaderName.value = true;
+        try {
+            const dlSnap = await getDocs(query(
+                collection(db, 'district_leaders'),
+                where('districtId', '==', id),
+                where('isActive', '==', true),
+            ));
+            if (!dlSnap.empty) {
+                const userId = dlSnap.docs[0].data().userId as string;
+                const leaderDoc = await getDoc(doc(db, 'leaders', userId));
+                if (leaderDoc.exists()) {
+                    const pd = leaderDoc.data().personalData ?? {};
+                    const fullName = [pd.firstName, pd.lastName].filter(Boolean).join(' ');
+                    if (fullName) editedEnroll.value.participantName = fullName;
+                }
+            }
+        } catch (e) {
+            console.error('Error al buscar líder distrital:', e);
+        } finally {
+            loadingLeaderName.value = false;
+        }
+    }
 }
 
 async function saveEnrollment() {
-    if (!selectedGraduation.value || !editedEnroll.value.participantName || !editedEnroll.value.districtId) {
-        alert('Complete los campos requeridos');
-        return;
+    if (!selectedModule.value || !currentGroup.value) return;
+    enrollError.value = '';
+
+    // Validar: máximo 2 Líderes Distritales por distrito por módulo (pareja de líderes)
+    if (editedEnroll.value.participantRole === 'Líder Distrital') {
+        const existingLeaders = enrollments.value.filter(e =>
+            e.participantRole === 'Líder Distrital' &&
+            e.districtId === editedEnroll.value.districtId &&
+            e.id !== editingEnrollId.value
+        );
+        if (existingLeaders.length >= 2) {
+            enrollError.value = 'Ya hay 2 líderes distritales registrados para este distrito en este módulo.';
+            return;
+        }
     }
+
+    saving.value = true;
     try {
         const grade = Number(editedEnroll.value.grade);
+        const gradeStatus = getGradeStatus(grade);
         const data = {
-            graduationId: selectedGraduation.value.id,
-            moduleId: selectedGraduation.value.moduleId,
-            participantName: editedEnroll.value.participantName,
+            moduleId: selectedModule.value.id,
+            groupName: currentGroup.value.groupName,
+            graduationDate: currentGroup.value.graduationDate,
+            participantName: editedEnroll.value.participantName.trim().toUpperCase(),
             participantRole: editedEnroll.value.participantRole,
-            level: editedEnroll.value.level,
             districtId: editedEnroll.value.districtId,
             districtName: editedEnroll.value.districtName,
-            churchName: editedEnroll.value.churchName || null,
             grade,
-            passed: grade >= 14,
+            passed: gradeStatus === 'aprobado',
+            gradeStatus,
             updatedAt: Timestamp.now(),
         };
+
         if (editingEnrollId.value) {
+            // Edición directa del registro existente
             await updateDoc(doc(db, 'training_enrollments', editingEnrollId.value), data);
         } else {
-            await addDoc(collection(db, 'training_enrollments'), { ...data, enrolledAt: Timestamp.now() });
+            // Nuevo registro: detectar si el participante ya existe en este módulo
+            const existingByName = enrollments.value.find(e =>
+                e.participantName.trim().toLowerCase() === editedEnroll.value.participantName.trim().toLowerCase() &&
+                e.districtId === editedEnroll.value.districtId
+            );
+
+            if (existingByName) {
+                const newGroupDate = currentGroup.value.graduationDate.toMillis();
+                const existingDate = existingByName.graduationDate?.toMillis() ?? 0;
+
+                if (newGroupDate > existingDate) {
+                    // El nuevo grupo es más reciente → es un reintento: archivar el anterior y actualizar
+                    const previousAttempt: EnrollmentAttempt = {
+                        groupName: existingByName.groupName,
+                        graduationDate: existingByName.graduationDate,
+                        grade: existingByName.grade,
+                        gradeStatus: existingByName.gradeStatus,
+                    };
+                    const updatedAttempts = [...(existingByName.attempts ?? []), previousAttempt];
+                    await updateDoc(doc(db, 'training_enrollments', existingByName.id), {
+                        ...data,
+                        attempts: updatedAttempts,
+                    });
+                } else {
+                    // El grupo nuevo es igual o anterior al existente → archivar este nuevo intento
+                    // en el historial del enrollment principal (que sigue siendo el más reciente)
+                    const olderAttempt: EnrollmentAttempt = {
+                        groupName: currentGroup.value.groupName,
+                        graduationDate: currentGroup.value.graduationDate,
+                        grade,
+                        gradeStatus,
+                    };
+                    const updatedAttempts = [...(existingByName.attempts ?? []), olderAttempt];
+                    await updateDoc(doc(db, 'training_enrollments', existingByName.id), {
+                        attempts: updatedAttempts,
+                        updatedAt: Timestamp.now(),
+                    });
+                }
+            } else {
+                await addDoc(collection(db, 'training_enrollments'), { ...data, enrolledAt: Timestamp.now() });
+            }
         }
+
         enrollDialog.value = false;
-        await loadEnrollments(selectedGraduation.value.id);
-        enrollmentCounts.value[selectedGraduation.value.id] = enrollments.value.length;
+        await loadEnrollments(selectedModule.value.id);
+        enrollmentCountsByModule.value[selectedModule.value.id] = enrollments.value.length;
     } catch (e) {
         console.error(e);
         alert('Error al guardar');
+    } finally {
+        saving.value = false;
     }
 }
 
@@ -691,10 +957,11 @@ function confirmDeleteEnroll(item: TrainingEnrollment) {
 }
 
 async function deleteEnrollment() {
-    if (!enrollToDelete.value || !selectedGraduation.value) return;
+    if (!enrollToDelete.value || !selectedModule.value) return;
     try {
         await deleteDoc(doc(db, 'training_enrollments', enrollToDelete.value.id));
-        await loadEnrollments(selectedGraduation.value.id);
+        await loadEnrollments(selectedModule.value.id);
+        enrollmentCountsByModule.value[selectedModule.value.id] = enrollments.value.length;
     } catch (e) {
         console.error(e);
         alert('Error al eliminar');
@@ -704,17 +971,15 @@ async function deleteEnrollment() {
     }
 }
 
-// Certificate
+// ── Certificate ────────────────────────────────────────────────────────────
 async function downloadCertificate(enrollment: TrainingEnrollment) {
-    if (!selectedGraduation.value) return;
-    const module = modules.value.find(m => m.id === selectedGraduation.value!.moduleId);
-    if (!module?.certificateImageUrl) {
-        alert('Este módulo no tiene plantilla de certificado configurada. Configúrala en Módulos de Formación.');
+    if (!selectedModule.value?.certificateImageUrl) {
+        alert('Este módulo no tiene plantilla de certificado configurada.');
         return;
     }
     generatingCert.value = enrollment.id;
     try {
-        await generateCertificate(enrollment, module, selectedGraduation.value.graduationDate);
+        await generateCertificate(enrollment, selectedModule.value, enrollment.graduationDate);
     } catch (e) {
         console.error(e);
         alert('Error al generar el certificado. Verifica que la URL de la plantilla sea accesible.');
@@ -723,41 +988,42 @@ async function downloadCertificate(enrollment: TrainingEnrollment) {
     }
 }
 
-// Export PDF
+// ── PDF export ─────────────────────────────────────────────────────────────
 function exportPdf() {
-    if (!selectedGraduation.value) return;
+    if (!selectedModule.value) return;
     const docPdf = new jsPDF({ orientation: 'landscape' });
     docPdf.setFontSize(14);
-    docPdf.text(`Graduación: ${selectedGraduation.value.moduleName}`, 14, 15);
-    docPdf.setFontSize(10);
-    docPdf.text(`Fecha: ${formatDate(selectedGraduation.value.graduationDate)}`, 14, 22);
-
+    docPdf.text(`Módulo: ${selectedModule.value.name}`, 14, 15);
     const total = enrollments.value.length;
     const passed = enrollments.value.filter(e => e.passed).length;
-    docPdf.text(`Total: ${total}  |  Aprobados: ${passed}  |  Reprobados: ${total - passed}`, 14, 29);
+    docPdf.setFontSize(10);
+    docPdf.text(`Total: ${total}  |  Aprobados: ${passed}  |  Reprobados: ${total - passed}`, 14, 22);
 
     autoTable(docPdf, {
-        startY: 35,
-        head: [['Nombre', 'Rol', 'Nivel', 'Distrito', 'Iglesia', 'Nota', 'Estado']],
+        startY: 28,
+        head: [['Grupo', 'Fecha', 'Nombre', 'Rol', 'Distrito', 'Nota', 'Estado']],
         body: enrollments.value.map(e => [
+            e.groupName,
+            formatDate(e.graduationDate),
             e.participantName,
             e.participantRole,
-            e.level === 'distrital' ? 'Distrital' : 'Local',
             e.districtName,
-            e.churchName || '–',
             e.grade,
-            e.passed ? 'Aprobado' : 'Reprobado',
+            statusLabel(e.gradeStatus),
         ]),
         styles: { fontSize: 8 },
         headStyles: { fillColor: [63, 81, 181] },
         didParseCell: (data) => {
             if (data.column.index === 6 && data.section === 'body') {
-                data.cell.styles.textColor = data.cell.raw === 'Aprobado' ? [0, 128, 0] : [200, 0, 0];
+                const v = data.cell.raw;
+                if (v === 'Aprobado') data.cell.styles.textColor = [0, 128, 0];
+                else if (v === 'Observado') data.cell.styles.textColor = [230, 120, 0];
+                else data.cell.styles.textColor = [200, 0, 0];
             }
         },
     });
 
-    docPdf.save(`Graduacion_${selectedGraduation.value.moduleName}_${selectedGraduation.value.graduationDate.toDate().toISOString().split('T')[0]}.pdf`);
+    docPdf.save(`Modulo_${selectedModule.value.name}.pdf`);
 }
 
 onMounted(loadData);

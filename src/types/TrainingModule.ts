@@ -9,10 +9,13 @@ export interface CertificateTextConfig {
     fontColor: string;
 }
 
+export type ModuleType = 'ruta' | 'certificacion';
+
 export interface TrainingModule {
     id: string;
     name: string;
     order: number;
+    moduleType: ModuleType;
     certificateImageUrl: string;
     certificateTextConfig: CertificateTextConfig;
     isActive: boolean;

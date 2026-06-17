@@ -21,6 +21,15 @@
                             <VChip color="primary" size="small" variant="tonal">{{ item.order }}</VChip>
                         </template>
 
+                        <template #[`item.moduleType`]="{ item }">
+                            <VChip
+                                :color="(item.moduleType ?? 'ruta') === 'ruta' ? 'indigo' : 'deep-orange'"
+                                size="small" variant="tonal"
+                            >
+                                {{ (item.moduleType ?? 'ruta') === 'ruta' ? 'Ruta' : 'Certificación' }}
+                            </VChip>
+                        </template>
+
                         <template #[`item.certificateImageUrl`]="{ item }">
                             <div class="d-flex align-center gap-2">
                                 <VChip
@@ -87,7 +96,7 @@
                     <VCardText>
                         <VContainer>
                             <VRow>
-                                <VCol cols="12" sm="8">
+                                <VCol cols="12" sm="6">
                                     <VTextField
                                         v-model="editedItem.name"
                                         label="Nombre del Módulo"
@@ -96,12 +105,22 @@
                                         required
                                     />
                                 </VCol>
-                                <VCol cols="12" sm="4">
+                                <VCol cols="6" sm="3">
                                     <VTextField
                                         v-model.number="editedItem.order"
                                         label="Orden"
                                         type="number"
                                         :rules="[v => v > 0 || 'Debe ser mayor a 0']"
+                                        required
+                                    />
+                                </VCol>
+                                <VCol cols="6" sm="3">
+                                    <VSelect
+                                        v-model="editedItem.moduleType"
+                                        :items="[{ title: 'Ruta de Formación', value: 'ruta' }, { title: 'Certificación', value: 'certificacion' }]"
+                                        item-title="title"
+                                        item-value="value"
+                                        label="Tipo"
                                         required
                                     />
                                 </VCol>
@@ -262,7 +281,7 @@ import {
     Timestamp, orderBy, query
 } from 'firebase/firestore';
 import { db } from '../../firebase/config';
-import type { TrainingModule, CertificateTextConfig } from '../../types/TrainingModule';
+import type { TrainingModule, CertificateTextConfig, ModuleType } from '../../types/TrainingModule';
 import NavigationBar from '../../components/NavigationBar.vue';
 
 const loading = ref(true);
@@ -304,6 +323,7 @@ interface EditedModule {
     id: string;
     name: string;
     order: number;
+    moduleType: ModuleType;
     certificateImageUrl: string;
     certificateStoragePath: string;
     certificateTextConfig: CertificateTextConfig;
@@ -320,6 +340,7 @@ const defaultItem: EditedModule = {
     id: '',
     name: '',
     order: 1,
+    moduleType: 'ruta',
     certificateImageUrl: '',
     certificateStoragePath: '',
     certificateTextConfig: { ...defaultTextConfig },
@@ -331,6 +352,7 @@ const editedItem = ref<EditedModule>({ ...defaultItem, certificateTextConfig: { 
 const headers = [
     { title: '#', key: 'order', align: 'center' as const, width: '60px' },
     { title: 'Módulo', key: 'name', align: 'start' as const },
+    { title: 'Tipo', key: 'moduleType', align: 'center' as const, sortable: false, width: '140px' },
     { title: 'Plantilla', key: 'certificateImageUrl', align: 'start' as const, sortable: false },
     { title: 'Activo', key: 'isActive', align: 'center' as const, sortable: false, width: '100px' },
     { title: 'Acciones', key: 'actions', align: 'center' as const, sortable: false, width: '100px' },
@@ -369,6 +391,7 @@ function editItem(item: TrainingModule) {
         id: item.id,
         name: item.name,
         order: item.order,
+        moduleType: item.moduleType ?? 'ruta',
         certificateImageUrl: item.certificateImageUrl || '',
         certificateStoragePath: '',
         certificateTextConfig: item.certificateTextConfig
@@ -393,6 +416,7 @@ async function saveModule() {
         const data = {
             name: editedItem.value.name,
             order: editedItem.value.order,
+            moduleType: editedItem.value.moduleType,
             certificateImageUrl: editedItem.value.certificateImageUrl,
             certificateTextConfig: { ...editedItem.value.certificateTextConfig },
             isActive: editedItem.value.isActive,

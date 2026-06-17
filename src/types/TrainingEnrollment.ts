@@ -1,26 +1,40 @@
 import { Timestamp } from 'firebase/firestore';
 
-export type ParticipantLevel = 'distrital' | 'local';
-
 export type ParticipantRole =
+    | 'Pastor'
     | 'Líder Distrital'
     | 'Equipo Distrital'
     | 'Líder Local'
     | 'Equipo Local';
 
+export type GradeStatus = 'aprobado' | 'observado' | 'reprobado';
+
+export interface EnrollmentAttempt {
+    groupName: string;
+    graduationDate: Timestamp;
+    grade: number;
+    gradeStatus: GradeStatus;
+}
+
+export function getGradeStatus(grade: number): GradeStatus {
+    if (grade >= 14) return 'aprobado';
+    if (grade >= 11) return 'observado';
+    return 'reprobado';
+}
+
 export interface TrainingEnrollment {
     id: string;
-    graduationId: string;
     moduleId: string;
+    groupName: string;
+    graduationDate: Timestamp;
     participantName: string;
     participantRole: ParticipantRole;
-    level: ParticipantLevel;
     districtId: string;
     districtName: string;
-    churchId?: string;
-    churchName?: string;
     grade: number;
     passed: boolean;
+    gradeStatus: GradeStatus;
     enrolledAt: Timestamp;
     updatedAt: Timestamp;
+    attempts?: EnrollmentAttempt[];
 }

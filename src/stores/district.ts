@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia';
 import { ref, computed } from 'vue';
 import { collection, query, where, getDocs, doc, getDoc, limit } from 'firebase/firestore';
-import { db } from '../firebase/config';
+import { db, auth } from '../firebase/config';
 import type { Church } from '../types/Church';
 import { useAuthStore } from './auth';
 import { COLLECTIONS, CACHE_TTL } from '@/constants';
@@ -29,7 +29,7 @@ export const useDistrictStore = defineStore('district', () => {
             const districtLeadersRef = collection(db, COLLECTIONS.DISTRICT_LEADERS);
             const q = query(
                 districtLeadersRef,
-                where("userId", "==", authStore.user?.id),
+                where("userId", "==", auth.currentUser?.uid ?? authStore.user?.id),
                 where("isActive", "==", true),
                 limit(1)
             );

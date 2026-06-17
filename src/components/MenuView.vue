@@ -243,7 +243,7 @@
               >
                 mdi-account
               </VIcon>
-              Datos Personales
+              Datos del Lider
             </VCardTitle>
             <VCardSubtitle :class="personalDataComplete ? 'text-success' : 'text-warning'">
               {{ personalDataComplete ? 'Información completa' : 'Actualiza tu información personal' }}
