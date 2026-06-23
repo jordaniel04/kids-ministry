@@ -173,15 +173,43 @@
                      SECCIÓN 2: PARTICIPANTES DE MI DISTRITO
                 ══════════════════════════════════════════════════ -->
                 <VCard elevation="2">
-                    <VCardTitle class="text-h6 pa-4 pb-2 d-flex align-center gap-2">
+                    <VCardTitle class="text-h6 pa-4 pb-2 d-flex align-center gap-2 flex-wrap">
                         <VIcon color="teal">mdi-account-group</VIcon>
                         Participantes de Mi Distrito
+                        <VSpacer />
+                        <VBtn
+                            size="small"
+                            color="error"
+                            variant="tonal"
+                            prepend-icon="mdi-account-off"
+                            @click="bajasDialog = true; bajasSearch = ''; bajasConfirmItem = null"
+                        >
+                            Gestionar Bajas
+                            <VChip v-if="inactiveDistrictEnrollments.length > 0" size="x-small" color="error" class="ms-1">
+                                {{ new Set(inactiveDistrictEnrollments.map(e => e.participantName.trim().toLowerCase())).size }}
+                            </VChip>
+                        </VBtn>
                     </VCardTitle>
                     <VCardText class="pa-4 pt-0">
 
                         <div v-if="districtEnrollments.length === 0 && !loading" class="text-medium-emphasis text-body-2 py-4">
                             Aún no hay participantes de tu distrito registrados.
                         </div>
+
+                        <template v-else>
+                            <VTextField
+                                v-model="searchParticipants"
+                                prepend-inner-icon="mdi-magnify"
+                                label="Buscar participante..."
+                                variant="outlined"
+                                density="compact"
+                                hide-details
+                                class="mb-3"
+                            />
+
+                            <div v-if="filteredDistrictEnrollments.length === 0" class="text-medium-emphasis text-body-2 py-4">
+                                No se encontraron participantes con ese nombre.
+                            </div>
 
                         <VExpansionPanels v-else variant="accordion" class="mt-2">
                             <VExpansionPanel
@@ -276,11 +304,111 @@
                                 </VExpansionPanelText>
                             </VExpansionPanel>
                         </VExpansionPanels>
+                        </template>
                     </VCardText>
                 </VCard>
 
             </template>
         </VContainer>
+
+        <!-- Diálogo: Gestionar Bajas -->
+        <VDialog v-model="bajasDialog" max-width="640px" scrollable>
+            <VCard>
+                <VCardTitle class="d-flex align-center gap-2 pa-4 pb-2">
+                    <VIcon color="error">mdi-account-off</VIcon>
+                    Gestionar Bajas de Participantes
+                </VCardTitle>
+                <VCardSubtitle class="px-4 pb-2">
+                    Los dados de baja no aparecen en estadísticas ni en la lista del admin.
+                </VCardSubtitle>
+
+                <VDivider />
+
+                <VCardText class="pa-4">
+                    <VTextField
+                        v-model="bajasSearch"
+                        prepend-inner-icon="mdi-magnify"
+                        label="Buscar participante..."
+                        variant="outlined"
+                        density="compact"
+                        hide-details
+                        class="mb-4"
+                    />
+
+                    <!-- Confirmación inline de baja -->
+                    <VAlert
+                        v-if="bajasConfirmItem"
+                        type="warning"
+                        variant="tonal"
+                        class="mb-4"
+                    >
+                        <div class="text-body-2">
+                            <span v-if="bajasConfirmItem && participantsSummary.find(p => p.name === bajasConfirmItem!.name && p.districtId === bajasConfirmItem!.districtId)?.isActive">
+                                ¿Dar de baja a <strong>{{ bajasConfirmItem.name }}</strong>? Se quitará de todos los módulos y el admin podrá ver la fecha de baja.
+                            </span>
+                            <span v-else>
+                                ¿Reactivar a <strong>{{ bajasConfirmItem.name }}</strong>? Volverá a aparecer en todos los módulos.
+                            </span>
+                        </div>
+                        <div class="d-flex gap-2 mt-3">
+                            <VBtn size="small" color="warning" variant="tonal" :loading="savingBaja"
+                                @click="toggleBaja(participantsSummary.find(p => p.name === bajasConfirmItem!.name && p.districtId === bajasConfirmItem!.districtId)!)">
+                                Confirmar
+                            </VBtn>
+                            <VBtn size="small" variant="text" @click="bajasConfirmItem = null">Cancelar</VBtn>
+                        </div>
+                    </VAlert>
+
+                    <VTable density="compact">
+                        <thead>
+                            <tr>
+                                <th>Nombre</th>
+                                <th>Roles</th>
+                                <th class="text-center">Estado</th>
+                                <th class="text-center">Fecha Baja</th>
+                                <th class="text-center">Acción</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr v-for="p in filteredParticipantsSummary" :key="`${p.name}__${p.districtId}`"
+                                :class="{ 'text-medium-emphasis': !p.isActive }">
+                                <td>{{ p.name }}</td>
+                                <td class="text-caption">{{ p.roles.join(', ') }}</td>
+                                <td class="text-center">
+                                    <VChip :color="p.isActive ? 'success' : 'error'" size="x-small" variant="tonal">
+                                        {{ p.isActive ? 'Activo' : 'De Baja' }}
+                                    </VChip>
+                                </td>
+                                <td class="text-center text-caption">
+                                    {{ p.isActive ? '—' : formatDateTs(p.deactivatedAt) }}
+                                </td>
+                                <td class="text-center">
+                                    <VBtn
+                                        size="x-small"
+                                        :color="p.isActive ? 'error' : 'success'"
+                                        variant="tonal"
+                                        :prepend-icon="p.isActive ? 'mdi-account-off' : 'mdi-account-check'"
+                                        @click="bajasConfirmItem = { name: p.name, districtId: p.districtId }"
+                                    >
+                                        {{ p.isActive ? 'Dar de Baja' : 'Reactivar' }}
+                                    </VBtn>
+                                </td>
+                            </tr>
+                            <tr v-if="filteredParticipantsSummary.length === 0">
+                                <td colspan="5" class="text-center text-medium-emphasis py-4">
+                                    No se encontraron participantes.
+                                </td>
+                            </tr>
+                        </tbody>
+                    </VTable>
+                </VCardText>
+
+                <VCardActions>
+                    <VSpacer />
+                    <VBtn variant="text" @click="bajasDialog = false">Cerrar</VBtn>
+                </VCardActions>
+            </VCard>
+        </VDialog>
     </div>
 </template>
 
@@ -304,9 +432,17 @@ const { generateCertificate } = useCertificateGenerator();
 const loading = ref(true);
 const modules = ref<TrainingModule[]>([]);
 const myEnrollments = ref<TrainingEnrollment[]>([]);        // enrollments de todos los líderes del distrito
-const districtEnrollments = ref<TrainingEnrollment[]>([]);  // todos los de su distrito
+const districtEnrollments = ref<TrainingEnrollment[]>([]);  // todos los de su distrito (activos)
+const inactiveDistrictEnrollments = ref<TrainingEnrollment[]>([]);  // dados de baja
 const districtGroupLevels = ref<Map<string, GroupLevel>>(new Map()); // key -> level from training_groups
 const generatingCert = ref<string | null>(null);
+const searchParticipants = ref('');
+
+// Gestión de bajas
+const bajasDialog = ref(false);
+const bajasSearch = ref('');
+const bajasConfirmItem = ref<{ name: string; districtId: string } | null>(null);
+const savingBaja = ref(false);
 interface LeaderName { normalized: string; display: string; }
 const myLeaderNames = ref<LeaderName[]>([]);  // líderes activos del distrito (principal + pareja)
 
@@ -388,8 +524,17 @@ const certModulesWithMyEnroll = computed(() => {
 });
 
 // ── Distrito ─────────────────────────────────────────────────────────────────
+const filteredDistrictEnrollments = computed(() => {
+    const q = searchParticipants.value.trim().toLowerCase();
+    if (!q) return districtEnrollments.value;
+    return districtEnrollments.value.filter(e =>
+        e.participantName.toLowerCase().includes(q) ||
+        e.participantRole.toLowerCase().includes(q)
+    );
+});
+
 function districtEnrollmentsByModule(moduleId: string): TrainingEnrollment[] {
-    return districtEnrollments.value.filter(e => e.moduleId === moduleId);
+    return filteredDistrictEnrollments.value.filter(e => e.moduleId === moduleId);
 }
 function passedCountInDistrictModule(moduleId: string): number {
     return districtEnrollmentsByModule(moduleId).filter(e => e.passed).length;
@@ -494,11 +639,11 @@ async function loadData() {
 
         const allDistrictEnr = districtEnrSnap.docs
             .map(d => ({ id: d.id, ...d.data() } as TrainingEnrollment))
-            .map(e => ({ ...e, gradeStatus: e.gradeStatus ?? getGradeStatus(e.grade) }));
+            .map(e => ({ ...e, gradeStatus: e.gradeStatus ?? getGradeStatus(e.grade) }))
+            .sort((a, b) => a.participantName.localeCompare(b.participantName));
 
-        districtEnrollments.value = allDistrictEnr.sort((a, b) =>
-            a.participantName.localeCompare(b.participantName)
-        );
+        districtEnrollments.value = allDistrictEnr.filter(e => e.isActive !== false);
+        inactiveDistrictEnrollments.value = allDistrictEnr.filter(e => e.isActive === false);
 
         // Identificar líderes activos del distrito (principal + pareja si existe)
         {
@@ -566,6 +711,92 @@ async function loadData() {
         console.error(e);
     } finally {
         loading.value = false;
+    }
+}
+
+// ── Gestión de bajas ──────────────────────────────────────────────────────
+interface ParticipantSummary {
+    name: string;
+    districtId: string;
+    roles: string[];
+    isActive: boolean;
+    deactivatedAt?: import('firebase/firestore').Timestamp;
+}
+
+const participantsSummary = computed((): ParticipantSummary[] => {
+    const map = new Map<string, ParticipantSummary>();
+    for (const e of [...districtEnrollments.value, ...inactiveDistrictEnrollments.value]) {
+        const key = `${e.participantName.trim().toLowerCase()}__${e.districtId}`;
+        if (!map.has(key)) {
+            map.set(key, {
+                name: e.participantName,
+                districtId: e.districtId,
+                roles: [],
+                isActive: e.isActive !== false,
+                deactivatedAt: e.deactivatedAt,
+            });
+        }
+        const s = map.get(key)!;
+        if (e.isActive === false) {
+            s.isActive = false;
+            if (e.deactivatedAt && (!s.deactivatedAt || e.deactivatedAt.toMillis() > s.deactivatedAt.toMillis())) {
+                s.deactivatedAt = e.deactivatedAt;
+            }
+        }
+        if (!s.roles.includes(e.participantRole)) s.roles.push(e.participantRole);
+    }
+    return [...map.values()].sort((a, b) => a.name.localeCompare(b.name));
+});
+
+const filteredParticipantsSummary = computed(() => {
+    const q = bajasSearch.value.trim().toLowerCase();
+    if (!q) return participantsSummary.value;
+    return participantsSummary.value.filter(p => p.name.toLowerCase().includes(q));
+});
+
+function formatDateTs(ts: import('firebase/firestore').Timestamp | undefined): string {
+    if (!ts) return '—';
+    return ts.toDate().toLocaleDateString('es-PE', { day: '2-digit', month: '2-digit', year: 'numeric' });
+}
+
+async function toggleBaja(participant: ParticipantSummary) {
+    savingBaja.value = true;
+    try {
+        const { writeBatch: wb, doc: fsDoc, Timestamp: FSTimestamp } = await import('firebase/firestore');
+        const batch = wb(db);
+
+        const { deleteField } = await import('firebase/firestore');
+        const allEnrollments = [...districtEnrollments.value, ...inactiveDistrictEnrollments.value];
+        const targets = allEnrollments.filter(
+            e => e.participantName.trim().toLowerCase() === participant.name.trim().toLowerCase() &&
+                 e.districtId === participant.districtId
+        );
+
+        const nowActive = participant.isActive;
+        targets.forEach(e => {
+            if (nowActive) {
+                batch.update(fsDoc(db, 'training_enrollments', e.id), {
+                    isActive: false,
+                    deactivatedAt: FSTimestamp.now(),
+                    updatedAt: FSTimestamp.now(),
+                });
+            } else {
+                batch.update(fsDoc(db, 'training_enrollments', e.id), {
+                    isActive: true,
+                    deactivatedAt: deleteField(),
+                    updatedAt: FSTimestamp.now(),
+                });
+            }
+        });
+
+        await batch.commit();
+        bajasConfirmItem.value = null;
+        await loadData();
+    } catch (e) {
+        console.error(e);
+        alert('Error al actualizar el estado del participante');
+    } finally {
+        savingBaja.value = false;
     }
 }
 

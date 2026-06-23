@@ -37,4 +37,7 @@ export interface TrainingEnrollment {
     enrolledAt: Timestamp;
     updatedAt: Timestamp;
     attempts?: EnrollmentAttempt[];
+    prerequisitePending?: boolean;
+    isActive?: boolean;
+    deactivatedAt?: Timestamp;
 }

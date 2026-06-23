@@ -84,6 +84,11 @@
                                 <VIcon start>mdi-chart-bar</VIcon>
                                 Por Distrito
                             </VTab>
+                            <VTab value="bajas" v-if="inactiveEnrollments.length > 0">
+                                <VIcon start>mdi-account-off</VIcon>
+                                Dados de Baja
+                                <VChip size="x-small" color="error" variant="tonal" class="ms-1">{{ inactiveEnrollments.length }}</VChip>
+                            </VTab>
                         </VTabs>
 
                         <VWindow v-model="activeTab">
@@ -146,7 +151,22 @@
                                         </thead>
                                         <tbody>
                                             <tr v-for="item in group.enrollments" :key="item.id">
-                                                <td>{{ item.participantName }}</td>
+                                                <td>
+                                                    {{ item.participantName }}
+                                                    <VChip
+                                                        v-if="item.prerequisitePending"
+                                                        color="warning"
+                                                        size="x-small"
+                                                        variant="tonal"
+                                                        prepend-icon="mdi-alert-circle-outline"
+                                                        class="ms-1"
+                                                    >
+                                                        Módulo previo pendiente
+                                                        <VTooltip activator="parent" location="top">
+                                                            No tenía aprobado el módulo anterior al ser registrado aquí.
+                                                        </VTooltip>
+                                                    </VChip>
+                                                </td>
                                                 <td>{{ item.participantRole }}</td>
                                                 <td>{{ item.districtName }}</td>
                                                 <td class="text-center">
@@ -217,6 +237,47 @@
                                     </template>
                                 </VDataTable>
                             </VWindowItem>
+
+                            <VWindowItem value="bajas">
+                                <div class="text-body-2 text-medium-emphasis mb-3">
+                                    Participantes dados de baja por su líder distrital. No se incluyen en estadísticas.
+                                </div>
+                                <VTable density="compact">
+                                    <thead>
+                                        <tr>
+                                            <th>Nombre</th>
+                                            <th>Rol</th>
+                                            <th>Distrito</th>
+                                            <th>Grupo</th>
+                                            <th class="text-center">Nota</th>
+                                            <th class="text-center">Fecha de Baja</th>
+                                            <th class="text-center">Acciones</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr v-for="item in inactiveEnrollments" :key="item.id">
+                                            <td>{{ item.participantName }}</td>
+                                            <td>{{ item.participantRole }}</td>
+                                            <td>{{ item.districtName }}</td>
+                                            <td>{{ item.groupName }}</td>
+                                            <td class="text-center">
+                                                <span :class="gradeClass(item.gradeStatus)">{{ item.grade }}</span>
+                                            </td>
+                                            <td class="text-center text-caption">
+                                                {{ item.deactivatedAt ? formatDate(item.deactivatedAt) : '—' }}
+                                            </td>
+                                            <td class="text-center">
+                                                <VBtn size="x-small" color="success" variant="tonal"
+                                                    prepend-icon="mdi-account-check"
+                                                    @click="reactivateEnrollment(item)">
+                                                    Reactivar
+                                                    <VTooltip activator="parent" location="top">Devolver al listado activo</VTooltip>
+                                                </VBtn>
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </VTable>
+                            </VWindowItem>
                         </VWindow>
                     </VCardText>
                 </VCard>
@@ -247,8 +308,9 @@
                     </VCardText>
                     <VCardActions>
                         <VSpacer />
-                        <VBtn color="error" variant="text" @click="groupDialog = false">Cancelar</VBtn>
+                        <VBtn color="error" variant="text" :disabled="saving" @click="groupDialog = false">Cancelar</VBtn>
                         <VBtn color="success" variant="text" @click="saveGroup"
+                            :loading="saving"
                             :disabled="!editedGroup.groupName || !editedGroup.graduationDateStr">
                             Guardar
                         </VBtn>
@@ -272,7 +334,8 @@
                                         v-model="editedEnroll.participantName"
                                         label="Nombre Completo"
                                         :loading="loadingLeaderName"
-                                        :hint="loadingLeaderName ? 'Buscando líder distrital...' : (editedEnroll.participantRole === 'Líder Distrital' && editedEnroll.districtId ? 'Autocompletado desde el registro del líder' : '')"
+                                        :error-messages="nameHasInvalidChars ? ['Solo se permiten letras, tildes y espacios'] : []"
+                                        :hint="!nameHasInvalidChars && loadingLeaderName ? 'Buscando líder distrital...' : (!nameHasInvalidChars && editedEnroll.participantRole === 'Líder Distrital' && editedEnroll.districtId ? 'Autocompletado desde el registro del líder' : '')"
                                         persistent-hint
                                         required
                                     />
@@ -300,11 +363,24 @@
                     <VCardText v-if="enrollError" class="pt-0">
                         <VAlert type="error" variant="tonal" density="compact">{{ enrollError }}</VAlert>
                     </VCardText>
+                    <VCardText v-if="prereqWarning" class="pt-0">
+                        <VAlert type="warning" variant="tonal">
+                            <div>{{ prereqWarning.message }}</div>
+                            <div class="d-flex gap-2 mt-3">
+                                <VBtn size="small" color="warning" variant="tonal" :loading="saving" @click="saveEnrollment">
+                                    Agregar de todas formas
+                                </VBtn>
+                                <VBtn size="small" variant="text" @click="prereqWarning = null">
+                                    Cancelar
+                                </VBtn>
+                            </div>
+                        </VAlert>
+                    </VCardText>
                     <VCardActions>
                         <VSpacer />
-                        <VBtn color="error" variant="text" @click="enrollDialog = false">Cancelar</VBtn>
+                        <VBtn color="error" variant="text" @click="enrollDialog = false; prereqWarning = null">Cancelar</VBtn>
                         <VBtn color="success" variant="text" @click="saveEnrollment"
-                            :loading="saving" :disabled="!isEnrollValid || saving">
+                            :loading="saving" :disabled="!isEnrollValid || saving || !!prereqWarning">
                             Guardar
                         </VBtn>
                     </VCardActions>
@@ -404,11 +480,18 @@ const editedEnroll = ref<EditedEnroll>({ ...defaultEnroll });
 // Autofill state
 const loadingLeaderName = ref(false);
 
+// Prerequisite warning
+type PrereqResult = 'ok' | 'missing' | { status: GradeStatus; grade: number };
+const prereqWarning = ref<{ message: string; pendingSubmit: boolean } | null>(null);
+
 // Delete dialogs
 const deleteGroupDialog = ref(false);
 const groupToDelete = ref<GroupRow | null>(null);
 const deleteEnrollDialog = ref(false);
 const enrollToDelete = ref<TrainingEnrollment | null>(null);
+
+// Inactive (dados de baja)
+const inactiveEnrollments = ref<TrainingEnrollment[]>([]);
 
 // ── Types ──────────────────────────────────────────────────────────────────
 interface GroupRow {
@@ -437,8 +520,14 @@ const districtOptions = computed(() =>
 // ── Computed ───────────────────────────────────────────────────────────────
 const previewStatus = computed(() => getGradeStatus(editedEnroll.value.grade));
 
+const nameHasInvalidChars = computed(() =>
+    /[^a-záéíóúüàèìòùäëïöüâêîôûñA-ZÁÉÍÓÚÜÀÈÌÒÙÄËÏÖÜÂÊÎÔÛÑ\s'-]/i.test(editedEnroll.value.participantName)
+);
+
 const isEnrollValid = computed(() =>
-    !!editedEnroll.value.participantName && !!editedEnroll.value.districtId
+    !!editedEnroll.value.participantName &&
+    !nameHasInvalidChars.value &&
+    !!editedEnroll.value.districtId
 );
 
 const filteredEnrollments = computed(() => {
@@ -452,27 +541,34 @@ const filteredEnrollments = computed(() => {
 });
 
 const groups = computed((): GroupRow[] => {
+    // Construir grupos desde los enrollments (fuente de verdad para participantes)
+    // El nivel se toma de groupsMeta buscando por nombre de grupo (no por fecha exacta)
     const map = new Map<string, GroupRow>();
     for (const e of filteredEnrollments.value) {
         const key = `${e.groupName}__${e.graduationDate?.toMillis?.() ?? 0}`;
         if (!map.has(key)) {
-            const meta = groupsMeta.value.find(g => g.key === key);
-            map.set(key, { key, groupName: e.groupName, graduationDate: e.graduationDate, level: meta?.level ?? 'distrital', enrollments: [] });
+            // Buscar nivel en groupsMeta por nombre de grupo (match exacto de nombre)
+            const meta = groupsMeta.value.find(g => g.groupName === e.groupName);
+            map.set(key, {
+                key,
+                groupName: e.groupName,
+                graduationDate: e.graduationDate,
+                level: meta?.level ?? 'distrital',
+                firestoreId: meta?.firestoreId,
+                enrollments: [],
+            });
         }
         map.get(key)!.enrollments.push(e);
     }
-    // Also include groups that exist but have 0 visible enrollments after search
-    // (we track them separately via groupsMeta)
+    // Incluir grupos vacíos que existen en Firestore pero sin enrollments visibles (tras búsqueda)
     for (const g of groupsMeta.value) {
         if (!map.has(g.key)) {
             map.set(g.key, { ...g, enrollments: [] });
         }
     }
-    return [...map.values()].sort((a, b) => {
-        const ta = a.graduationDate?.toMillis?.() ?? 0;
-        const tb = b.graduationDate?.toMillis?.() ?? 0;
-        return tb - ta;
-    });
+    return [...map.values()].sort((a, b) =>
+        (b.graduationDate?.toMillis?.() ?? 0) - (a.graduationDate?.toMillis?.() ?? 0)
+    );
 });
 
 // Groups persisted in Firestore
@@ -614,10 +710,13 @@ async function loadEnrollments(moduleId: string) {
         const repairs: Promise<void>[] = [];
         const toRemoveIds = new Set<string>();
 
-        // Paso 1: consolidar documentos duplicados (misma persona + distrito, docs separados)
-        // Agrupa por clave nombre+distrito para encontrar duplicados
+        // Paso 1: consolidar documentos duplicados pre-upsert (misma persona + distrito, sin attempts)
+        // Solo consolida docs que NO tienen attempts — son los creados antes del sistema upsert.
+        // Docs con attempts ya fueron procesados correctamente y no deben tocarse.
         const byPerson = new Map<string, TrainingEnrollment[]>();
         for (const e of loaded) {
+            // Solo considerar docs sin attempts (pre-upsert legacy)
+            if (e.attempts && e.attempts.length > 0) continue;
             const key = `${e.participantName.trim().toLowerCase()}__${e.districtId}`;
             if (!byPerson.has(key)) byPerson.set(key, []);
             byPerson.get(key)!.push(e);
@@ -627,27 +726,20 @@ async function loadEnrollments(moduleId: string) {
             // Ordenar por fecha de graduación: el más reciente es el principal
             group.sort((a, b) => (b.graduationDate?.toMillis() ?? 0) - (a.graduationDate?.toMillis() ?? 0));
             const [primary, ...duplicates] = group;
-            // Construir historial completo: attempts existentes del principal + los duplicados como attempts
-            const mergedAttempts: EnrollmentAttempt[] = [...(primary.attempts ?? [])];
-            for (const dup of duplicates) {
-                mergedAttempts.push({
-                    groupName: dup.groupName,
-                    graduationDate: dup.graduationDate,
-                    grade: dup.grade,
-                    gradeStatus: dup.gradeStatus,
-                });
-                // Agregar también los attempts que el duplicado ya tuviera
-                for (const a of dup.attempts ?? []) mergedAttempts.push(a);
-                toRemoveIds.add(dup.id);
-            }
-            // Ordenar historial del más antiguo al más reciente
-            mergedAttempts.sort((a, b) => (a.graduationDate?.toMillis() ?? 0) - (b.graduationDate?.toMillis() ?? 0));
+            // Construir historial completo con los duplicados como attempts
+            const mergedAttempts: EnrollmentAttempt[] = duplicates.map(dup => ({
+                groupName: dup.groupName,
+                graduationDate: dup.graduationDate,
+                grade: dup.grade,
+                gradeStatus: dup.gradeStatus,
+            })).sort((a, b) => (a.graduationDate?.toMillis() ?? 0) - (b.graduationDate?.toMillis() ?? 0));
             primary.attempts = mergedAttempts;
             repairs.push(updateDoc(doc(db, 'training_enrollments', primary.id), {
                 attempts: mergedAttempts, updatedAt: Timestamp.now(),
             }));
             for (const dup of duplicates) {
                 repairs.push(deleteDoc(doc(db, 'training_enrollments', dup.id)));
+                toRemoveIds.add(dup.id);
             }
         }
 
@@ -685,7 +777,9 @@ async function loadEnrollments(moduleId: string) {
 
         if (repairs.length > 0) await Promise.all(repairs);
 
-        enrollments.value = surviving.sort((a, b) => a.participantName.localeCompare(b.participantName));
+        const allSurviving = surviving.sort((a, b) => a.participantName.localeCompare(b.participantName));
+        enrollments.value = allSurviving.filter(e => e.isActive !== false);
+        inactiveEnrollments.value = allSurviving.filter(e => e.isActive === false);
     } catch (e) {
         console.error(e);
         alert('Error al cargar participantes');
@@ -696,7 +790,11 @@ async function loadEnrollments(moduleId: string) {
 
 // ── Group CRUD ─────────────────────────────────────────────────────────────
 function openGroupDialog(group?: GroupRow) {
-    editingGroup.value = group ?? null;
+    // Asegurar que firestoreId venga de groupsMeta (fuente de verdad), no del computed groups
+    const meta = group
+        ? groupsMeta.value.find(g => g.groupName === group.groupName) ?? group
+        : null;
+    editingGroup.value = meta ?? null;
     editedGroup.value = group
         ? { groupName: group.groupName, graduationDateStr: group.graduationDate.toDate().toISOString().split('T')[0], level: group.level ?? 'distrital' }
         : { groupName: '', graduationDateStr: new Date().toISOString().split('T')[0], level: 'distrital' };
@@ -705,28 +803,38 @@ function openGroupDialog(group?: GroupRow) {
 
 async function saveGroup() {
     if (!editedGroup.value.groupName || !editedGroup.value.graduationDateStr || !selectedModule.value) return;
-    const newDate = Timestamp.fromDate(new Date(editedGroup.value.graduationDateStr));
+    const [y, m, d] = editedGroup.value.graduationDateStr.split('-').map(Number);
+    const newDate = Timestamp.fromDate(new Date(y, m - 1, d, 12, 0, 0));
     const newName = editedGroup.value.groupName;
     saving.value = true;
     try {
         if (editingGroup.value) {
-            // Update Firestore group doc
+            // Update Firestore group doc — si no tiene firestoreId (grupo legacy sin doc), crearlo
             if (editingGroup.value.firestoreId) {
                 await updateDoc(doc(db, 'training_groups', editingGroup.value.firestoreId), {
                     groupName: newName, graduationDate: newDate, level: editedGroup.value.level,
                 });
+            } else {
+                await addDoc(collection(db, 'training_groups'), {
+                    moduleId: selectedModule.value.id,
+                    groupName: newName,
+                    graduationDate: newDate,
+                    level: editedGroup.value.level,
+                    createdAt: Timestamp.now(),
+                });
             }
             // Update all enrollments in batch (incluyendo attempts que referencien el grupo renombrado)
             const oldName = editingGroup.value!.groupName;
-            const oldMillis = editingGroup.value!.graduationDate?.toMillis();
+            const oldMillis = editingGroup.value!.graduationDate?.toMillis() ?? 0;
+            const sameGroup = (groupName: string, dateMillis: number) =>
+                groupName === oldName && Math.abs(dateMillis - oldMillis) < 86400000;
             const toUpdate = enrollments.value.filter(e =>
-                e.groupName === oldName &&
-                e.graduationDate?.toMillis() === oldMillis
+                sameGroup(e.groupName, e.graduationDate?.toMillis() ?? 0)
             );
             // También actualizar enrollments cuyo historial (attempts) referencia al grupo renombrado
             const withOldAttempt = enrollments.value.filter(e =>
                 !toUpdate.includes(e) &&
-                e.attempts?.some(a => a.groupName === oldName && a.graduationDate?.toMillis() === oldMillis)
+                e.attempts?.some(a => sameGroup(a.groupName, a.graduationDate?.toMillis() ?? 0))
             );
             if (toUpdate.length > 0 || withOldAttempt.length > 0) {
                 const batch = writeBatch(db);
@@ -745,7 +853,8 @@ async function saveGroup() {
                 });
                 await batch.commit();
             }
-            await Promise.all([loadGroups(selectedModule.value.id), loadEnrollments(selectedModule.value.id)]);
+            await loadGroups(selectedModule.value.id);
+            await loadEnrollments(selectedModule.value.id);
         } else {
             // Create new group in Firestore
             const key = `${newName}__${newDate.toMillis()}`;
@@ -798,12 +907,66 @@ async function deleteGroup() {
     }
 }
 
+// ── Prerequisite check ────────────────────────────────────────────────────
+async function checkPrerequisite(name: string, districtId: string): Promise<PrereqResult> {
+    if (!selectedModule.value) return 'ok';
+    if ((selectedModule.value.moduleType ?? 'ruta') !== 'ruta') return 'ok';
+    if (selectedModule.value.order <= 1) return 'ok';
+
+    const prevModule = modules.value
+        .filter(m => (m.moduleType ?? 'ruta') === 'ruta' && m.order < selectedModule.value!.order)
+        .sort((a, b) => b.order - a.order)[0];
+    if (!prevModule) return 'ok';
+
+    const snap = await getDocs(query(
+        collection(db, 'training_enrollments'),
+        where('moduleId', '==', prevModule.id),
+        where('districtId', '==', districtId),
+    ));
+    const found = snap.docs.map(d => d.data()).find(e =>
+        (e.participantName as string)?.trim().toLowerCase() === name.trim().toLowerCase()
+    );
+    if (!found) return 'missing';
+    if (found.gradeStatus === 'aprobado') return 'ok';
+    return { status: found.gradeStatus as GradeStatus, grade: found.grade as number };
+}
+
+async function clearPrerequisitePending(name: string, districtId: string) {
+    if (!selectedModule.value) return;
+    const nextModules = modules.value.filter(m =>
+        (m.moduleType ?? 'ruta') === 'ruta' && m.order > selectedModule.value!.order
+    );
+    for (const mod of nextModules) {
+        const snap = await getDocs(query(
+            collection(db, 'training_enrollments'),
+            where('moduleId', '==', mod.id),
+            where('districtId', '==', districtId),
+        ));
+        const toFix = snap.docs.filter(d =>
+            (d.data().participantName as string)?.trim().toLowerCase() === name.trim().toLowerCase() &&
+            d.data().prerequisitePending === true
+        );
+        if (toFix.length > 0) {
+            const batch = writeBatch(db);
+            toFix.forEach(d => batch.update(doc(db, 'training_enrollments', d.id), {
+                prerequisitePending: false, updatedAt: Timestamp.now(),
+            }));
+            await batch.commit();
+            // Actualizar en memoria si el módulo actual cargado es alguno de los siguientes
+            if (selectedModule.value && toFix.some(d => d.data().moduleId === selectedModule.value!.id)) {
+                await loadEnrollments(selectedModule.value.id);
+            }
+        }
+    }
+}
+
 // ── Enrollment CRUD ────────────────────────────────────────────────────────
 function openEnrollDialog(group: GroupRow) {
     editingEnrollId.value = null;
     currentGroup.value = group;
     editedEnroll.value = { ...defaultEnroll };
     enrollError.value = '';
+    prereqWarning.value = null;
     enrollDialog.value = true;
 }
 
@@ -818,6 +981,7 @@ function openEditEnrollDialog(item: TrainingEnrollment, group: GroupRow) {
         grade: item.grade,
     };
     enrollError.value = '';
+    prereqWarning.value = null;
     enrollDialog.value = true;
 }
 
@@ -875,21 +1039,49 @@ async function saveEnrollment() {
         }
     }
 
+    // Chequeo de prerrequisito (solo en modo creación y si no hay confirmación pendiente)
+    let isPrereqPending = false;
+    if (!editingEnrollId.value && !prereqWarning.value?.pendingSubmit) {
+        saving.value = true;
+        const prereqResult = await checkPrerequisite(
+            editedEnroll.value.participantName,
+            editedEnroll.value.districtId,
+        ).finally(() => { saving.value = false; });
+
+        if (prereqResult !== 'ok') {
+            const prevModule = modules.value
+                .filter(m => (m.moduleType ?? 'ruta') === 'ruta' && m.order < selectedModule.value!.order)
+                .sort((a, b) => b.order - a.order)[0];
+            const prevName = prevModule?.name ?? 'el módulo anterior';
+            const msg = prereqResult === 'missing'
+                ? `Este participante no parece haber llevado "${prevName}". También podría ser un error de escritura en el nombre. ¿Deseas agregarlo de todas formas?`
+                : `Este participante llevó "${prevName}" pero no lo aprobó (nota ${(prereqResult as { grade: number; status: string }).grade} – ${(prereqResult as { grade: number; status: string }).status}). ¿Deseas agregarlo de todas formas?`;
+            prereqWarning.value = { message: msg, pendingSubmit: true };
+            return;
+        }
+    }
+
+    // Si el admin confirmó la advertencia, el participante tiene prerrequisito pendiente
+    if (prereqWarning.value?.pendingSubmit) isPrereqPending = true;
+    prereqWarning.value = null;
+
     saving.value = true;
     try {
         const grade = Number(editedEnroll.value.grade);
         const gradeStatus = getGradeStatus(grade);
+        const participantName = editedEnroll.value.participantName.trim();
         const data = {
             moduleId: selectedModule.value.id,
             groupName: currentGroup.value.groupName,
             graduationDate: currentGroup.value.graduationDate,
-            participantName: editedEnroll.value.participantName.trim().toUpperCase(),
+            participantName,
             participantRole: editedEnroll.value.participantRole,
             districtId: editedEnroll.value.districtId,
             districtName: editedEnroll.value.districtName,
             grade,
             passed: gradeStatus === 'aprobado',
             gradeStatus,
+            prerequisitePending: isPrereqPending,
             updatedAt: Timestamp.now(),
         };
 
@@ -899,7 +1091,7 @@ async function saveEnrollment() {
         } else {
             // Nuevo registro: detectar si el participante ya existe en este módulo
             const existingByName = enrollments.value.find(e =>
-                e.participantName.trim().toLowerCase() === editedEnroll.value.participantName.trim().toLowerCase() &&
+                e.participantName.trim().toLowerCase() === participantName.trim().toLowerCase() &&
                 e.districtId === editedEnroll.value.districtId
             );
 
@@ -908,7 +1100,6 @@ async function saveEnrollment() {
                 const existingDate = existingByName.graduationDate?.toMillis() ?? 0;
 
                 if (newGroupDate > existingDate) {
-                    // El nuevo grupo es más reciente → es un reintento: archivar el anterior y actualizar
                     const previousAttempt: EnrollmentAttempt = {
                         groupName: existingByName.groupName,
                         graduationDate: existingByName.graduationDate,
@@ -921,8 +1112,6 @@ async function saveEnrollment() {
                         attempts: updatedAttempts,
                     });
                 } else {
-                    // El grupo nuevo es igual o anterior al existente → archivar este nuevo intento
-                    // en el historial del enrollment principal (que sigue siendo el más reciente)
                     const olderAttempt: EnrollmentAttempt = {
                         groupName: currentGroup.value.groupName,
                         graduationDate: currentGroup.value.graduationDate,
@@ -938,6 +1127,11 @@ async function saveEnrollment() {
             } else {
                 await addDoc(collection(db, 'training_enrollments'), { ...data, enrolledAt: Timestamp.now() });
             }
+        }
+
+        // Si el participante aprobó, limpiar prerequisitePending en módulos posteriores
+        if (gradeStatus === 'aprobado') {
+            await clearPrerequisitePending(participantName, editedEnroll.value.districtId);
         }
 
         enrollDialog.value = false;
@@ -968,6 +1162,30 @@ async function deleteEnrollment() {
     } finally {
         deleteEnrollDialog.value = false;
         enrollToDelete.value = null;
+    }
+}
+
+async function reactivateEnrollment(item: TrainingEnrollment) {
+    if (!selectedModule.value) return;
+    try {
+        const batch = writeBatch(db);
+        // Reactivar todos los enrollments del participante en este distrito
+        const allInactive = inactiveEnrollments.value.filter(
+            e => e.participantName.trim().toLowerCase() === item.participantName.trim().toLowerCase() &&
+                 e.districtId === item.districtId
+        );
+        const targets = allInactive.length > 0 ? allInactive : [item];
+        targets.forEach(e => batch.update(doc(db, 'training_enrollments', e.id), {
+            isActive: true,
+            deactivatedAt: null,
+            updatedAt: Timestamp.now(),
+        }));
+        await batch.commit();
+        await loadEnrollments(selectedModule.value.id);
+        enrollmentCountsByModule.value[selectedModule.value.id] = enrollments.value.length;
+    } catch (e) {
+        console.error(e);
+        alert('Error al reactivar participante');
     }
 }
 
