@@ -1069,7 +1069,7 @@ async function saveEnrollment() {
     try {
         const grade = Number(editedEnroll.value.grade);
         const gradeStatus = getGradeStatus(grade);
-        const participantName = editedEnroll.value.participantName.trim();
+        const participantName = editedEnroll.value.participantName.trim().toUpperCase();
         const data = {
             moduleId: selectedModule.value.id,
             groupName: currentGroup.value.groupName,

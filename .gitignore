@@ -30,3 +30,8 @@ docs/
 .agents/
 .firebase/
 skills-lock.json
+
+# Local dev scripts and config
+cleanup.mjs
+cors.json
+.mcp.json
