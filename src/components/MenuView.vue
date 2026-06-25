@@ -208,17 +208,24 @@
         <VCol v-if="isLeader" cols="12" sm="12" md="4">
           <VCard
             class="mx-auto mb-4"
-            color="surface-variant"
+            :style="{
+              backgroundColor: personalDataComplete ? undefined : '#FAFAFA',
+              opacity: personalDataComplete ? 1 : 0.7,
+              transition: 'all 0.3s ease'
+            }"
+            :class="{ 'disabled-card': !personalDataComplete }"
             max-width="100%"
             @click="goToTrainingProgress"
           >
             <VCardTitle class="d-flex align-center">
-              <VIcon class="me-2">mdi-school</VIcon>
+              <VIcon class="me-2" :color="personalDataComplete ? '' : 'grey'">mdi-school</VIcon>
               Ruta de Formación
             </VCardTitle>
-            <VCardSubtitle>Ver módulos, notas y certificados de tu distrito</VCardSubtitle>
+            <VCardSubtitle :class="personalDataComplete ? '' : 'text-grey-darken-1'">
+              {{ personalDataComplete ? 'Ver módulos, notas y certificados de tu distrito' : 'Complete sus datos personales primero' }}
+            </VCardSubtitle>
             <template v-slot:actions>
-              <VBtn variant="text" @click="goToTrainingProgress">
+              <VBtn variant="text" :color="personalDataComplete ? '' : 'grey'" :disabled="!personalDataComplete" @click="goToTrainingProgress">
                 Ver Progreso
               </VBtn>
             </template>
@@ -425,6 +432,7 @@ const goToTrainingEnrollments = () => {
 };
 
 const goToTrainingProgress = () => {
+  if (!personalDataComplete.value) return;
   router.push("/training-progress");
 };
 

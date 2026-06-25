@@ -8,4 +8,12 @@ export interface DistrictLeader {
     startDate: Timestamp;
     endDate?: Timestamp;
     isActive: boolean;
+    previousLeaderName?: string;
+    areaNumber?: number;
+    districtNumber?: number;
+    location?: string;
+    createdAt?: Timestamp;
+    updatedAt?: Timestamp;
+    createdBy?: string;
+    updatedBy?: string;
 }

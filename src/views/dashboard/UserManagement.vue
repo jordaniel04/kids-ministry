@@ -157,17 +157,6 @@
                                         required
                                     ></VSelect>
                                 </VCol>
-                                <VCol cols="12">
-                                    <VSelect
-                                        v-model="leaderRole"
-                                        :items="[
-                                            { title: 'Líder Principal', value: 'primary' },
-                                            { title: 'Líder Secundario', value: 'secondary' }
-                                        ]"
-                                        label="Rol en el Distrito"
-                                        required
-                                    ></VSelect>
-                                </VCol>
                             </template>
                         </VRow>
                     </VContainer>
@@ -359,6 +348,7 @@ const deleteUser = async (user: User) => {
 const selectedDistrict = ref<any>(null);
 const leaderRole = ref<'primary' | 'secondary'>('primary');
 const loadingDistricts = ref(false);
+
 
 const saveUser = async () => {
     try {

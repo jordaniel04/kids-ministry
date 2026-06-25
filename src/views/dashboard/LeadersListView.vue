@@ -47,17 +47,38 @@
                             </VChip>
                         </template>
                         <template #[`item.district.location`]="{ item }">
-                            {{ item.district?.location || 'Sin asignar' }}
+                            <span :class="item.hasPendingData ? 'text-deep-orange font-weight-bold' : ''">
+                                {{ item.district?.location || 'Sin asignar' }}
+                            </span>
+                        </template>
+                        <template #[`item.personalData.firstName`]="{ item }">
+                            <span :class="item.hasPendingData ? 'text-deep-orange' : ''">
+                                {{ item.hasPendingData ? '⚠ Pendiente de actualización' : item.personalData?.firstName }}
+                            </span>
+                        </template>
+                        <template #[`item.personalData.lastName`]="{ item }">
+                            <span :class="item.hasPendingData ? 'text-deep-orange' : ''">
+                                {{ item.hasPendingData ? '—' : item.personalData?.lastName }}
+                            </span>
                         </template>
                         <template #[`item.actions`]="{ item }">
                             <VIcon
                                 color="info"
                                 icon="mdi-eye"
                                 size="small"
-                                class="cursor-pointer"
+                                class="me-2 cursor-pointer"
                                 @click="viewLeaderDetails(item)"
                             >
                                 <VTooltip activator="parent" location="top">Ver Detalles</VTooltip>
+                            </VIcon>
+                            <VIcon
+                                color="warning"
+                                icon="mdi-account-switch"
+                                size="small"
+                                class="cursor-pointer"
+                                @click="openChangeLeaderDialog(item)"
+                            >
+                                <VTooltip activator="parent" location="top">Cambiar Líder</VTooltip>
                             </VIcon>
                         </template>
                     </VDataTable>
@@ -65,25 +86,27 @@
                     <!-- Vista Móvil -->
                     <VRow v-else>
                         <VCol v-for="leader in filteredLeaders" :key="leader.id" cols="12">
-                            <VCard class="mb-3">
-                                <VCardTitle>
-                                    {{ leader.personalData?.firstName }} {{ leader.personalData?.lastName }}
+                            <VCard class="mb-3" :style="leader.hasPendingData ? { borderLeft: '4px solid #F4511E' } : {}">
+                                <VCardTitle :class="leader.hasPendingData ? 'text-deep-orange' : ''">
+                                    {{ leader.hasPendingData ? '⚠ Pendiente de actualización' : `${leader.personalData?.firstName} ${leader.personalData?.lastName}` }}
                                 </VCardTitle>
                                 <VCardText>
                                     <div class="mb-2">
-                                        <strong>Distrito:</strong> {{ leader.district?.location || 'Sin asignar' }}
+                                        <strong>Distrito:</strong>
+                                        <span :class="leader.hasPendingData ? 'text-deep-orange font-weight-bold' : ''">
+                                            {{ leader.district?.location || 'Sin asignar' }}
+                                        </span>
                                     </div>
-                                    <div class="mb-2">
+                                    <div class="mb-2" v-if="!leader.hasPendingData">
                                         <strong>Teléfono:</strong> {{ leader.personalData?.phoneNumber || 'No especificado' }}
                                     </div>
                                 </VCardText>
                                 <VCardActions>
                                     <VSpacer />
-                                    <VBtn
-                                        color="info"
-                                        variant="text"
-                                        @click="viewLeaderDetails(leader)"
-                                    >
+                                    <VBtn color="warning" variant="text" @click="openChangeLeaderDialog(leader)">
+                                        Cambiar Líder
+                                    </VBtn>
+                                    <VBtn color="info" variant="text" @click="viewLeaderDetails(leader)">
                                         Ver Detalles
                                     </VBtn>
                                 </VCardActions>
@@ -93,6 +116,30 @@
                 </VCardText>
             </VCard>
         </VContainer>
+
+        <!-- Diálogo Cambiar Líder -->
+        <VDialog v-model="changeLeaderDialog" max-width="450px">
+            <VCard>
+                <VCardTitle class="d-flex align-center gap-2 pt-4">
+                    <VIcon color="warning" icon="mdi-account-switch" />
+                    Cambiar Líder
+                </VCardTitle>
+                <VCardText>
+                    <VAlert type="warning" variant="tonal" class="mb-4">
+                        Esta acción borrará los datos personales del líder actual. El nuevo líder deberá ingresar sus propios datos al iniciar sesión.
+                    </VAlert>
+                    <div class="text-body-2 mb-1"><strong>Distrito:</strong> {{ changeLeaderTarget?.district?.location ?? '—' }}</div>
+                    <div class="text-body-2"><strong>Líder actual:</strong> {{ previousLeaderName || '(Sin datos registrados)' }}</div>
+                </VCardText>
+                <VCardActions>
+                    <VSpacer />
+                    <VBtn variant="text" @click="changeLeaderDialog = false">Cancelar</VBtn>
+                    <VBtn color="warning" variant="tonal" :loading="changingLeader" @click="changeLeader">
+                        Confirmar Cambio
+                    </VBtn>
+                </VCardActions>
+            </VCard>
+        </VDialog>
 
         <!-- Diálogo de detalles del líder -->
         <VDialog v-model="detailsDialog" max-width="600px">
@@ -164,9 +211,10 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from "vue";
 import { db } from "../../firebase/config";
-import { collection, getDocs, query, where, doc, getDoc } from "firebase/firestore";
+import { collection, getDocs, query, where, doc, getDoc, updateDoc, writeBatch, deleteField, Timestamp } from "firebase/firestore";
 import NavigationBar from '../../components/NavigationBar.vue';
 import { useAuthStore } from '../../stores/auth';
+import { COLLECTIONS } from '@/constants';
 
 const authStore = useAuthStore();
 
@@ -174,6 +222,7 @@ interface Leader {
     id: string;
     email: string;
     role: string;
+    hasPendingData: boolean;
     personalData?: {
         firstName?: string;
         lastName?: string;
@@ -183,6 +232,7 @@ interface Leader {
         address?: string;
     };
     district?: {
+        id: string;
         location: string;
         areaNumber: number;
         districtNumber: number;
@@ -256,12 +306,16 @@ const loadLeaders = async () => {
             const userData = userDoc.data();
             const districtId = userDistrictMap.get(userDoc.id);
             const districtData = districtId ? districtMap.get(districtId) : null;
+            const pd = personalDataMap.get(userDoc.id);
+            const hasPendingData = !pd?.firstName || !pd?.lastName;
             return {
                 id: userDoc.id,
                 email: userData.email,
                 role: userData.role,
-                personalData: personalDataMap.get(userDoc.id) ?? {},
+                hasPendingData,
+                personalData: pd ?? {},
                 district: districtData ? {
+                    id: districtId as string,
                     location: districtData.location,
                     areaNumber: districtData.areaNumber,
                     districtNumber: districtData.districtNumber
@@ -269,16 +323,10 @@ const loadLeaders = async () => {
             };
         });
 
-        // Filtrar líderes sin distrito y ordenar alfabéticamente por ubicación
-        const validLeaders = (leadersData as Leader[])
-            .filter(leader => leader.district !== null && leader.district !== undefined)
-            .sort((a, b) => {
-                const locA = a.district?.location || '';
-                const locB = b.district?.location || '';
-                return locA.localeCompare(locB);
-            });
-
-        leaders.value = validLeaders;
+        // Ordenar alfabéticamente por distrito
+        leaders.value = (leadersData as Leader[]).sort((a, b) =>
+            (a.district?.location || '').localeCompare(b.district?.location || '')
+        );
     } catch (error) {
         console.error("Error al obtener líderes:", error);
     } finally {
@@ -382,6 +430,63 @@ const exportToPDF = async () => {
         alert('Error al generar el PDF de líderes');
     } finally {
         exporting.value = false;
+    }
+};
+
+const changeLeaderDialog = ref(false);
+const changingLeader = ref(false);
+const changeLeaderTarget = ref<Leader | null>(null);
+const previousLeaderName = ref('');
+
+const openChangeLeaderDialog = async (leader: Leader) => {
+    changeLeaderTarget.value = leader;
+    previousLeaderName.value = [leader.personalData?.firstName, leader.personalData?.lastName]
+        .filter(Boolean).join(' ').trim();
+    changeLeaderDialog.value = true;
+};
+
+const changeLeader = async () => {
+    if (!changeLeaderTarget.value) return;
+    changingLeader.value = true;
+    try {
+        const now = Timestamp.now();
+        const batch = writeBatch(db);
+
+        const dlSnap = await getDocs(query(
+            collection(db, COLLECTIONS.DISTRICT_LEADERS),
+            where('userId', '==', changeLeaderTarget.value.id),
+            where('isActive', '==', true)
+        ));
+        if (!dlSnap.empty) {
+            batch.update(dlSnap.docs[0].ref, {
+                previousLeaderName: previousLeaderName.value || '(Sin datos registrados)',
+                updatedAt: now,
+                updatedBy: authStore.user?.id
+            });
+        }
+
+        batch.update(doc(db, COLLECTIONS.LEADERS, changeLeaderTarget.value.id), {
+            personalData: deleteField(),
+            ministerialData: deleteField(),
+            secondLeader: deleteField()
+        });
+
+        batch.update(doc(db, COLLECTIONS.USERS, changeLeaderTarget.value.id), {
+            personalDataComplete: deleteField(),
+            updatedAt: now,
+            updatedBy: authStore.user?.id
+        });
+
+        await batch.commit();
+        changeLeaderDialog.value = false;
+        changeLeaderTarget.value = null;
+        previousLeaderName.value = '';
+        await loadLeaders();
+    } catch (e) {
+        console.error('Error al cambiar líder:', e);
+        alert('Error al cambiar líder. Intenta de nuevo.');
+    } finally {
+        changingLeader.value = false;
     }
 };
 
