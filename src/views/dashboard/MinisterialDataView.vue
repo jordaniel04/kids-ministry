@@ -46,7 +46,7 @@
                 </div>
             </VAlert>
 
-            <div class="d-flex gap-2 mb-4">
+            <div class="d-flex gap-2 mb-2">
                 <VBtn
                     v-if="activePeriod && !isConfirmed"
                     color="success"
@@ -59,6 +59,26 @@
                     Confirmar Datos del Distrito
                 </VBtn>
             </div>
+
+            <!-- Recordatorio de confirmación -->
+            <VAlert
+                v-if="confirmReminderStatus?.type === 'incomplete'"
+                type="warning"
+                variant="tonal"
+                class="mb-4"
+                density="compact"
+                icon="mdi-alert-circle-outline"
+            >
+                <strong>{{ confirmReminderStatus.pending }} iglesia{{ confirmReminderStatus.pending > 1 ? 's' : '' }} aún sin datos.</strong>
+                Completa el registro de todas las iglesias activas y luego presiona <strong>Confirmar Datos del Distrito</strong> para enviar el reporte. Sin confirmación, el reporte no será enviado.
+            </VAlert>
+
+            <p
+                v-if="confirmReminderStatus?.type === 'ready'"
+                class="mb-4 text-error text-body-1"
+            >
+                Si ya registraste todas tus iglesias y sus datos, presiona el botón <strong>Confirmar Datos del Distrito</strong> para enviar el reporte. <strong>Sin confirmación, el reporte no será enviado.</strong>
+            </p>
 
             <h2 class="text-h4 mb-4">
                 Datos de las iglesias del Distrito: {{ districtName }}
@@ -645,6 +665,19 @@ const churchesWithLatestData = computed(() =>
         latestData: getLatestMinisterialData(church)
     }))
 );
+
+const confirmReminderStatus = computed(() => {
+    if (!activePeriod.value || isConfirmed.value || !activePeriod.value.allowEditing) return null;
+    const active = churchesWithLatestData.value.filter(c => !c.latestData.isInactiveForPeriod);
+    if (active.length === 0) return null;
+    const filled = active.filter(c => {
+        const d = c.latestData;
+        return (d.totalChildren ?? 0) > 0 || (d.totalTeachers ?? 0) > 0;
+    });
+    const pending = active.length - filled.length;
+    if (pending > 0) return { type: 'incomplete' as const, filled: filled.length, total: active.length, pending };
+    return { type: 'ready' as const, total: active.length };
+});
 
 // Totales computados en un solo loop (se excluyen iglesias inactivas)
 const totals = computed(() => {
