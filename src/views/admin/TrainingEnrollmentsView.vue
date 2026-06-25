@@ -10,7 +10,18 @@
                         <h1>Inscripciones y Certificados</h1>
                         <p class="text-body-2 text-medium-emphasis">Selecciona un módulo para gestionar sus grupos y participantes.</p>
                     </div>
+                    <VBtn
+                        color="warning" variant="tonal" size="small"
+                        prepend-icon="mdi-format-letter-case-upper"
+                        :loading="migrating"
+                        @click="migrateNamesToUppercase"
+                    >
+                        Normalizar nombres
+                    </VBtn>
                 </div>
+                <VAlert v-if="migrateResult" :type="migrateResult.type" variant="tonal" density="compact" class="mb-4" closable @click:close="migrateResult = null">
+                    {{ migrateResult.message }}
+                </VAlert>
                 <VProgressLinear v-if="loading" indeterminate color="primary" class="mb-4" />
                 <VAlert v-if="!loading && modules.length === 0" type="info" variant="tonal">
                     No hay módulos de formación creados aún.
@@ -41,7 +52,7 @@
             <!-- Vista: detalle del módulo -->
             <template v-if="selectedModule">
                 <div class="d-flex align-center gap-2 mb-4">
-                    <VBtn variant="text" icon @click="selectedModule = null; groupsMeta = []">
+                    <VBtn variant="text" icon @click="selectedModule = null; groupsMeta = []; expandedGroups = new Set()">
                         <VIcon>mdi-arrow-left</VIcon>
                         <VTooltip activator="parent">Volver a módulos</VTooltip>
                     </VBtn>
@@ -61,7 +72,7 @@
 
                 <!-- Resumen rápido -->
                 <VRow class="mb-4">
-                    <VCol cols="6" sm="2" v-for="stat in generalStats" :key="stat.label">
+                    <VCol cols="6" sm="auto" v-for="stat in generalStats" :key="stat.label">
                         <VCard variant="tonal" :color="stat.color">
                             <VCardText class="text-center pa-3">
                                 <VIcon :icon="stat.icon" size="24" class="mb-1" />
@@ -83,6 +94,10 @@
                             <VTab value="estadisticas">
                                 <VIcon start>mdi-chart-bar</VIcon>
                                 Por Distrito
+                            </VTab>
+                            <VTab value="replicas">
+                                <VIcon start>mdi-map-marker-multiple</VIcon>
+                                Réplicas Distritales
                             </VTab>
                             <VTab value="bajas" v-if="inactiveEnrollments.length > 0">
                                 <VIcon start>mdi-account-off</VIcon>
@@ -110,8 +125,13 @@
                                 </div>
 
                                 <!-- Grupos -->
-                                <div v-for="group in groups" :key="group.key" class="mb-6">
-                                    <div class="d-flex align-center gap-2 mb-2">
+                                <div v-for="group in groups" :key="group.key" class="mb-2">
+                                    <div
+                                        class="d-flex align-center gap-2 pa-2 rounded cursor-pointer"
+                                        style="background: rgba(var(--v-theme-primary), 0.05);"
+                                        @click="toggleGroup(group.key)"
+                                    >
+                                        <VIcon size="18" :icon="expandedGroups.has(group.key) ? 'mdi-chevron-down' : 'mdi-chevron-right'" color="primary" />
                                         <VIcon size="16" color="primary">mdi-calendar-check</VIcon>
                                         <span class="text-subtitle-1 font-weight-bold">{{ group.groupName }}</span>
                                         <span class="text-caption text-medium-emphasis">— {{ formatDate(group.graduationDate) }}</span>
@@ -121,20 +141,21 @@
                                         <VSpacer />
                                         <VChip size="x-small" color="primary" variant="tonal">{{ group.enrollments.length }} personas</VChip>
                                         <VBtn size="x-small" color="primary" variant="tonal" prepend-icon="mdi-account-plus"
-                                            @click="openEnrollDialog(group)">
+                                            @click.stop="openEnrollDialog(group)">
                                             Agregar
                                         </VBtn>
-                                        <VBtn icon size="x-small" color="primary" variant="text" @click="openGroupDialog(group)">
+                                        <VBtn icon size="x-small" color="primary" variant="text" @click.stop="openGroupDialog(group)">
                                             <VIcon size="16">mdi-pencil</VIcon>
                                             <VTooltip activator="parent">Editar grupo</VTooltip>
                                         </VBtn>
-                                        <VBtn icon size="x-small" color="error" variant="text" @click="confirmDeleteGroup(group)">
+                                        <VBtn icon size="x-small" color="error" variant="text" @click.stop="confirmDeleteGroup(group)">
                                             <VIcon size="16">mdi-delete</VIcon>
                                             <VTooltip activator="parent">Eliminar grupo y participantes</VTooltip>
                                         </VBtn>
                                     </div>
 
-                                    <div v-if="group.enrollments.length === 0" class="text-caption text-medium-emphasis ms-6 mb-2">
+                                    <div v-if="expandedGroups.has(group.key)" class="mb-4">
+                                    <div v-if="group.enrollments.length === 0" class="text-caption text-medium-emphasis ms-6 mt-2 mb-2">
                                         Sin participantes en este grupo aún.
                                     </div>
 
@@ -212,6 +233,11 @@
                                                                 {{ item.passed ? 'Descargar certificado' : 'Solo aprobados' }}
                                                             </VTooltip>
                                                         </VBtn>
+                                                        <VBtn icon color="orange" size="x-small" variant="tonal"
+                                                            @click="openMoveDialog(item, group)">
+                                                            <VIcon>mdi-swap-horizontal</VIcon>
+                                                            <VTooltip activator="parent" location="top">Mover a otro grupo</VTooltip>
+                                                        </VBtn>
                                                         <VBtn icon color="error" size="x-small" variant="tonal"
                                                             @click="confirmDeleteEnroll(item)">
                                                             <VIcon>mdi-delete</VIcon>
@@ -221,6 +247,7 @@
                                             </tr>
                                         </tbody>
                                     </VTable>
+                                    </div><!-- /expandedGroups -->
                                 </div>
                             </VWindowItem>
 
@@ -236,6 +263,50 @@
                                         </VProgressLinear>
                                     </template>
                                 </VDataTable>
+                            </VWindowItem>
+
+                            <VWindowItem value="replicas">
+                                <div v-if="loadingLeaders" class="text-center py-8">
+                                    <VProgressCircular indeterminate color="primary" />
+                                </div>
+                                <div v-else-if="replicasByDistrict.length === 0" class="text-center text-medium-emphasis py-8">
+                                    No hay grupos distritales registrados en este módulo.
+                                </div>
+                                <VTable v-else density="comfortable">
+                                    <thead>
+                                        <tr>
+                                            <th style="width:30%">Distrito</th>
+                                            <th>Líderes Distritales</th>
+                                            <th>Réplicas realizadas</th>
+                                            <th class="text-center">Total participantes</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr v-for="row in replicasByDistrict" :key="row.districtId">
+                                            <td class="font-weight-medium">{{ row.districtName }}</td>
+                                            <td>
+                                                <div v-if="districtLeadersMap[row.districtId]?.length">
+                                                    <div v-for="leader in districtLeadersMap[row.districtId]" :key="leader" class="text-body-2">
+                                                        {{ leader }}
+                                                    </div>
+                                                </div>
+                                                <span v-else class="text-caption text-medium-emphasis">—</span>
+                                            </td>
+                                            <td>
+                                                <div v-for="g in row.groups" :key="g.key" class="d-flex align-center gap-2 py-1">
+                                                    <VChip size="x-small" color="teal" variant="tonal">{{ formatDate(g.graduationDate) }}</VChip>
+                                                    <span class="text-caption text-medium-emphasis">{{ g.groupName }}</span>
+                                                    <span class="text-caption text-medium-emphasis">({{ g.enrollments.length }} pers.)</span>
+                                                </div>
+                                            </td>
+                                            <td class="text-center">
+                                                <VChip size="small" color="primary" variant="tonal">
+                                                    {{ row.totalParticipants }}
+                                                </VChip>
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </VTable>
                             </VWindowItem>
 
                             <VWindowItem value="bajas">
@@ -303,6 +374,19 @@
                                         item-title="title" item-value="value"
                                         label="Nivel de capacitación" required />
                                 </VCol>
+                                <VCol v-if="editedGroup.level === 'distrital'" cols="12">
+                                    <VAutocomplete
+                                        v-model="editedGroup.districtId"
+                                        :items="districtOptions"
+                                        item-title="label"
+                                        item-value="value"
+                                        label="Distrito"
+                                        placeholder="Buscar distrito..."
+                                        clearable
+                                        required
+                                        @update:model-value="onGroupDistrictChange"
+                                    />
+                                </VCol>
                             </VRow>
                         </VContainer>
                     </VCardText>
@@ -311,7 +395,7 @@
                         <VBtn color="error" variant="text" :disabled="saving" @click="groupDialog = false">Cancelar</VBtn>
                         <VBtn color="success" variant="text" @click="saveGroup"
                             :loading="saving"
-                            :disabled="!editedGroup.groupName || !editedGroup.graduationDateStr">
+                            :disabled="!isGroupValid">
                             Guardar
                         </VBtn>
                     </VCardActions>
@@ -403,6 +487,34 @@
                 </VCard>
             </VDialog>
 
+            <!-- Dialog mover participante -->
+            <VDialog v-model="moveDialog" max-width="420px" persistent>
+                <VCard>
+                    <VCardTitle>Mover participante</VCardTitle>
+                    <VCardSubtitle class="pb-0">{{ enrollToMove?.participantName }}</VCardSubtitle>
+                    <VCardText>
+                        <p class="text-body-2 text-medium-emphasis mb-4">
+                            Grupo actual: <strong>{{ groupOfEnrollToMove?.groupName }}</strong>
+                        </p>
+                        <VSelect
+                            v-model="moveTargetGroupKey"
+                            :items="moveGroupOptions"
+                            item-title="label"
+                            item-value="key"
+                            label="Mover a grupo"
+                            required
+                        />
+                    </VCardText>
+                    <VCardActions>
+                        <VSpacer />
+                        <VBtn color="grey" variant="text" :disabled="saving" @click="moveDialog = false">Cancelar</VBtn>
+                        <VBtn color="primary" variant="text" :loading="saving" :disabled="!moveTargetGroupKey" @click="moveEnrollment">
+                            Mover
+                        </VBtn>
+                    </VCardActions>
+                </VCard>
+            </VDialog>
+
             <!-- Dialog eliminar participante -->
             <VDialog v-model="deleteEnrollDialog" max-width="400px">
                 <VCard>
@@ -448,6 +560,18 @@ const enrollmentCountsByModule = ref<Record<string, number>>({});
 const loading = ref(true);
 const loadingEnrollments = ref(false);
 const saving = ref(false);
+const migrating = ref(false);
+const migrateResult = ref<{ type: 'success' | 'error'; message: string } | null>(null);
+const expandedGroups = ref(new Set<string>());
+
+function toggleGroup(key: string) {
+    if (expandedGroups.value.has(key)) {
+        expandedGroups.value.delete(key);
+    } else {
+        expandedGroups.value.add(key);
+    }
+    expandedGroups.value = new Set(expandedGroups.value);
+}
 const activeTab = ref('lista');
 const searchEnrollments = ref('');
 const generatingCert = ref<string | null>(null);
@@ -455,8 +579,21 @@ const generatingCert = ref<string | null>(null);
 // Group dialog
 const groupDialog = ref(false);
 const editingGroup = ref<GroupRow | null>(null);
-interface EditedGroup { groupName: string; graduationDateStr: string; level: GroupLevel }
-const editedGroup = ref<EditedGroup>({ groupName: '', graduationDateStr: '', level: 'distrital' });
+interface EditedGroup { groupName: string; graduationDateStr: string; level: GroupLevel; districtId: string; districtName: string }
+const editedGroup = ref<EditedGroup>({ groupName: '', graduationDateStr: '', level: 'distrital', districtId: '', districtName: '' });
+
+const isGroupValid = computed(() => {
+    if (!editedGroup.value.groupName || !editedGroup.value.graduationDateStr) return false;
+    if (editedGroup.value.level === 'distrital' && !editedGroup.value.districtId) return false;
+    return true;
+});
+
+function onGroupDistrictChange(id: string | null) {
+    const d = districts.value.find(d => d.id === id);
+    editedGroup.value.districtName = d
+        ? `Área ${d.areaNumber} · Distrito ${d.districtNumber} – ${d.location}`
+        : '';
+}
 
 // Enrollment dialog
 const enrollDialog = ref(false);
@@ -490,8 +627,24 @@ const groupToDelete = ref<GroupRow | null>(null);
 const deleteEnrollDialog = ref(false);
 const enrollToDelete = ref<TrainingEnrollment | null>(null);
 
+// Move dialog
+const moveDialog = ref(false);
+const enrollToMove = ref<TrainingEnrollment | null>(null);
+const groupOfEnrollToMove = ref<GroupRow | null>(null);
+const moveTargetGroupKey = ref<string>('');
+
+const moveGroupOptions = computed(() =>
+    groups.value
+        .filter(g => g.key !== groupOfEnrollToMove.value?.key)
+        .map(g => ({ key: g.key, label: `${g.groupName} — ${formatDate(g.graduationDate)}` }))
+);
+
 // Inactive (dados de baja)
 const inactiveEnrollments = ref<TrainingEnrollment[]>([]);
+
+// Réplicas distritales — líderes por districtId
+const districtLeadersMap = ref<Record<string, string[]>>({});
+const loadingLeaders = ref(false);
 
 // ── Types ──────────────────────────────────────────────────────────────────
 interface GroupRow {
@@ -499,6 +652,8 @@ interface GroupRow {
     groupName: string;
     graduationDate: Timestamp;
     level: GroupLevel;
+    districtId?: string;
+    districtName?: string;
     firestoreId?: string;
     enrollments: TrainingEnrollment[];
 }
@@ -581,6 +736,9 @@ const generalStats = computed(() => {
     const nationalGroupKeys = new Set(groupsMeta.value.filter(g => g.level === 'nacional').map(g => g.key));
     const nacional = enrollments.value.filter(e => nationalGroupKeys.has(`${e.groupName}__${e.graduationDate?.toMillis?.() ?? 0}`)).length;
     const distrital = total - nacional;
+    const uniqueDistricts = new Set(
+        groupsMeta.value.filter(g => g.level === 'distrital' && g.districtId).map(g => g.districtId)
+    ).size;
     const avg = total > 0
         ? (enrollments.value.reduce((s, e) => s + e.grade, 0) / total).toFixed(1)
         : '0';
@@ -590,8 +748,28 @@ const generalStats = computed(() => {
         { label: 'Observados', value: observed, color: 'warning', icon: 'mdi-eye-circle' },
         { label: 'Nacional', value: nacional, color: 'purple', icon: 'mdi-earth' },
         { label: 'Distrital', value: distrital, color: 'teal', icon: 'mdi-map-marker' },
+        { label: 'Réplicas', value: uniqueDistricts, color: 'deep-orange', icon: 'mdi-home-group' },
         { label: 'Promedio', value: avg, color: 'info', icon: 'mdi-calculator' },
     ];
+});
+
+const replicasByDistrict = computed(() => {
+    const map = new Map<string, { districtId: string; districtName: string; groups: (GroupRow & { enrollments: TrainingEnrollment[] })[]; totalParticipants: number }>();
+    for (const g of groupsMeta.value) {
+        if (g.level !== 'distrital' || !g.districtId) continue;
+        const enrollments = groups.value.find(gr => gr.key === g.key)?.enrollments ?? [];
+        if (!map.has(g.districtId)) {
+            map.set(g.districtId, { districtId: g.districtId, districtName: g.districtName ?? g.groupName, groups: [], totalParticipants: 0 });
+        }
+        const entry = map.get(g.districtId)!;
+        entry.groups.push({ ...g, enrollments });
+        entry.totalParticipants += enrollments.length;
+    }
+    // ordenar grupos de cada distrito por fecha desc
+    for (const entry of map.values()) {
+        entry.groups.sort((a, b) => (b.graduationDate?.toMillis() ?? 0) - (a.graduationDate?.toMillis() ?? 0));
+    }
+    return [...map.values()].sort((a, b) => a.districtName.localeCompare(b.districtName));
 });
 
 const districtStats = computed(() => {
@@ -680,6 +858,7 @@ async function selectModule(mod: TrainingModule) {
     activeTab.value = 'lista';
     searchEnrollments.value = '';
     groupsMeta.value = [];
+    districtLeadersMap.value = {};
     await Promise.all([loadGroups(mod.id), loadEnrollments(mod.id)]);
 }
 
@@ -694,6 +873,8 @@ async function loadGroups(moduleId: string) {
         groupName: g.groupName,
         graduationDate: g.graduationDate,
         level: g.level ?? 'distrital',
+        districtId: g.districtId ?? '',
+        districtName: g.districtName ?? '',
         firestoreId: g.id,
         enrollments: [],
     } as GroupRow));
@@ -780,6 +961,11 @@ async function loadEnrollments(moduleId: string) {
         const allSurviving = surviving.sort((a, b) => a.participantName.localeCompare(b.participantName));
         enrollments.value = allSurviving.filter(e => e.isActive !== false);
         inactiveEnrollments.value = allSurviving.filter(e => e.isActive === false);
+        // Expandir el primer grupo por defecto al cargar
+        if (enrollments.value.length > 0) {
+            const firstKey = enrollments.value[0].groupName;
+            expandedGroups.value = new Set([firstKey]);
+        }
     } catch (e) {
         console.error(e);
         alert('Error al cargar participantes');
@@ -796,8 +982,8 @@ function openGroupDialog(group?: GroupRow) {
         : null;
     editingGroup.value = meta ?? null;
     editedGroup.value = group
-        ? { groupName: group.groupName, graduationDateStr: group.graduationDate.toDate().toISOString().split('T')[0], level: group.level ?? 'distrital' }
-        : { groupName: '', graduationDateStr: new Date().toISOString().split('T')[0], level: 'distrital' };
+        ? { groupName: group.groupName, graduationDateStr: group.graduationDate.toDate().toISOString().split('T')[0], level: group.level ?? 'distrital', districtId: group.districtId ?? '', districtName: group.districtName ?? '' }
+        : { groupName: '', graduationDateStr: new Date().toISOString().split('T')[0], level: 'distrital', districtId: '', districtName: '' };
     groupDialog.value = true;
 }
 
@@ -810,16 +996,17 @@ async function saveGroup() {
     try {
         if (editingGroup.value) {
             // Update Firestore group doc — si no tiene firestoreId (grupo legacy sin doc), crearlo
+            const groupFields = {
+                groupName: newName, graduationDate: newDate, level: editedGroup.value.level,
+                districtId: editedGroup.value.level === 'distrital' ? editedGroup.value.districtId : '',
+                districtName: editedGroup.value.level === 'distrital' ? editedGroup.value.districtName : '',
+            };
             if (editingGroup.value.firestoreId) {
-                await updateDoc(doc(db, 'training_groups', editingGroup.value.firestoreId), {
-                    groupName: newName, graduationDate: newDate, level: editedGroup.value.level,
-                });
+                await updateDoc(doc(db, 'training_groups', editingGroup.value.firestoreId), groupFields);
             } else {
                 await addDoc(collection(db, 'training_groups'), {
                     moduleId: selectedModule.value.id,
-                    groupName: newName,
-                    graduationDate: newDate,
-                    level: editedGroup.value.level,
+                    ...groupFields,
                     createdAt: Timestamp.now(),
                 });
             }
@@ -859,14 +1046,18 @@ async function saveGroup() {
             // Create new group in Firestore
             const key = `${newName}__${newDate.toMillis()}`;
             if (!groupsMeta.value.find(g => g.key === key)) {
+                const districtId = editedGroup.value.level === 'distrital' ? editedGroup.value.districtId : '';
+                const districtName = editedGroup.value.level === 'distrital' ? editedGroup.value.districtName : '';
                 const ref = await addDoc(collection(db, 'training_groups'), {
                     moduleId: selectedModule.value.id,
                     groupName: newName,
                     graduationDate: newDate,
                     level: editedGroup.value.level,
+                    districtId,
+                    districtName,
                     createdAt: Timestamp.now(),
                 });
-                groupsMeta.value.push({ key, groupName: newName, graduationDate: newDate, level: editedGroup.value.level, firestoreId: ref.id, enrollments: [] });
+                groupsMeta.value.push({ key, groupName: newName, graduationDate: newDate, level: editedGroup.value.level, districtId, districtName, firestoreId: ref.id, enrollments: [] });
             }
         }
     } finally {
@@ -1150,6 +1341,33 @@ function confirmDeleteEnroll(item: TrainingEnrollment) {
     deleteEnrollDialog.value = true;
 }
 
+function openMoveDialog(item: TrainingEnrollment, group: GroupRow) {
+    enrollToMove.value = item;
+    groupOfEnrollToMove.value = group;
+    moveTargetGroupKey.value = '';
+    moveDialog.value = true;
+}
+
+async function moveEnrollment() {
+    if (!enrollToMove.value || !moveTargetGroupKey.value) return;
+    const targetGroup = groups.value.find(g => g.key === moveTargetGroupKey.value);
+    if (!targetGroup) return;
+    saving.value = true;
+    try {
+        await updateDoc(doc(db, 'training_enrollments', enrollToMove.value.id), {
+            groupName: targetGroup.groupName,
+            graduationDate: targetGroup.graduationDate,
+            updatedAt: Timestamp.now(),
+        });
+        moveDialog.value = false;
+        if (selectedModule.value) await loadEnrollments(selectedModule.value.id);
+    } catch (e) {
+        console.error('Error al mover participante:', e);
+    } finally {
+        saving.value = false;
+    }
+}
+
 async function deleteEnrollment() {
     if (!enrollToDelete.value || !selectedModule.value) return;
     try {
@@ -1242,6 +1460,71 @@ function exportPdf() {
     });
 
     docPdf.save(`Modulo_${selectedModule.value.name}.pdf`);
+}
+
+// ── Réplicas distritales — carga de líderes ────────────────────────────────
+async function loadDistrictLeaders() {
+    const districtIds = replicasByDistrict.value.map(r => r.districtId).filter(Boolean) as string[];
+    if (districtIds.length === 0) return;
+    loadingLeaders.value = true;
+    try {
+        const result: Record<string, string[]> = {};
+        await Promise.all(districtIds.map(async (districtId) => {
+            const dlSnap = await getDocs(query(
+                collection(db, 'district_leaders'),
+                where('districtId', '==', districtId),
+                where('isActive', '==', true),
+            ));
+            const names: string[] = [];
+            await Promise.all(dlSnap.docs.map(async (dlDoc) => {
+                const userId = dlDoc.data().userId as string;
+                const leaderDoc = await getDoc(doc(db, 'leaders', userId));
+                if (leaderDoc.exists()) {
+                    const pd = leaderDoc.data().personalData ?? {};
+                    const fullName = [pd.firstName, pd.lastName].filter(Boolean).join(' ');
+                    if (fullName) names.push(fullName);
+                }
+            }));
+            result[districtId] = names;
+        }));
+        districtLeadersMap.value = result;
+    } catch (e) {
+        console.error('Error cargando líderes distritales:', e);
+    } finally {
+        loadingLeaders.value = false;
+    }
+}
+
+watch(activeTab, (tab) => {
+    if (tab === 'replicas' && Object.keys(districtLeadersMap.value).length === 0) {
+        loadDistrictLeaders();
+    }
+});
+
+// ── Migración temporal: normalizar participantName a mayúsculas ─────────────
+async function migrateNamesToUppercase() {
+    migrating.value = true;
+    migrateResult.value = null;
+    try {
+        const snap = await getDocs(collection(db, 'training_enrollments'));
+        const batch = writeBatch(db);
+        let count = 0;
+        snap.forEach(d => {
+            const name: string = d.data().participantName ?? '';
+            const upper = name.trim().toUpperCase();
+            if (name !== upper) {
+                batch.update(doc(db, 'training_enrollments', d.id), { participantName: upper });
+                count++;
+            }
+        });
+        if (count > 0) await batch.commit();
+        migrateResult.value = { type: 'success', message: `${count} nombre(s) normalizados a mayúsculas.` };
+    } catch (e) {
+        console.error(e);
+        migrateResult.value = { type: 'error', message: 'Error al normalizar nombres.' };
+    } finally {
+        migrating.value = false;
+    }
 }
 
 onMounted(loadData);

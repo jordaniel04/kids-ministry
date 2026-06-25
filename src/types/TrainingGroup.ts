@@ -8,5 +8,7 @@ export interface TrainingGroup {
     groupName: string;
     graduationDate: Timestamp;
     level: GroupLevel;
+    districtId?: string;
+    districtName?: string;
     createdAt: Timestamp;
 }
