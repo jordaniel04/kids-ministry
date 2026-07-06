@@ -217,7 +217,7 @@
                                 :key="mod.id"
                             >
                                 <VExpansionPanelTitle>
-                                    <div class="d-flex align-center gap-2 w-100">
+                                    <div class="d-flex align-center flex-wrap gap-2 w-100">
                                         <VChip
                                             :color="(mod.moduleType ?? 'ruta') === 'ruta' ? 'indigo' : 'deep-orange'"
                                             size="x-small" variant="tonal"
@@ -225,7 +225,6 @@
                                             {{ (mod.moduleType ?? 'ruta') === 'ruta' ? 'Ruta' : 'Certif.' }}
                                         </VChip>
                                         <span class="font-weight-medium">{{ mod.name }}</span>
-                                        <VSpacer />
                                         <VChip
                                             :color="allPassedInDistrictModule(mod.id) ? 'success' : 'warning'"
                                             size="x-small" variant="tonal" class="me-2"
@@ -241,76 +240,81 @@
                                         :key="group.key"
                                         class="mb-5"
                                     >
-                                        <div class="d-flex align-center gap-2 mb-2">
-                                            <VIcon size="14" color="primary">mdi-calendar-check</VIcon>
-                                            <span class="text-subtitle-2 font-weight-bold">{{ group.groupName }}</span>
-                                            <span class="text-caption text-medium-emphasis">— {{ formatDate(group.graduationDate) }}</span>
-                                            <VChip
-                                                :color="group.level === 'nacional' ? 'purple' : 'teal'"
-                                                size="x-small" variant="tonal"
-                                            >
-                                                {{ group.level === 'nacional' ? 'Nacional' : 'Distrital' }}
-                                            </VChip>
-                                            <VSpacer />
-                                            <VChip color="success" size="x-small" variant="tonal">
-                                                {{ group.enrollments.filter(e => e.passed).length }} aprob.
-                                            </VChip>
-                                            <VChip color="error" size="x-small" variant="tonal">
-                                                {{ group.enrollments.filter(e => !e.passed).length }} no aprob.
-                                            </VChip>
-                                            <VBtn
-                                                v-if="group.enrollments.some(e => e.passed)"
-                                                size="x-small"
-                                                variant="tonal"
-                                                color="primary"
-                                                prepend-icon="mdi-folder-zip-outline"
-                                                :loading="generatingZipKey === group.key"
-                                                @click="downloadGroupCertificatesZip(group, mod)"
-                                            >
-                                                Descargar todos (ZIP)
-                                            </VBtn>
+                                        <div class="group-header mb-2">
+                                            <div class="d-flex align-center flex-wrap gap-2">
+                                                <VIcon size="14" color="primary">mdi-calendar-check</VIcon>
+                                                <span class="text-subtitle-2 font-weight-bold">{{ group.groupName }}</span>
+                                                <span class="text-caption text-medium-emphasis">— {{ formatDate(group.graduationDate) }}</span>
+                                                <VChip
+                                                    :color="group.level === 'nacional' ? 'purple' : 'teal'"
+                                                    size="x-small" variant="tonal"
+                                                >
+                                                    {{ group.level === 'nacional' ? 'Nacional' : 'Distrital' }}
+                                                </VChip>
+                                            </div>
+                                            <div class="d-flex align-center flex-wrap gap-2 mt-2">
+                                                <VChip color="success" size="x-small" variant="tonal">
+                                                    {{ group.enrollments.filter(e => e.passed).length }} aprob.
+                                                </VChip>
+                                                <VChip color="error" size="x-small" variant="tonal">
+                                                    {{ group.enrollments.filter(e => !e.passed).length }} no aprob.
+                                                </VChip>
+                                                <VBtn
+                                                    v-if="group.enrollments.some(e => e.passed)"
+                                                    size="x-small"
+                                                    variant="tonal"
+                                                    color="primary"
+                                                    prepend-icon="mdi-folder-zip-outline"
+                                                    :loading="generatingZipKey === group.key"
+                                                    @click="downloadGroupCertificatesZip(group, mod)"
+                                                >
+                                                    Descargar todos (ZIP)
+                                                </VBtn>
+                                            </div>
                                         </div>
 
-                                        <VTable density="compact">
-                                            <thead>
-                                                <tr>
-                                                    <th>Nombre</th>
-                                                    <th>Rol</th>
-                                                    <th class="text-center">Nota</th>
-                                                    <th class="text-center">Estado</th>
-                                                    <th class="text-center">Certificado</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                                                <tr
-                                                    v-for="enrollment in group.enrollments"
-                                                    :key="enrollment.id"
-                                                >
-                                                    <td>{{ enrollment.participantName }}</td>
-                                                    <td>{{ enrollment.participantRole }}</td>
-                                                    <td class="text-center">
-                                                        <span :class="gradeClass(enrollment.gradeStatus)">{{ enrollment.grade }}</span>
-                                                    </td>
-                                                    <td class="text-center">
-                                                        <VChip :color="statusColor(enrollment.gradeStatus)" size="x-small" variant="tonal">
-                                                            {{ statusLabel(enrollment.gradeStatus) }}
-                                                        </VChip>
-                                                    </td>
-                                                    <td class="text-center">
-                                                        <VBtn
-                                                            v-if="enrollment.passed"
-                                                            icon size="x-small" color="success" variant="tonal"
-                                                            :loading="generatingCert === enrollment.id"
-                                                            @click="downloadCertForMod(enrollment, moduleById(enrollment.moduleId))"
-                                                        >
-                                                            <VIcon>mdi-certificate-outline</VIcon>
-                                                            <VTooltip activator="parent" location="top">Descargar certificado</VTooltip>
-                                                        </VBtn>
-                                                        <span v-else class="text-disabled text-caption">—</span>
-                                                    </td>
-                                                </tr>
-                                            </tbody>
-                                        </VTable>
+                                        <div class="table-scroll">
+                                            <VTable density="compact">
+                                                <thead>
+                                                    <tr>
+                                                        <th>Nombre</th>
+                                                        <th>Rol</th>
+                                                        <th class="text-center">Nota</th>
+                                                        <th class="text-center">Estado</th>
+                                                        <th class="text-center">Certificado</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    <tr
+                                                        v-for="enrollment in group.enrollments"
+                                                        :key="enrollment.id"
+                                                    >
+                                                        <td>{{ enrollment.participantName }}</td>
+                                                        <td>{{ enrollment.participantRole }}</td>
+                                                        <td class="text-center">
+                                                            <span :class="gradeClass(enrollment.gradeStatus)">{{ enrollment.grade }}</span>
+                                                        </td>
+                                                        <td class="text-center">
+                                                            <VChip :color="statusColor(enrollment.gradeStatus)" size="x-small" variant="tonal">
+                                                                {{ statusLabel(enrollment.gradeStatus) }}
+                                                            </VChip>
+                                                        </td>
+                                                        <td class="text-center">
+                                                            <VBtn
+                                                                v-if="enrollment.passed"
+                                                                icon size="x-small" color="success" variant="tonal"
+                                                                :loading="generatingCert === enrollment.id"
+                                                                @click="downloadCertForMod(enrollment, moduleById(enrollment.moduleId))"
+                                                            >
+                                                                <VIcon>mdi-certificate-outline</VIcon>
+                                                                <VTooltip activator="parent" location="top">Descargar certificado</VTooltip>
+                                                            </VBtn>
+                                                            <span v-else class="text-disabled text-caption">—</span>
+                                                        </td>
+                                                    </tr>
+                                                </tbody>
+                                            </VTable>
+                                        </div>
                                     </div>
                                 </VExpansionPanelText>
                             </VExpansionPanel>
@@ -835,6 +839,18 @@ onMounted(loadData);
 </script>
 
 <style scoped>
+/* ── Grupo de participantes (sección 2) ───────────────────────── */
+.table-scroll {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+@media (max-width: 600px) {
+    .group-header .v-chip {
+        font-size: 11px;
+    }
+}
+
 /* ── Stepper de ruta ─────────────────────────────────────────── */
 .ruta-stepper {
     display: flex;

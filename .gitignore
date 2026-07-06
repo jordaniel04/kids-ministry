@@ -35,3 +35,6 @@ skills-lock.json
 cleanup.mjs
 cors.json
 .mcp.json
+
+# Playwright MCP artifacts (screenshots, snapshots, test downloads)
+.playwright-mcp/
