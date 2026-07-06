@@ -258,6 +258,17 @@
                                             <VChip color="error" size="x-small" variant="tonal">
                                                 {{ group.enrollments.filter(e => !e.passed).length }} no aprob.
                                             </VChip>
+                                            <VBtn
+                                                v-if="group.enrollments.some(e => e.passed)"
+                                                size="x-small"
+                                                variant="tonal"
+                                                color="primary"
+                                                prepend-icon="mdi-folder-zip-outline"
+                                                :loading="generatingZipKey === group.key"
+                                                @click="downloadGroupCertificatesZip(group, mod)"
+                                            >
+                                                Descargar todos (ZIP)
+                                            </VBtn>
                                         </div>
 
                                         <VTable density="compact">
@@ -427,7 +438,7 @@ import NavigationBar from '../../components/NavigationBar.vue';
 
 const districtStore = useDistrictStore();
 const authStore = useAuthStore();
-const { generateCertificate } = useCertificateGenerator();
+const { generateCertificate, generateCertificatesZip } = useCertificateGenerator();
 
 const loading = ref(true);
 const modules = ref<TrainingModule[]>([]);
@@ -436,6 +447,7 @@ const districtEnrollments = ref<TrainingEnrollment[]>([]);  // todos los de su d
 const inactiveDistrictEnrollments = ref<TrainingEnrollment[]>([]);  // dados de baja
 const districtGroupLevels = ref<Map<string, GroupLevel>>(new Map()); // key -> level from training_groups
 const generatingCert = ref<string | null>(null);
+const generatingZipKey = ref<string | null>(null);
 const searchParticipants = ref('');
 
 // Gestión de bajas
@@ -599,7 +611,7 @@ async function downloadMyCert(mod: TrainingModule) {
 }
 
 async function downloadCertForMod(enrollment: TrainingEnrollment, mod: TrainingModule | undefined) {
-    if (!mod?.certificateImageUrl) {
+    if (!mod?.certificateTemplateUrl) {
         alert('Este módulo no tiene plantilla de certificado configurada.');
         return;
     }
@@ -608,9 +620,28 @@ async function downloadCertForMod(enrollment: TrainingEnrollment, mod: TrainingM
         await generateCertificate(enrollment, mod, enrollment.graduationDate);
     } catch (e) {
         console.error(e);
-        alert('Error al generar el certificado.');
+        const detail = e instanceof Error ? e.message : String(e);
+        alert(`Error al generar el certificado: ${detail}`);
     } finally {
         generatingCert.value = null;
+    }
+}
+
+async function downloadGroupCertificatesZip(group: GroupRow, mod: TrainingModule) {
+    if (!mod.certificateTemplateUrl) {
+        alert('Este módulo no tiene plantilla de certificado configurada.');
+        return;
+    }
+    const passed = group.enrollments.filter(e => e.passed);
+    generatingZipKey.value = group.key;
+    try {
+        await generateCertificatesZip(passed, mod, `${group.groupName}_${formatDate(group.graduationDate)}`);
+    } catch (e) {
+        console.error(e);
+        const detail = e instanceof Error ? e.message : String(e);
+        alert(`Error al generar los certificados: ${detail}`);
+    } finally {
+        generatingZipKey.value = null;
     }
 }
 

@@ -30,27 +30,27 @@
                             </VChip>
                         </template>
 
-                        <template #[`item.certificateImageUrl`]="{ item }">
+                        <template #[`item.certificateTemplateUrl`]="{ item }">
                             <div class="d-flex align-center gap-2">
                                 <VChip
-                                    v-if="item.certificateImageUrl"
+                                    v-if="item.certificateTemplateUrl"
                                     color="success"
                                     size="small"
                                     variant="tonal"
-                                    prepend-icon="mdi-image-check"
+                                    prepend-icon="mdi-file-check"
                                 >
                                     Configurada
                                 </VChip>
-                                <VChip v-else color="warning" size="small" variant="tonal" prepend-icon="mdi-image-off">
+                                <VChip v-else color="warning" size="small" variant="tonal" prepend-icon="mdi-file-alert">
                                     Sin plantilla
                                 </VChip>
                                 <VBtn
-                                    v-if="item.certificateImageUrl"
+                                    v-if="item.certificateTemplateUrl"
                                     icon
                                     size="x-small"
                                     variant="text"
                                     color="primary"
-                                    :href="item.certificateImageUrl"
+                                    :href="item.certificateTemplateUrl"
                                     target="_blank"
                                 >
                                     <VIcon size="16">mdi-open-in-new</VIcon>
@@ -129,112 +129,36 @@
                                     <VDivider class="mb-4" />
                                     <p class="text-subtitle-2 mb-1">Plantilla de Certificado</p>
                                     <p class="text-caption text-medium-emphasis mb-3">
-                                        Sube la imagen a Google Drive, hazla pública y pega el link aquí (cualquier formato de Drive sirve).
+                                        Sube un PDF diseñado con campos de formulario llamados <code>nombre</code> y <code>fecha</code>
+                                        en las posiciones donde deben aparecer esos datos.
                                     </p>
                                 </VCol>
 
                                 <VCol cols="12">
-                                    <VTextField
-                                        v-model="driveInput"
-                                        label="Link de Google Drive"
-                                        placeholder="https://drive.google.com/file/d/... o solo el ID"
-                                        prepend-inner-icon="mdi-image-outline"
+                                    <VFileInput
+                                        v-model="templateFile"
+                                        label="Plantilla PDF"
+                                        placeholder="Selecciona el archivo PDF de la plantilla"
+                                        prepend-icon="mdi-file-pdf-box"
+                                        accept="application/pdf"
+                                        :loading="uploadingTemplate"
+                                        :disabled="uploadingTemplate"
                                         clearable
-                                        hint="Imagen PNG o JPG con espacio en blanco donde irán el nombre y la fecha"
-                                        persistent-hint
-                                        @update:model-value="onDriveInputChange"
+                                        @update:model-value="onTemplateFileChange"
                                     />
                                 </VCol>
 
-                                <VCol cols="12" v-if="editedItem.certificateImageUrl">
+                                <VCol cols="12" v-if="editedItem.certificateTemplateUrl">
                                     <VBtn
                                         size="small"
                                         variant="tonal"
                                         color="primary"
-                                        :href="editedItem.certificateImageUrl"
+                                        :href="editedItem.certificateTemplateUrl"
                                         target="_blank"
                                         prepend-icon="mdi-open-in-new"
                                     >
-                                        Verificar imagen
+                                        Verificar plantilla
                                     </VBtn>
-                                    <span class="text-caption text-medium-emphasis ms-3">
-                                        URL guardada: <code>{{ editedItem.certificateImageUrl }}</code>
-                                    </span>
-                                </VCol>
-
-                                <!-- Config de texto -->
-                                <VCol cols="12" class="mt-2">
-                                    <VExpansionPanels variant="accordion">
-                                        <VExpansionPanel>
-                                            <VExpansionPanelTitle>
-                                                <VIcon class="me-2" size="18">mdi-format-text</VIcon>
-                                                Posición del texto en el certificado
-                                            </VExpansionPanelTitle>
-                                            <VExpansionPanelText>
-                                                <p class="text-caption text-medium-emphasis mb-3">
-                                                    Coordenadas en píxeles desde la esquina superior izquierda de la imagen.
-                                                    Si no sabes los valores exactos, déjalos por defecto y ajusta después de generar un certificado de prueba.
-                                                </p>
-                                                <VRow dense>
-                                                    <VCol cols="6" sm="3">
-                                                        <VTextField
-                                                            v-model.number="editedItem.certificateTextConfig.nameX"
-                                                            label="Nombre X"
-                                                            type="number"
-                                                            density="compact"
-                                                        />
-                                                    </VCol>
-                                                    <VCol cols="6" sm="3">
-                                                        <VTextField
-                                                            v-model.number="editedItem.certificateTextConfig.nameY"
-                                                            label="Nombre Y"
-                                                            type="number"
-                                                            density="compact"
-                                                        />
-                                                    </VCol>
-                                                    <VCol cols="6" sm="3">
-                                                        <VTextField
-                                                            v-model.number="editedItem.certificateTextConfig.dateX"
-                                                            label="Fecha X"
-                                                            type="number"
-                                                            density="compact"
-                                                        />
-                                                    </VCol>
-                                                    <VCol cols="6" sm="3">
-                                                        <VTextField
-                                                            v-model.number="editedItem.certificateTextConfig.dateY"
-                                                            label="Fecha Y"
-                                                            type="number"
-                                                            density="compact"
-                                                        />
-                                                    </VCol>
-                                                    <VCol cols="6" sm="3">
-                                                        <VTextField
-                                                            v-model.number="editedItem.certificateTextConfig.fontSize"
-                                                            label="Tamaño fuente"
-                                                            type="number"
-                                                            density="compact"
-                                                        />
-                                                    </VCol>
-                                                    <VCol cols="6" sm="3">
-                                                        <VTextField
-                                                            v-model="editedItem.certificateTextConfig.fontColor"
-                                                            label="Color (hex)"
-                                                            placeholder="#1a1a1a"
-                                                            density="compact"
-                                                        >
-                                                            <template #append-inner>
-                                                                <div
-                                                                    class="color-preview"
-                                                                    :style="{ background: editedItem.certificateTextConfig.fontColor }"
-                                                                />
-                                                            </template>
-                                                        </VTextField>
-                                                    </VCol>
-                                                </VRow>
-                                            </VExpansionPanelText>
-                                        </VExpansionPanel>
-                                    </VExpansionPanels>
                                 </VCol>
                             </VRow>
                         </VContainer>
@@ -280,42 +204,36 @@ import {
     collection, doc, getDocs, addDoc, updateDoc, deleteDoc,
     Timestamp, orderBy, query
 } from 'firebase/firestore';
-import { db } from '../../firebase/config';
-import type { TrainingModule, CertificateTextConfig, ModuleType } from '../../types/TrainingModule';
+import { ref as storageRef, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { db, storage } from '../../firebase/config';
+import type { TrainingModule, ModuleType } from '../../types/TrainingModule';
 import NavigationBar from '../../components/NavigationBar.vue';
 
 const loading = ref(true);
 const saving = ref(false);
+const uploadingTemplate = ref(false);
 const dialog = ref(false);
 const deleteDialog = ref(false);
 const modules = ref<TrainingModule[]>([]);
 const itemToDelete = ref<TrainingModule | null>(null);
 const editedIndex = ref(-1);
-const driveInput = ref('');
+const templateFile = ref<File | null>(null);
 
-function extractDriveId(input: string): string | null {
-    const trimmed = input.trim();
-    // Si es solo un ID (sin slashes ni http)
-    if (/^[A-Za-z0-9_-]{25,}$/.test(trimmed)) return trimmed;
-    // Extraer ID de cualquier formato de URL de Drive
-    const match = trimmed.match(/\/d\/([A-Za-z0-9_-]+)/);
-    if (match) return match[1];
-    // URL tipo uc?id=...
-    const idParam = trimmed.match(/[?&]id=([A-Za-z0-9_-]+)/);
-    if (idParam) return idParam[1];
-    return null;
-}
-
-function onDriveInputChange(value: string) {
-    if (!value) {
-        editedItem.value.certificateImageUrl = '';
-        return;
-    }
-    const id = extractDriveId(value);
-    if (id) {
-        editedItem.value.certificateImageUrl = `https://drive.google.com/uc?export=download&id=${id}`;
-    } else {
-        editedItem.value.certificateImageUrl = value;
+async function onTemplateFileChange(value: File | File[] | null) {
+    const file = Array.isArray(value) ? value[0] : value;
+    if (!file) return;
+    uploadingTemplate.value = true;
+    try {
+        const path = `certificate-templates/${Date.now()}_${file.name}`;
+        const fileRef = storageRef(storage, path);
+        await uploadBytes(fileRef, file);
+        editedItem.value.certificateTemplateUrl = await getDownloadURL(fileRef);
+    } catch (e) {
+        console.error(e);
+        alert('Error al subir la plantilla');
+        templateFile.value = null;
+    } finally {
+        uploadingTemplate.value = false;
     }
 }
 
@@ -324,36 +242,26 @@ interface EditedModule {
     name: string;
     order: number;
     moduleType: ModuleType;
-    certificateImageUrl: string;
-    certificateStoragePath: string;
-    certificateTextConfig: CertificateTextConfig;
+    certificateTemplateUrl: string;
     isActive: boolean;
 }
-
-const defaultTextConfig: CertificateTextConfig = {
-    nameX: 400, nameY: 300,
-    dateX: 400, dateY: 350,
-    fontSize: 24, fontColor: '#1a1a1a'
-};
 
 const defaultItem: EditedModule = {
     id: '',
     name: '',
     order: 1,
     moduleType: 'ruta',
-    certificateImageUrl: '',
-    certificateStoragePath: '',
-    certificateTextConfig: { ...defaultTextConfig },
+    certificateTemplateUrl: '',
     isActive: true,
 };
 
-const editedItem = ref<EditedModule>({ ...defaultItem, certificateTextConfig: { ...defaultTextConfig } });
+const editedItem = ref<EditedModule>({ ...defaultItem });
 
 const headers = [
     { title: '#', key: 'order', align: 'center' as const, width: '60px' },
     { title: 'Módulo', key: 'name', align: 'start' as const },
     { title: 'Tipo', key: 'moduleType', align: 'center' as const, sortable: false, width: '140px' },
-    { title: 'Plantilla', key: 'certificateImageUrl', align: 'start' as const, sortable: false },
+    { title: 'Plantilla', key: 'certificateTemplateUrl', align: 'start' as const, sortable: false },
     { title: 'Activo', key: 'isActive', align: 'center' as const, sortable: false, width: '100px' },
     { title: 'Acciones', key: 'actions', align: 'center' as const, sortable: false, width: '100px' },
 ];
@@ -380,8 +288,8 @@ async function loadModules() {
 
 function createItem() {
     editedIndex.value = -1;
-    editedItem.value = { ...defaultItem, certificateTextConfig: { ...defaultTextConfig } };
-    driveInput.value = '';
+    editedItem.value = { ...defaultItem };
+    templateFile.value = null;
     dialog.value = true;
 }
 
@@ -392,22 +300,18 @@ function editItem(item: TrainingModule) {
         name: item.name,
         order: item.order,
         moduleType: item.moduleType ?? 'ruta',
-        certificateImageUrl: item.certificateImageUrl || '',
-        certificateStoragePath: '',
-        certificateTextConfig: item.certificateTextConfig
-            ? { ...item.certificateTextConfig }
-            : { ...defaultTextConfig },
+        certificateTemplateUrl: item.certificateTemplateUrl || '',
         isActive: item.isActive,
     };
-    driveInput.value = item.certificateImageUrl || '';
+    templateFile.value = null;
     dialog.value = true;
 }
 
 function closeDialog() {
     dialog.value = false;
     editedIndex.value = -1;
-    editedItem.value = { ...defaultItem, certificateTextConfig: { ...defaultTextConfig } };
-    driveInput.value = '';
+    editedItem.value = { ...defaultItem };
+    templateFile.value = null;
 }
 
 async function saveModule() {
@@ -417,8 +321,7 @@ async function saveModule() {
             name: editedItem.value.name,
             order: editedItem.value.order,
             moduleType: editedItem.value.moduleType,
-            certificateImageUrl: editedItem.value.certificateImageUrl,
-            certificateTextConfig: { ...editedItem.value.certificateTextConfig },
+            certificateTemplateUrl: editedItem.value.certificateTemplateUrl,
             isActive: editedItem.value.isActive,
         };
 
@@ -468,12 +371,3 @@ async function deleteModule() {
 
 onMounted(loadModules);
 </script>
-
-<style scoped>
-.color-preview {
-    width: 20px;
-    height: 20px;
-    border-radius: 4px;
-    border: 1px solid rgba(0, 0, 0, 0.2);
-}
-</style>

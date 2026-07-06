@@ -1409,7 +1409,7 @@ async function reactivateEnrollment(item: TrainingEnrollment) {
 
 // ── Certificate ────────────────────────────────────────────────────────────
 async function downloadCertificate(enrollment: TrainingEnrollment) {
-    if (!selectedModule.value?.certificateImageUrl) {
+    if (!selectedModule.value?.certificateTemplateUrl) {
         alert('Este módulo no tiene plantilla de certificado configurada.');
         return;
     }
@@ -1418,7 +1418,8 @@ async function downloadCertificate(enrollment: TrainingEnrollment) {
         await generateCertificate(enrollment, selectedModule.value, enrollment.graduationDate);
     } catch (e) {
         console.error(e);
-        alert('Error al generar el certificado. Verifica que la URL de la plantilla sea accesible.');
+        const detail = e instanceof Error ? e.message : String(e);
+        alert(`Error al generar el certificado: ${detail}`);
     } finally {
         generatingCert.value = null;
     }

@@ -1,0 +1,21 @@
+- generic [ref=f1e8]:
+  - heading "Iniciar Sesión" [level=2] [ref=f1e10]
+  - generic [ref=f1e12]:
+    - generic [ref=f1e13]:
+      - generic [ref=f1e15]: 󰇮
+      - generic [ref=f1e18]:
+        - generic: Correo Electrónico
+        - textbox "Correo Electrónico Correo Electrónico" [ref=f1e19]: admin@admin.com
+      - alert [ref=f1e21]
+    - generic [ref=f1e22]:
+      - generic [ref=f1e24]: 󰌾
+      - generic [ref=f1e27]:
+        - generic: Contraseña
+        - textbox "Contraseña Contraseña" [ref=f1e28]: admin2025
+      - button "Contraseña appended action" [ref=f1e30] [cursor=pointer]: 󰈉
+      - alert [ref=f1e32]
+    - button "Iniciar Sesión" [active]:
+      - generic: Iniciar Sesión
+      - generic:
+        - progressbar:
+          - img
