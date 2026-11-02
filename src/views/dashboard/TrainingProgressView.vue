@@ -855,6 +855,7 @@ onMounted(loadData);
 .ruta-stepper {
     display: flex;
     flex-wrap: wrap;
+    justify-content: center;
     gap: 8px 0;
     align-items: flex-start;
     padding: 8px 0;
@@ -966,6 +967,7 @@ onMounted(loadData);
 @media (max-width: 480px) {
     .ruta-stepper {
         flex-direction: column;
+        justify-content: flex-start;
         align-items: flex-start;
         gap: 0;
     }

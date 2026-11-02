@@ -42,6 +42,7 @@ import { ref, onMounted } from 'vue';
 import { collection, query, where, getDocs } from 'firebase/firestore';
 import { db } from '../../firebase/config';
 import type { District } from '../../types/District';
+import NavigationBar from '../../components/NavigationBar.vue';
 
 const loading = ref(false);
 const districts = ref<District[]>([]);

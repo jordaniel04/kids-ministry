@@ -185,7 +185,7 @@ const months = [
     { title: 'Diciembre', value: 11 }
 ];
 
-const selectedMonth = ref<number | null>(null);
+const selectedMonth = ref<number | null>(new Date().getMonth());
 
 const filteredLeaders = computed(() => {
     if (selectedMonth.value === null) {

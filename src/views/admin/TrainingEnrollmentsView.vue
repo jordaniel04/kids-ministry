@@ -1188,7 +1188,7 @@ async function onDistrictChange(id: string) {
         ? `Área ${d.areaNumber} · Distrito ${d.districtNumber} – ${d.location}`
         : '';
 
-    if (editedEnroll.value.participantRole === 'Líder Distrital' && id) {
+    if (editedEnroll.value.participantRole === 'Líder Distrital' && id && !editingEnrollId.value) {
         loadingLeaderName.value = true;
         try {
             const dlSnap = await getDocs(query(
@@ -1197,12 +1197,24 @@ async function onDistrictChange(id: string) {
                 where('isActive', '==', true),
             ));
             if (!dlSnap.empty) {
-                const userId = dlSnap.docs[0].data().userId as string;
-                const leaderDoc = await getDoc(doc(db, 'leaders', userId));
-                if (leaderDoc.exists()) {
+                // Puede haber pareja de líderes (primary/secondary): nombres ya
+                // agregados como "Líder Distrital" para este distrito en el grupo actual.
+                const alreadyAddedNames = new Set(
+                    enrollments.value
+                        .filter(e => e.participantRole === 'Líder Distrital' && e.districtId === id)
+                        .map(e => e.participantName.trim().toLowerCase())
+                );
+
+                for (const dl of dlSnap.docs) {
+                    const userId = dl.data().userId as string;
+                    const leaderDoc = await getDoc(doc(db, 'leaders', userId));
+                    if (!leaderDoc.exists()) continue;
                     const pd = leaderDoc.data().personalData ?? {};
                     const fullName = [pd.firstName, pd.lastName].filter(Boolean).join(' ');
-                    if (fullName) editedEnroll.value.participantName = fullName;
+                    if (fullName && !alreadyAddedNames.has(fullName.trim().toLowerCase())) {
+                        editedEnroll.value.participantName = fullName;
+                        break;
+                    }
                 }
             }
         } catch (e) {

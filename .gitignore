@@ -27,6 +27,7 @@ dist-ssr
 AGENTS.md
 CLAUDE.md
 docs/
+.docs/
 .agents/
 .firebase/
 skills-lock.json

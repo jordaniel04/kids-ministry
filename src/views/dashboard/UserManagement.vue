@@ -38,6 +38,9 @@
                     <template #[`item.role`]="{ item }">
                         <VChip :color="getRoleColor(item.role)">{{ item.role }}</VChip>
                     </template>
+                    <template #[`item.lastLogin`]="{ item }">
+                        {{ formatLastLogin(item.lastLogin) }}
+                    </template>
                     <template #[`item.actions`]="{ item }">
                         <VIcon
                             color="primary"
@@ -64,7 +67,7 @@
                     <VCol v-for="user in filteredUsers" :key="user.email" cols="12" sm="6" md="4">
                         <VCard>
                             <VCardTitle>{{ user.email }}</VCardTitle>
-                            <VCardSubtitle>{{ user.lastLogin }}</VCardSubtitle>
+                            <VCardSubtitle>{{ formatLastLogin(user.lastLogin) }}</VCardSubtitle>
                             <VCardText>
                                 <VChip :color="getRoleColor(user.role)">{{ user.role }}</VChip>
                             </VCardText>
@@ -229,8 +232,10 @@ const headers = [
 
 const filteredUsers = computed(() => {
     if (!users.value) return [];
-    
+
     return users.value.filter(user => {
+        if (user?.role === 'admin') return false;
+
         const searchTerm = search.value.toLowerCase();
         return (
             user?.email?.toLowerCase().includes(searchTerm) ||
@@ -540,7 +545,7 @@ const getUsers = async () => {
                 email: userData.email,
                 role: userData.role,
                 location: districtInfo.location,
-                lastLogin: userData.lastLogin?.toDate().toLocaleString() || "N/A",
+                lastLogin: userData.lastLogin?.toDate() ?? null,
                 createdAt: userData.createdAt?.toDate(),
                 updatedAt: userData.updatedAt?.toDate()
             };
@@ -552,6 +557,12 @@ const getUsers = async () => {
     } finally {
         loading.value = false;
     }
+};
+
+const formatLastLogin = (lastLogin: Date | Timestamp | null | undefined) => {
+    if (!lastLogin) return 'N/A';
+    const date = lastLogin instanceof Timestamp ? lastLogin.toDate() : lastLogin;
+    return date.toLocaleString();
 };
 
 const getRoleColor = (role: string) => {

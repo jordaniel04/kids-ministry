@@ -102,10 +102,15 @@ const router = createRouter({
 });
 
 // Limpiar todos los listeners antes de cada cambio de ruta
-router.beforeEach((to, from, next) => {
+router.beforeEach(async (to, from, next) => {
   // Limpiar todos los listeners de Firestore
   clearAllFirestoreListeners();
-  
+
+  // Esperar a que Firebase confirme si hay una sesión persistida antes de
+  // evaluar auth.currentUser, que es null hasta que esto se resuelva.
+  const authStore = useAuthStore();
+  await authStore.waitForAuthReady();
+
   const requiresAuth = to.matched.some(record => record.meta.requiresAuth);
   const requiresAdmin = to.matched.some(record => record.meta.requiresAdmin);
 
@@ -125,7 +130,6 @@ router.beforeEach((to, from, next) => {
 
   if (requiresAdmin) {
     // Verificar rol usando Pinia
-    const authStore = useAuthStore();
     const role = authStore.user?.role;
     if (role !== 'admin' && role !== 'secretaria') {
       // Si no tiene permisos, redirigir al dashboard

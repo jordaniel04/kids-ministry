@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia';
 import { auth, db } from '../firebase/config';
-import { signInWithEmailAndPassword, signOut } from 'firebase/auth';
+import { signInWithEmailAndPassword, signOut, onAuthStateChanged } from 'firebase/auth';
 import { doc, getDoc, setDoc, Timestamp } from "firebase/firestore";
 import type { User } from '../types/User';
 import { COLLECTIONS, CACHE_TTL } from '@/constants';
@@ -12,6 +12,8 @@ interface AuthState {
   userData: any;
 }
 
+let authReadyPromise: Promise<void> | null = null;
+
 export const useAuthStore = defineStore('auth', {
   state: (): AuthState => ({
     user: null,
@@ -19,27 +21,60 @@ export const useAuthStore = defineStore('auth', {
     error: null,
     userData: null as any
   }),
-  
+
   actions: {
+    async fetchUserProfile(uid: string): Promise<User | null> {
+      const userRef = doc(db, COLLECTIONS.USERS, uid);
+      const userDoc = await getDoc(userRef);
+
+      if (!userDoc.exists()) {
+        return null;
+      }
+
+      const userData = userDoc.data();
+      return {
+        id: uid,
+        email: userData.email,
+        lastLogin: userData.lastLogin,
+        role: userData.role,
+        createdAt: userData.createdAt,
+        updatedAt: userData.updatedAt
+      };
+    },
+
+    // Espera a que Firebase restaure (o no) la sesión persistida antes de que
+    // el router evalúe auth.currentUser, que de otra forma llega null en la
+    // primera carga aunque exista una sesión válida.
+    waitForAuthReady() {
+      if (!authReadyPromise) {
+        authReadyPromise = new Promise<void>((resolve) => {
+          onAuthStateChanged(auth, async (firebaseUser) => {
+            if (firebaseUser) {
+              try {
+                this.user = await this.fetchUserProfile(firebaseUser.uid);
+              } catch (error) {
+                console.error('Error al restaurar la sesión:', error);
+                this.user = null;
+              }
+            } else {
+              this.user = null;
+            }
+            resolve();
+          });
+        });
+      }
+      return authReadyPromise;
+    },
+
     async login(email: string, password: string) {
       this.loading = true;
       this.error = null;
       try {
         const userCredential = await signInWithEmailAndPassword(auth, email, password);
         const userRef = doc(db, COLLECTIONS.USERS, userCredential.user.uid);
-        const userDoc = await getDoc(userRef);
 
-        if (userDoc.exists()) {
-          const userData = userDoc.data();
-          this.user = {
-            id: userCredential.user.uid,
-            email: userData.email,
-            lastLogin: Timestamp.now(),
-            role: userData.role,
-            createdAt: userData.createdAt,
-            updatedAt: Timestamp.now()
-          };
-        } else {
+        this.user = await this.fetchUserProfile(userCredential.user.uid);
+        if (!this.user) {
           console.error("No se encontró el documento del usuario en Firestore");
         }
 

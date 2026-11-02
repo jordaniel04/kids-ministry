@@ -19,294 +19,273 @@
       </VRow>
 
       <VRow>
-        <VCol v-if="isAdmin" cols="12" sm="12" md="4">
+        <VCol v-if="isAdmin" cols="12" sm="12" md="4" class="d-flex">
           <VCard
-            class="mx-auto mb-4"
-            color="surface-variant"
+            class="mx-auto mb-4 pa-2 leader-card h-100"
             max-width="100%"
+            width="100%"
             @click="goToUserManagement"
           >
-            <VCardTitle class="d-flex align-center">
-              <VIcon class="me-2">mdi-account-group</VIcon>
-              Administrar Usuarios
-            </VCardTitle>
-            <VCardSubtitle> Gestiona los usuarios del sistema </VCardSubtitle>
-            <template v-slot:actions>
-              <VBtn variant="text" @click="goToUserManagement">
-                Ir a Gestión
-              </VBtn>
-            </template>
+            <VCardText class="d-flex align-center h-100">
+              <div class="d-flex align-center ga-4">
+                <VAvatar color="primary" variant="tonal" size="56">
+                  <VIcon icon="mdi-account-group" size="28" />
+                </VAvatar>
+                <div class="flex-grow-1" style="min-width: 0;">
+                  <VCardTitle class="px-0 pt-0 pb-1">Administrar Usuarios</VCardTitle>
+                  <VCardSubtitle class="px-0">Gestiona los usuarios del sistema</VCardSubtitle>
+                </div>
+              </div>
+            </VCardText>
           </VCard>
         </VCol>
 
-        <VCol v-if="isAdmin" cols="12" sm="12" md="4">
+        <VCol v-if="isAdmin" cols="12" sm="12" md="4" class="d-flex">
           <VCard
-            class="mx-auto mb-4"
-            color="surface-variant"
+            class="mx-auto mb-4 pa-2 leader-card h-100"
             max-width="100%"
+            width="100%"
             @click="goToStatistics"
           >
-            <VCardTitle class="d-flex align-center">
-              <VIcon class="me-2">mdi-account-group</VIcon>
-              Gestión de Períodos de Reporte
-            </VCardTitle>
-            <VCardSubtitle> Organizar los datos ministeriales por períodos </VCardSubtitle>
-            <template v-slot:actions>
-              <VBtn variant="text" @click="goToStatistics">
-                Gestión de Períodos
-              </VBtn>
-            </template>
+            <VCardText class="d-flex align-center h-100">
+              <div class="d-flex align-center ga-4">
+                <VAvatar color="primary" variant="tonal" size="56">
+                  <VIcon icon="mdi-calendar-range" size="28" />
+                </VAvatar>
+                <div class="flex-grow-1" style="min-width: 0;">
+                  <VCardTitle class="px-0 pt-0 pb-1">Gestión de Períodos de Reporte</VCardTitle>
+                  <VCardSubtitle class="px-0">Organizar los datos ministeriales por períodos</VCardSubtitle>
+                </div>
+              </div>
+            </VCardText>
           </VCard>
         </VCol>
 
-        <VCol v-if="isAdmin" cols="12" sm="12" md="4">
+        <VCol v-if="isAdmin" cols="12" sm="12" md="4" class="d-flex">
           <VCard
-            class="mx-auto mb-4"
-            color="surface-variant"
+            class="mx-auto mb-4 pa-2 leader-card h-100"
             max-width="100%"
+            width="100%"
             @click="goToDistrictManagement"
           >
-            <VCardTitle class="d-flex align-center">
-              <VIcon class="me-2">mdi-office-building-marker</VIcon>
-              Gestión de Distritos
-            </VCardTitle>
-            <VCardSubtitle>
-              Administra los distritos del ministerio
-            </VCardSubtitle>
-            <template v-slot:actions>
-              <VBtn variant="text" @click="goToDistrictManagement">
-                Gestionar Distritos
-              </VBtn>
-            </template>
+            <VCardText class="d-flex align-center h-100">
+              <div class="d-flex align-center ga-4">
+                <VAvatar color="primary" variant="tonal" size="56">
+                  <VIcon icon="mdi-office-building-marker" size="28" />
+                </VAvatar>
+                <div class="flex-grow-1" style="min-width: 0;">
+                  <VCardTitle class="px-0 pt-0 pb-1">Gestión de Distritos</VCardTitle>
+                  <VCardSubtitle class="px-0">Administra los distritos del ministerio</VCardSubtitle>
+                </div>
+              </div>
+            </VCardText>
           </VCard>
         </VCol>
 
-        <VCol v-if="isAdmin || isSecretary" cols="12" sm="12" md="4">
+        <VCol v-if="isAdmin || isSecretary" cols="12" sm="12" md="4" class="d-flex">
           <VCard
-            class="mx-auto mb-4"
-            color="surface-variant"
+            class="mx-auto mb-4 pa-2 leader-card h-100"
             max-width="100%"
+            width="100%"
             @click="goToDistrictReports"
           >
-            <VCardTitle class="d-flex align-center">
-              <VIcon class="me-2">mdi-chart-box</VIcon>
-              Reportes por Distrito
-            </VCardTitle>
-            <VCardSubtitle>
-              Ver historial de reportes por distrito y período
-            </VCardSubtitle>
-            <template v-slot:actions>
-              <VBtn variant="text" @click="goToDistrictReports">
-                Ver Reportes
-              </VBtn>
-            </template>
+            <VCardText class="d-flex align-center h-100">
+              <div class="d-flex align-center ga-4">
+                <VAvatar color="primary" variant="tonal" size="56">
+                  <VIcon icon="mdi-chart-box" size="28" />
+                </VAvatar>
+                <div class="flex-grow-1" style="min-width: 0;">
+                  <VCardTitle class="px-0 pt-0 pb-1">Reportes por Distrito</VCardTitle>
+                  <VCardSubtitle class="px-0">Ver historial de reportes por distrito y período</VCardSubtitle>
+                </div>
+              </div>
+            </VCardText>
           </VCard>
         </VCol>
 
-        <VCol v-if="isAdmin || isSecretary" cols="12" sm="12" md="4">
+        <VCol v-if="isAdmin || isSecretary" cols="12" sm="12" md="4" class="d-flex">
           <VCard
-            class="mx-auto mb-4"
-            color="surface-variant"
+            class="mx-auto mb-4 pa-2 leader-card h-100"
             max-width="100%"
+            width="100%"
             @click="goToReportMatrix"
           >
-            <VCardTitle class="d-flex align-center">
-              <VIcon class="me-2">mdi-table</VIcon>
-              Matriz de Reportes
-            </VCardTitle>
-            <VCardSubtitle>
-              Ver matriz de reportes por distrito y período
-            </VCardSubtitle>
-            <template v-slot:actions>
-              <VBtn variant="text" @click="goToReportMatrix">
-                Ver Matriz
-              </VBtn>
-            </template>
+            <VCardText class="d-flex align-center h-100">
+              <div class="d-flex align-center ga-4">
+                <VAvatar color="primary" variant="tonal" size="56">
+                  <VIcon icon="mdi-table" size="28" />
+                </VAvatar>
+                <div class="flex-grow-1" style="min-width: 0;">
+                  <VCardTitle class="px-0 pt-0 pb-1">Matriz de Reportes</VCardTitle>
+                  <VCardSubtitle class="px-0">Ver matriz de reportes por distrito y período</VCardSubtitle>
+                </div>
+              </div>
+            </VCardText>
           </VCard>
         </VCol>
 
-        <VCol v-if="isAdmin || isSecretary" cols="12" sm="12" md="4">
+        <VCol v-if="isAdmin || isSecretary" cols="12" sm="12" md="4" class="d-flex">
           <VCard
-            class="mx-auto mb-4"
-            color="surface-variant"
+            class="mx-auto mb-4 pa-2 leader-card h-100"
             max-width="100%"
+            width="100%"
             @click="goToBirthdayList"
           >
-            <VCardTitle class="d-flex align-center">
-              <VIcon class="me-2">mdi-cake-variant</VIcon>
-              Lista de Cumpleaños
-            </VCardTitle>
-            <VCardSubtitle>Ver líderes por fecha de cumpleaños</VCardSubtitle>
-            <template v-slot:actions>
-              <VBtn variant="text" @click="goToBirthdayList">
-                Ver Lista
-              </VBtn>
-            </template>
+            <VCardText class="d-flex align-center h-100">
+              <div class="d-flex align-center ga-4">
+                <VAvatar color="primary" variant="tonal" size="56">
+                  <VIcon icon="mdi-cake-variant" size="28" />
+                </VAvatar>
+                <div class="flex-grow-1" style="min-width: 0;">
+                  <VCardTitle class="px-0 pt-0 pb-1">Lista de Cumpleaños</VCardTitle>
+                  <VCardSubtitle class="px-0">Ver líderes por fecha de cumpleaños</VCardSubtitle>
+                </div>
+              </div>
+            </VCardText>
           </VCard>
         </VCol>
 
-        <VCol v-if="isAdmin || isSecretary" cols="12" sm="12" md="4">
+        <VCol v-if="isAdmin || isSecretary" cols="12" sm="12" md="4" class="d-flex">
           <VCard
-            class="mx-auto mb-4"
-            color="surface-variant"
+            class="mx-auto mb-4 pa-2 leader-card h-100"
             max-width="100%"
+            width="100%"
             @click="goToLeadersList"
           >
-            <VCardTitle class="d-flex align-center">
-              <VIcon class="me-2">mdi-account-supervisor</VIcon>
-              Directorio de Líderes
-            </VCardTitle>
-            <VCardSubtitle>Ver información completa de todos los líderes</VCardSubtitle>
-            <template v-slot:actions>
-              <VBtn variant="text" @click="goToLeadersList">
-                Ver Líderes
-              </VBtn>
-            </template>
+            <VCardText class="d-flex align-center h-100">
+              <div class="d-flex align-center ga-4">
+                <VAvatar color="primary" variant="tonal" size="56">
+                  <VIcon icon="mdi-account-supervisor" size="28" />
+                </VAvatar>
+                <div class="flex-grow-1" style="min-width: 0;">
+                  <VCardTitle class="px-0 pt-0 pb-1">Directorio de Líderes</VCardTitle>
+                  <VCardSubtitle class="px-0">Ver información completa de todos los líderes</VCardSubtitle>
+                </div>
+              </div>
+            </VCardText>
           </VCard>
         </VCol>
 
-        <VCol v-if="isAdmin || isSecretary" cols="12" sm="12" md="4">
+        <VCol v-if="isAdmin || isSecretary" cols="12" sm="12" md="4" class="d-flex">
           <VCard
-            class="mx-auto mb-4"
-            color="surface-variant"
+            class="mx-auto mb-4 pa-2 leader-card h-100"
             max-width="100%"
+            width="100%"
             @click="goToTrainingModules"
           >
-            <VCardTitle class="d-flex align-center">
-              <VIcon class="me-2">mdi-book-education</VIcon>
-              Módulos de Formación
-            </VCardTitle>
-            <VCardSubtitle>Gestiona la ruta de formación y sus módulos</VCardSubtitle>
-            <template v-slot:actions>
-              <VBtn variant="text" @click="goToTrainingModules">
-                Ver Módulos
-              </VBtn>
-            </template>
+            <VCardText class="d-flex align-center h-100">
+              <div class="d-flex align-center ga-4">
+                <VAvatar color="primary" variant="tonal" size="56">
+                  <VIcon icon="mdi-book-education" size="28" />
+                </VAvatar>
+                <div class="flex-grow-1" style="min-width: 0;">
+                  <VCardTitle class="px-0 pt-0 pb-1">Módulos de Formación</VCardTitle>
+                  <VCardSubtitle class="px-0">Gestiona la ruta de formación y sus módulos</VCardSubtitle>
+                </div>
+              </div>
+            </VCardText>
           </VCard>
         </VCol>
 
-        <VCol v-if="isAdmin || isSecretary" cols="12" sm="12" md="4">
+        <VCol v-if="isAdmin || isSecretary" cols="12" sm="12" md="4" class="d-flex">
           <VCard
-            class="mx-auto mb-4"
-            color="surface-variant"
+            class="mx-auto mb-4 pa-2 leader-card h-100"
             max-width="100%"
+            width="100%"
             @click="goToTrainingEnrollments"
           >
-            <VCardTitle class="d-flex align-center">
-              <VIcon class="me-2">mdi-certificate</VIcon>
-              Inscripciones y Certificados
-            </VCardTitle>
-            <VCardSubtitle>Registra notas, estadísticas y genera certificados</VCardSubtitle>
-            <template v-slot:actions>
-              <VBtn variant="text" @click="goToTrainingEnrollments">
-                Ver Inscripciones
-              </VBtn>
-            </template>
+            <VCardText class="d-flex align-center h-100">
+              <div class="d-flex align-center ga-4">
+                <VAvatar color="primary" variant="tonal" size="56">
+                  <VIcon icon="mdi-certificate" size="28" />
+                </VAvatar>
+                <div class="flex-grow-1" style="min-width: 0;">
+                  <VCardTitle class="px-0 pt-0 pb-1">Inscripciones y Certificados</VCardTitle>
+                  <VCardSubtitle class="px-0">Registra notas, estadísticas y genera certificados</VCardSubtitle>
+                </div>
+              </div>
+            </VCardText>
           </VCard>
         </VCol>
 
-        <VCol v-if="isLeader" cols="12" sm="12" md="4">
+        <VCol v-if="isLeader" cols="12" sm="12" md="4" class="d-flex">
           <VCard
-            class="mx-auto mb-4"
-            :style="{
-              backgroundColor: personalDataComplete ? undefined : '#FAFAFA',
-              opacity: personalDataComplete ? 1 : 0.7,
-              transition: 'all 0.3s ease'
-            }"
+            class="mx-auto mb-4 pa-2 leader-card h-100"
+            :style="{ opacity: personalDataComplete ? 1 : 0.7, transition: 'all 0.3s ease' }"
             :class="{ 'disabled-card': !personalDataComplete }"
             max-width="100%"
-            @click="goToTrainingProgress"
-          >
-            <VCardTitle class="d-flex align-center">
-              <VIcon class="me-2" :color="personalDataComplete ? '' : 'grey'">mdi-school</VIcon>
-              Ruta de Formación
-            </VCardTitle>
-            <VCardSubtitle :class="personalDataComplete ? '' : 'text-grey-darken-1'">
-              {{ personalDataComplete ? 'Ver módulos, notas y certificados de tu distrito' : 'Complete sus datos personales primero' }}
-            </VCardSubtitle>
-            <template v-slot:actions>
-              <VBtn variant="text" :color="personalDataComplete ? '' : 'grey'" :disabled="!personalDataComplete" @click="goToTrainingProgress">
-                Ver Progreso
-              </VBtn>
-            </template>
-          </VCard>
-        </VCol>
-
-        <VCol v-if="isLeader" cols="12" sm="12" md="4">
-          <VCard
-            class="mx-auto mb-4"
-            :style="{ 
-              backgroundColor: personalDataComplete ? '#E8F5E9' : '#FFF3E0',
-              transition: 'all 0.3s ease'
-            }"
-            :elevation="2"
-            max-width="100%"
+            width="100%"
             @click="goToPersonalData"
           >
-            <VCardTitle class="d-flex align-center">
-              <VIcon 
-                class="me-2" 
-                :color="personalDataComplete ? 'success-darken-2' : 'warning'"
-              >
-                mdi-account
-              </VIcon>
-              Datos del Lider
-            </VCardTitle>
-            <VCardSubtitle :class="personalDataComplete ? 'text-success' : 'text-warning'">
-              {{ personalDataComplete ? 'Información completa' : 'Actualiza tu información personal' }}
-            </VCardSubtitle>
-            <VCardActions>
-              <VBtn 
-                variant="tonal"
-                :color="personalDataComplete ? 'success' : 'warning'"
-                @click="goToPersonalData"
-              >
-                Ir a Datos
-              </VBtn>
-            </VCardActions>
+            <VCardText class="d-flex align-center h-100">
+              <div class="d-flex align-center ga-4">
+                <VAvatar :color="personalDataComplete ? 'success' : 'warning'" variant="tonal" size="56">
+                  <VIcon :icon="personalDataComplete ? 'mdi-account-check' : 'mdi-account'" size="28" />
+                </VAvatar>
+                <div class="flex-grow-1" style="min-width: 0;">
+                  <VCardTitle class="px-0 pt-0 pb-1">Datos del Líder</VCardTitle>
+                  <VCardSubtitle class="px-0" :class="personalDataComplete ? 'text-success' : 'text-warning'">
+                    {{ personalDataComplete ? 'Información completa' : 'Actualiza tu información personal' }}
+                  </VCardSubtitle>
+                </div>
+              </div>
+            </VCardText>
           </VCard>
         </VCol>
 
-        <VCol v-if="isLeader" cols="12" sm="12" md="4">
+        <VCol v-if="isLeader" cols="12" sm="12" md="4" class="d-flex">
           <VCard
-            class="mx-auto mb-4"
-            :style="{ 
-              backgroundColor: hasPendingReport ? '#FFF3E0' : (personalDataComplete ? '#E8F5E9' : '#FAFAFA'),
-              opacity: personalDataComplete ? 1 : 0.7,
-              transition: 'all 0.3s ease'
-            }"
-            :elevation="2"
-            max-width="100%"
+            class="mx-auto mb-4 pa-2 leader-card h-100"
+            :style="{ opacity: personalDataComplete ? 1 : 0.7, transition: 'all 0.3s ease' }"
             :class="{ 'disabled-card': !personalDataComplete }"
+            max-width="100%"
+            width="100%"
             @click="goToMinisterialData"
           >
-            <VCardTitle class="d-flex align-center">
-              <VIcon 
-                :color="hasPendingReport ? 'warning' : 'success'"
-                class="mr-2"
-              >
-                {{ hasPendingReport ? 'mdi-alert' : 'mdi-chart-box' }}
-              </VIcon>
-              Datos Estadísticos
-            </VCardTitle>
-            <VCardSubtitle :class="personalDataComplete ? (hasPendingReport ? 'text-warning' : 'text-success-darken-1') : 'text-grey-darken-1'">
-              {{ 
-                !personalDataComplete 
-                  ? 'Complete sus datos personales primero' 
-                  : (hasPendingReport 
-                      ? 'Tienes un período de reporte pendiente.'
-                      : 'Gestiona tu información estadística del distrito')
-              }}
-            </VCardSubtitle>
-            <VCardActions>
-              <VBtn 
-                variant="tonal"
-                :color="personalDataComplete ? (hasPendingReport ? 'warning' : 'success') : 'grey'"
-                :disabled="!personalDataComplete"
-              >
-                Ir a Estadísticas Distritales
-              </VBtn>
-            </VCardActions>
+            <VCardText class="d-flex align-center h-100">
+              <div class="d-flex align-center ga-4">
+                <VAvatar :color="hasPendingReport ? 'warning' : 'success'" variant="tonal" size="56">
+                  <VIcon :icon="hasPendingReport ? 'mdi-alert' : 'mdi-chart-box'" size="28" />
+                </VAvatar>
+                <div class="flex-grow-1" style="min-width: 0;">
+                  <VCardTitle class="px-0 pt-0 pb-1">Datos Estadísticos</VCardTitle>
+                  <VCardSubtitle class="px-0" :class="personalDataComplete ? (hasPendingReport ? 'text-warning' : 'text-success') : 'text-medium-emphasis'">
+                    {{
+                      !personalDataComplete
+                        ? 'Complete sus datos personales primero'
+                        : (hasPendingReport
+                            ? 'Tienes un período de reporte pendiente.'
+                            : 'Gestiona tu información estadística del distrito')
+                    }}
+                  </VCardSubtitle>
+                </div>
+              </div>
+            </VCardText>
+          </VCard>
+        </VCol>
+
+        <VCol v-if="isLeader" cols="12" sm="12" md="4" class="d-flex">
+          <VCard
+            class="mx-auto mb-4 pa-2 leader-card h-100"
+            :style="{ opacity: personalDataComplete ? 1 : 0.7, transition: 'all 0.3s ease' }"
+            :class="{ 'disabled-card': !personalDataComplete }"
+            max-width="100%"
+            width="100%"
+            @click="goToTrainingProgress"
+          >
+            <VCardText class="d-flex align-center h-100">
+              <div class="d-flex align-center ga-4">
+                <VAvatar :color="personalDataComplete ? 'primary' : 'grey-lighten-2'" variant="tonal" size="56">
+                  <VIcon icon="mdi-school" :color="personalDataComplete ? 'primary' : 'grey'" size="28" />
+                </VAvatar>
+                <div class="flex-grow-1" style="min-width: 0;">
+                  <VCardTitle class="px-0 pt-0 pb-1">Ruta de Formación</VCardTitle>
+                  <VCardSubtitle class="px-0" :class="personalDataComplete ? '' : 'text-grey-darken-1'">
+                    {{ personalDataComplete ? 'Ver módulos, notas y certificados de tu distrito' : 'Complete sus datos personales primero' }}
+                  </VCardSubtitle>
+                </div>
+              </div>
+            </VCardText>
           </VCard>
         </VCol>
       </VRow>
@@ -463,6 +442,12 @@ const goBack = () => {
 
 .v-card {
   transition: all 0.3s ease;
+  cursor: pointer;
+}
+
+.leader-card :deep(.v-card-title),
+.leader-card :deep(.v-card-subtitle) {
+  white-space: normal;
 }
 
 .v-card:not(.disabled-card):hover {
